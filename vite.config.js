@@ -25,7 +25,7 @@ export default defineConfig({
         "**/__tests__/**",
         "public/**",
         "scripts/**",
-        "server/**",
+        "api/**",
         "**/main.jsx",
       ],
     },

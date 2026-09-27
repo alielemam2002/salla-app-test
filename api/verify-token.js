@@ -1,5 +1,5 @@
 /**
- * Serverless Function - Token Verification
+ * Vercel Serverless Function - Token Verification
  *
  * This function handles token verification by proxying the request
  * to the Salla exchange authority service.
@@ -11,54 +11,44 @@ const VERIFY_API_URLS = {
   prod: "https://api.salla.dev/exchange-authority/v1/verify",
 };
 
-exports.handler = async (event, _context) => {
+export default async function handler(req, res) {
   // Only allow POST requests
-  if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: "Method not allowed" }),
-    };
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    // Parse request body
-    const body = JSON.parse(event.body || "{}");
+    // Parse request body (Vercel parses JSON bodies automatically)
+    const body =
+      typeof req.body === "string"
+        ? JSON.parse(req.body || "{}")
+        : req.body || {};
     const { token, iss, subject, appId } = body;
 
     // Validate required fields
-    const jsonHeaders = { "Content-Type": "application/json" };
-
     if (!token) {
-      return {
-        statusCode: 400,
-        headers: jsonHeaders,
-        body: JSON.stringify({ success: false, error: "Token is required" }),
-      };
+      return res
+        .status(400)
+        .json({ success: false, error: "Token is required" });
     }
 
     // Validate app ID
     if (!appId) {
-      return {
-        statusCode: 400,
-        headers: jsonHeaders,
-        body: JSON.stringify({ success: false, error: "App ID is required" }),
-      };
+      return res
+        .status(400)
+        .json({ success: false, error: "App ID is required" });
     }
 
-    // Determine environment (default to 'dev' when ENV is not set, e.g. local netlify dev)
+    // Determine environment (default to 'dev' when ENV is not set, e.g. local vercel dev)
     const environment = process.env.ENV || "dev";
 
     // Get API URL based on environment
     const apiUrl = VERIFY_API_URLS[environment];
     if (!apiUrl) {
-      return {
-        statusCode: 400,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          success: false,
-          error: `Invalid environment: ${environment}. Must be 'dev' or 'prod'`,
-        }),
-      };
+      return res.status(400).json({
+        success: false,
+        error: `Invalid environment: ${environment}. Must be 'dev' or 'prod'`,
+      });
     }
 
     // Debug log request details
@@ -92,24 +82,14 @@ exports.handler = async (event, _context) => {
     const result = await response.json();
 
     // Return the result with appropriate status code
-    return {
-      statusCode: response.status,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*", // Allow CORS
-        "Access-Control-Allow-Headers": "Content-Type",
-      },
-      body: JSON.stringify(result),
-    };
+    res.setHeader("Access-Control-Allow-Origin", "*"); // Allow CORS
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    return res.status(response.status).json(result);
   } catch (error) {
     console.error("Token verification error:", error);
-    return {
-      statusCode: 500,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        success: false,
-        error: error.message || "Internal server error",
-      }),
-    };
+    return res.status(500).json({
+      success: false,
+      error: error.message || "Internal server error",
+    });
   }
-};
+}
