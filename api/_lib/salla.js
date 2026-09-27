@@ -57,7 +57,11 @@ export async function introspectEmbeddedToken(token, appId) {
  * @returns {Promise<{ status: number, body: any }>}
  */
 export async function merchantApi(path) {
-  const accessToken = process.env.SALLA_ACCESS_TOKEN;
+  // Tolerate common copy/paste mistakes: whitespace, quotes, "Bearer " prefix
+  const accessToken = (process.env.SALLA_ACCESS_TOKEN || "")
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .replace(/^Bearer\s+/i, "");
   if (!accessToken) {
     const error = new Error(
       "SALLA_ACCESS_TOKEN is not set in Vercel environment variables",
@@ -73,18 +77,21 @@ export async function merchantApi(path) {
     },
   });
 
-  if (response.status === 401) {
-    const error = new Error(
-      "Salla rejected SALLA_ACCESS_TOKEN (expired, revoked, or missing the products scope)",
-    );
-    error.code = "token_expired";
-    throw error;
-  }
-
   const body = parseJson(
     await response.text(),
     response.status,
     "Merchant API",
   );
+
+  if (response.status === 401) {
+    // Surface Salla's own reason (invalid token, missing scope, inactive user…)
+    const reason = body.error?.message || "no reason given";
+    const error = new Error(
+      `Salla rejected SALLA_ACCESS_TOKEN: ${reason} (token starts with "${accessToken.slice(0, 7)}…", length ${accessToken.length})`,
+    );
+    error.code = "token_expired";
+    throw error;
+  }
+
   return { status: response.status, body };
 }
