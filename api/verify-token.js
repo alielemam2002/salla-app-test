@@ -39,8 +39,8 @@ export default async function handler(req, res) {
         .json({ success: false, error: "App ID is required" });
     }
 
-    // Determine environment (default to 'dev' when ENV is not set, e.g. local vercel dev)
-    const environment = process.env.ENV || "dev";
+    // Determine environment (default to 'prod'; set ENV=dev to use Salla's internal dev service)
+    const environment = process.env.ENV || "prod";
 
     // Get API URL based on environment
     const apiUrl = VERIFY_API_URLS[environment];
@@ -79,7 +79,18 @@ export default async function handler(req, res) {
     // Debug log response status
     console.log("Salla API response status:", response.status);
 
-    const result = await response.json();
+    // Salla may answer with a non-JSON body (e.g. an HTML error page)
+    const text = await response.text();
+    let result;
+    try {
+      result = JSON.parse(text);
+    } catch {
+      console.error("Non-JSON response from Salla API:", text.slice(0, 200));
+      return res.status(502).json({
+        success: false,
+        error: `Salla verify API (${environment}) returned a non-JSON response with status ${response.status}`,
+      });
+    }
 
     // Return the result with appropriate status code
     res.setHeader("Access-Control-Allow-Origin", "*"); // Allow CORS
