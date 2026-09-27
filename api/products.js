@@ -3,15 +3,19 @@
  *
  * POST /api/products  { token, appId?, page?, perPage? }
  *
- * 1. Verifies the embedded session token via Salla introspect → merchant_id
- * 2. Looks up that merchant's stored OAuth access token (see api/webhook.js)
- * 3. Calls GET /admin/v2/products on the merchant's behalf
+ * 1. Verifies the embedded session token via Salla introspect
+ * 2. Calls GET /admin/v2/products with the store access token from the
+ *    SALLA_ACCESS_TOKEN env var
  */
 
-import { isRedisConfigured } from "./_lib/redis.js";
 import { introspectEmbeddedToken, merchantApi } from "./_lib/salla.js";
 
 const MAX_PER_PAGE = 60; // Salla's per_page limit
+
+const ERROR_STATUS = {
+  token_not_configured: 500,
+  token_expired: 401,
+};
 
 const fail = (status, code, error) =>
   Response.json({ success: false, code, error }, { status });
@@ -35,13 +39,6 @@ export async function POST(request) {
 
   if (!token) return fail(400, "bad_request", "Token is required");
   if (!appId) return fail(400, "bad_request", "App ID is required");
-  if (!isRedisConfigured()) {
-    return fail(
-      500,
-      "storage_not_configured",
-      "Redis is not configured. Add Upstash Redis to the Vercel project.",
-    );
-  }
 
   try {
     const session = await introspectEmbeddedToken(token, appId);
@@ -49,9 +46,7 @@ export async function POST(request) {
       return fail(session.status, "session_invalid", session.error);
     }
 
-    const merchantId = session.data.merchant_id;
     const { status, body: result } = await merchantApi(
-      merchantId,
       `/products?page=${page}&per_page=${perPage}`,
     );
 
@@ -65,14 +60,14 @@ export async function POST(request) {
 
     return Response.json({
       success: true,
-      merchantId,
+      merchantId: session.data.merchant_id,
       products: result.data || [],
       pagination: result.pagination || null,
     });
   } catch (error) {
     console.error("Products fetch failed:", error);
     return fail(
-      error.code === "not_installed" ? 404 : 500,
+      ERROR_STATUS[error.code] || 500,
       error.code || "server_error",
       error.message || "Internal server error",
     );

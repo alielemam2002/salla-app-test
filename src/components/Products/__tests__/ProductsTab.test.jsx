@@ -70,17 +70,19 @@ describe("ProductsTab", () => {
     expect(embedded.auth.refresh).toHaveBeenCalled();
   });
 
-  it("shows the setup hint when the store has no stored token", async () => {
+  it("shows the setup hint when the access token is not configured", async () => {
     fetchProductsPage.mockResolvedValue({
       success: false,
-      code: "not_installed",
-      error: "No access token stored for this store.",
+      code: "token_not_configured",
+      error: "SALLA_ACCESS_TOKEN is not set",
     });
 
     render(<ProductsTab embedded={makeEmbedded()} showToast={vi.fn()} />);
 
     await waitFor(() =>
-      expect(screen.getByText(/Reinstall the app/)).toBeInTheDocument(),
+      expect(
+        screen.getByText(/Add the store's Merchant API access token/),
+      ).toBeInTheDocument(),
     );
   });
 });

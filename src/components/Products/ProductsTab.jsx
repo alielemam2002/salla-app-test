@@ -10,10 +10,10 @@ const PER_PAGE = 30;
 
 // Setup hints shown for errors the merchant/developer can fix
 const ERROR_HINTS = {
-  not_installed:
-    "No access token is stored for this store yet. Reinstall the app on the store so Salla sends app.store.authorize to /api/webhook.",
-  storage_not_configured:
-    "Add Upstash Redis to the Vercel project (Storage → Marketplace), then redeploy.",
+  token_not_configured:
+    "Add the store's Merchant API access token to Vercel as SALLA_ACCESS_TOKEN, then redeploy.",
+  token_expired:
+    "SALLA_ACCESS_TOKEN was rejected. Access tokens expire after 14 days: put a fresh token in Vercel and redeploy, and make sure the app has the products read scope.",
   session_invalid:
     "The embedded session token is invalid or expired. Refresh the session to get a new one.",
 };
@@ -188,7 +188,7 @@ export default function ProductsTab({ embedded, showToast }) {
         <h2 className="panel-title">Products</h2>
         <span className="panel-subtitle">
           GET /admin/v2/products via /api/products (embedded token → introspect
-          → stored merchant access token)
+          → SALLA_ACCESS_TOKEN)
         </span>
       </div>
       <div className="panel-actions">

@@ -14,21 +14,25 @@ Source docs: https://docs.salla.dev/embedded-sdk/overview.md (index of all pages
 | `pnpm test`                 | Vitest (jsdom) with coverage                                 |
 | `pnpm lint` / `pnpm format` | ESLint / Prettier                                            |
 
-- **Hosting: Vercel.** Config in [vercel.json](vercel.json). Serverless functions live in [api/](api/) (Node, ESM). `verify-token.js` uses `export default function handler(req, res)`; newer ones use Web-style `export async function POST(request)` (needed for raw-body webhook signatures). Shared code goes in [api/\_lib/](api/_lib/), whose files are not deployed as functions. There is no Netlify anymore; don't reintroduce `/.netlify/functions/*` paths.
+- **Hosting: Vercel.** Config in [vercel.json](vercel.json). Serverless functions live in [api/](api/) (Node, ESM). `verify-token.js` uses `export default function handler(req, res)`; newer ones use Web-style `export async function POST(request)`. Shared code goes in [api/\_lib/](api/_lib/), whose files are not deployed as functions. There is no Netlify anymore; don't reintroduce `/.netlify/functions/*` paths.
 - **Products tab (Merchant API access):**
-  - [api/webhook.js](api/webhook.js) verifies the Salla signature and stores each merchant's OAuth tokens in Upstash Redis on `app.store.authorize`. It deletes them on `app.uninstalled`.
-  - [api/products.js](api/products.js) introspects the embedded token to get `merchant_id`, loads that merchant's stored token, and calls `GET /admin/v2/products`.
-  - [api/\_lib/salla.js](api/_lib/salla.js) refreshes tokens under a per-merchant Redis lock, because refresh tokens are single-use.
+  - [api/products.js](api/products.js) introspects the embedded token (to confirm the caller is a real merchant session), then calls `GET /admin/v2/products` with the access token from the `SALLA_ACCESS_TOKEN` env var.
+  - There is **no token storage** (Redis was removed on purpose). So this works for one store, and the token must be replaced by hand when it expires after 14 days. Don't reintroduce a webhook or database unless asked.
   - UI: [src/components/Products/ProductsTab.jsx](src/components/Products/ProductsTab.jsx) and [src/utils/productsApi.js](src/utils/productsApi.js).
 - **Vercel env vars:**
 
-  | Variable                                                            | Required? | Purpose                                                                   |
-  | ------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------- |
-  | `KV_REST_API_URL` / `KV_REST_API_TOKEN` (or `UPSTASH_REDIS_REST_*`) | Yes       | Redis connection. Set automatically when you add Upstash Redis in Vercel. |
-  | `SALLA_WEBHOOK_SECRET`                                              | Yes       | Webhook secret from the Partners Portal.                                  |
-  | `SALLA_APP_ID`                                                      | Yes       | Used for introspect. Falls back to the `app_id` the page sends.           |
-  | `SALLA_CLIENT_ID` / `SALLA_CLIENT_SECRET`                           | Yes       | Needed to refresh access tokens.                                          |
-  | `ENV`                                                               | No        | Selects the verify-token upstream.                                        |
+  | Variable             | Required? | Purpose                                                             |
+  | -------------------- | --------- | ------------------------------------------------------------------- |
+  | `SALLA_ACCESS_TOKEN` | Yes       | The store's Merchant API access token, needed for the Products tab. |
+  | `SALLA_APP_ID`       | Yes       | Used for introspect. Falls back to the `app_id` the page sends.     |
+  | `ENV`                | No        | Selects the verify-token upstream.                                  |
+
+------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------- |
+| `KV_REST_API_URL` / `KV_REST_API_TOKEN` (or `UPSTASH_REDIS_REST_*`) | Yes | Redis connection. Set automatically when you add Upstash Redis in Vercel. |
+| `SALLA_WEBHOOK_SECRET` | Yes | Webhook secret from the Partners Portal. |
+| `SALLA_APP_ID` | Yes | Used for introspect. Falls back to the `app_id` the page sends. |
+| `SALLA_CLIENT_ID` / `SALLA_CLIENT_SECRET` | Yes | Needed to refresh access tokens. |
+| `ENV` | No | Selects the verify-token upstream. |
 
 - **Token verification:** frontend [src/utils/tokenVerification.js](src/utils/tokenVerification.js) → `POST /api/verify-token` → [api/verify-token.js](api/verify-token.js) → Salla exchange-authority. `ENV` env var picks the upstream (`prod` default = `api.salla.dev`; `dev` = Salla's internal dev worker, not reachable for partners).
 - **App ID** is read from the `app_id` URL query param ([src/utils/constants.js](src/utils/constants.js)).
