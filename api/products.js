@@ -15,6 +15,7 @@ const MAX_PER_PAGE = 60; // Salla's per_page limit
 const ERROR_STATUS = {
   token_not_configured: 500,
   token_expired: 401,
+  missing_scope: 403,
 };
 
 const fail = (status, code, error) =>

@@ -89,7 +89,7 @@ export async function merchantApi(path) {
     const error = new Error(
       `Salla rejected SALLA_ACCESS_TOKEN: ${reason} (token starts with "${accessToken.slice(0, 7)}…", length ${accessToken.length})`,
     );
-    error.code = "token_expired";
+    error.code = /scope/i.test(reason) ? "missing_scope" : "token_expired";
     throw error;
   }
 

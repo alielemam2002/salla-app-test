@@ -12,6 +12,8 @@ const PER_PAGE = 30;
 const ERROR_HINTS = {
   token_not_configured:
     "Add the store's Merchant API access token to Vercel as SALLA_ACCESS_TOKEN, then redeploy.",
+  missing_scope:
+    "The token works but lacks products permission. In the Partners Portal enable the Products scope (App Scopes → Update Scope), reinstall the app on the store, then put the NEW access_token (its scope must include products) in SALLA_ACCESS_TOKEN and redeploy.",
   token_expired:
     "SALLA_ACCESS_TOKEN was rejected. Access tokens expire after 14 days: put a fresh token in Vercel and redeploy, and make sure the app has the products read scope.",
   session_invalid:
