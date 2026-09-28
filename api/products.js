@@ -25,11 +25,22 @@ const ERROR_STATUS = {
   validation_failed: 422,
 };
 
-const fail = (status, code, error, fields = null) =>
-  Response.json(
-    { success: false, code, error, ...(fields ? { fields } : {}) },
+const fail = (status, code, error, fields = null) => {
+  let message = error || "Operation failed";
+  if (fields && typeof fields === "object") {
+    const details = Object.entries(fields)
+      .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
+      .filter(Boolean)
+      .join(" | ");
+    if (details && !message.includes(details)) {
+      message = `${message} (${details})`;
+    }
+  }
+  return Response.json(
+    { success: false, code, error: message, ...(fields ? { fields } : {}) },
     { status },
   );
+};
 
 export async function POST(request) {
   let body;
@@ -277,57 +288,75 @@ export async function POST(request) {
         ) {
           payload.quantity = Number(payload.quantity);
         }
+
         if (
           payload.maximum_quantity_per_order !== undefined &&
           payload.maximum_quantity_per_order !== null &&
           payload.maximum_quantity_per_order !== ""
         ) {
-          payload.maximum_quantity_per_order = Number(
-            payload.maximum_quantity_per_order,
-          );
+          const maxQ = Number(payload.maximum_quantity_per_order);
+          if (!isNaN(maxQ) && maxQ > 0) {
+            payload.maximum_quantity_per_order = maxQ;
+          } else {
+            delete payload.maximum_quantity_per_order;
+          }
+        } else {
+          delete payload.maximum_quantity_per_order;
         }
+
         if (payload.hide_quantity !== undefined) {
           payload.hide_quantity = Boolean(payload.hide_quantity);
         }
-        for (const dateField of ["sale_start", "sale_end"]) {
-          if (payload[dateField] !== undefined) {
-            payload[dateField] = payload[dateField] || null;
-          }
-        }
+
         if (
           payload.sale_price !== undefined &&
           payload.sale_price !== null &&
-          payload.sale_price !== ""
+          payload.sale_price !== "" &&
+          !isNaN(Number(payload.sale_price)) &&
+          Number(payload.sale_price) > 0
         ) {
           payload.sale_price = Number(payload.sale_price);
-        } else if (payload.sale_price === null) {
+          if (!payload.sale_end) {
+            delete payload.sale_end;
+          }
+        } else {
           payload.sale_price = null;
+          delete payload.sale_end;
         }
+        delete payload.sale_start;
+
         if (
           payload.cost_price !== undefined &&
           payload.cost_price !== null &&
           payload.cost_price !== ""
         ) {
           payload.cost_price = Number(payload.cost_price);
+        } else {
+          delete payload.cost_price;
         }
+
         if (
           payload.weight !== undefined &&
           payload.weight !== null &&
           payload.weight !== ""
         ) {
           payload.weight = Number(payload.weight);
+        } else {
+          delete payload.weight;
         }
+
         if (
           payload.brand_id !== undefined &&
           payload.brand_id !== null &&
-          payload.brand_id !== ""
+          payload.brand_id !== "" &&
+          !isNaN(Number(payload.brand_id))
         ) {
           payload.brand_id = Number(payload.brand_id);
+        } else {
+          delete payload.brand_id;
         }
 
         if (payload.tags !== undefined) {
-          // Salla's PUT expects tag IDs (numbers). New tags arrive as names
-          // and are created first via POST /products/tags?tag_name=…
           const rawTags = Array.isArray(payload.tags)
             ? payload.tags
             : typeof payload.tags === "string"
@@ -344,49 +373,46 @@ export async function POST(request) {
               typeof tag === "object" ? tag?.name || "" : tag,
             ).trim();
             if (!name) continue;
-            const { status, body: created } = await merchantApi(
-              `/products/tags?tag_name=${encodeURIComponent(name)}`,
-              { method: "POST" },
-            );
-            const createdTag = Array.isArray(created.data)
-              ? created.data[0]
-              : created.data;
-            if (!created.success || !createdTag?.id) {
-              return fail(
-                status >= 400 ? status : 502,
-                "salla_api_error",
-                created.error?.message || `Failed to create tag "${name}"`,
-                created.error?.fields,
+            try {
+              const { body: created } = await merchantApi(
+                `/products/tags?tag_name=${encodeURIComponent(name)}`,
+                { method: "POST" },
               );
+              const createdTag = Array.isArray(created.data)
+                ? created.data[0]
+                : created.data;
+              if (created.success && createdTag?.id) {
+                tagIds.push(Number(createdTag.id));
+              }
+            } catch {
+              // Ignore tag creation error and continue
             }
-            tagIds.push(Number(createdTag.id));
           }
-          payload.tags = [...new Set(tagIds)];
+          if (tagIds.length > 0) {
+            payload.tags = [...new Set(tagIds)];
+          } else {
+            delete payload.tags;
+          }
         }
-        if (payload.metadata_title !== undefined) {
-          payload.metadata_title = String(payload.metadata_title || "").trim();
-        }
-        if (payload.metadata_description !== undefined) {
-          payload.metadata_description = String(
-            payload.metadata_description || "",
-          ).trim();
-        }
-        if (payload.metadata_url !== undefined) {
-          payload.metadata_url = String(payload.metadata_url || "").trim();
-        }
-        if (payload.promotion_title !== undefined) {
-          payload.promotion_title = String(
-            payload.promotion_title || "",
-          ).trim();
-        }
-        if (payload.subtitle !== undefined) {
-          payload.subtitle = String(payload.subtitle || "").trim();
-        }
-        if (payload.gtin !== undefined) {
-          payload.gtin = String(payload.gtin || "").trim();
-        }
-        if (payload.mpn !== undefined) {
-          payload.mpn = String(payload.mpn || "").trim();
+
+        for (const strField of [
+          "metadata_title",
+          "metadata_description",
+          "metadata_url",
+          "promotion_title",
+          "subtitle",
+          "gtin",
+          "mpn",
+          "sku",
+        ]) {
+          if (payload[strField] !== undefined) {
+            const val = String(payload[strField] || "").trim();
+            if (val) {
+              payload[strField] = val;
+            } else {
+              delete payload[strField];
+            }
+          }
         }
 
         // Remove immutable or read-only fields on update
@@ -397,13 +423,21 @@ export async function POST(request) {
 
         // Normalize images array if present
         if (Array.isArray(payload.images)) {
-          payload.images = payload.images.map((img, idx) => ({
-            ...(img.id ? { id: img.id } : {}),
-            original: img.original || img.url,
-            default: Boolean(img.default),
-            sort: img.sort !== undefined ? Number(img.sort) : idx + 1,
-            alt: img.alt || "",
-          }));
+          const validImages = payload.images
+            .filter((img) => img && (img.original || img.url))
+            .map((img, idx) => ({
+              ...(img.id ? { id: img.id } : {}),
+              original: img.original || img.url,
+              default: Boolean(img.default),
+              sort: img.sort !== undefined ? Number(img.sort) : idx + 1,
+              alt: img.alt || "",
+            }));
+
+          if (validImages.length > 0) {
+            payload.images = validImages;
+          } else {
+            delete payload.images;
+          }
         }
 
         const { status, body: result } = await merchantApi(

@@ -107,6 +107,23 @@ export function useProductImages(productId, token) {
 /**
  * Mutation: Update product details (basic info, pricing, SEO, categories, tags).
  */
+function formatApiError(res, fallbackMessage = "Operation failed") {
+  let msg = res.error || fallbackMessage;
+  if (res.fields && typeof res.fields === "object") {
+    const details = Object.entries(res.fields)
+      .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
+      .filter(Boolean)
+      .join(" | ");
+    if (details && !msg.includes(details)) {
+      msg = `${msg} (${details})`;
+    }
+  }
+  const error = new Error(msg);
+  error.fields = res.fields;
+  error.code = res.code;
+  return error;
+}
+
 export function useUpdateProduct(productId, token) {
   const queryClient = useQueryClient();
 
@@ -114,10 +131,7 @@ export function useUpdateProduct(productId, token) {
     mutationFn: async (payload) => {
       const res = await updateProduct(token, productId, payload);
       if (!res.success) {
-        const error = new Error(res.error || "Failed to update product");
-        error.fields = res.fields;
-        error.code = res.code;
-        throw error;
+        throw formatApiError(res, "Failed to update product");
       }
       return res.product;
     },
@@ -143,7 +157,7 @@ export function useUploadProductImage(productId, token) {
     mutationFn: async (imageData) => {
       const res = await uploadProductImage(token, productId, imageData);
       if (!res.success) {
-        throw new Error(res.error || "Failed to upload image");
+        throw formatApiError(res, "Failed to upload image");
       }
       return res.image;
     },
@@ -164,7 +178,7 @@ export function useDeleteProductImage(productId, token) {
     mutationFn: async (imageId) => {
       const res = await deleteProductImage(token, productId, imageId);
       if (!res.success) {
-        throw new Error(res.error || "Failed to delete image");
+        throw formatApiError(res, "Failed to delete image");
       }
       return imageId;
     },
@@ -190,7 +204,7 @@ export function useUpdateVariant(productId, token) {
         variantData,
       );
       if (!res.success) {
-        throw new Error(res.error || "Failed to update variant");
+        throw formatApiError(res, "Failed to update variant");
       }
       return res.variant;
     },
@@ -211,7 +225,7 @@ export function useCreateOption(productId, token) {
     mutationFn: async (optionData) => {
       const res = await createProductOption(token, productId, optionData);
       if (!res.success) {
-        throw new Error(res.error || "Failed to create option");
+        throw formatApiError(res, "Failed to create option");
       }
       return res.option;
     },
@@ -233,7 +247,7 @@ export function useDeleteOption(productId, token) {
     mutationFn: async (optionId) => {
       const res = await deleteProductOption(token, productId, optionId);
       if (!res.success) {
-        throw new Error(res.error || "Failed to delete option");
+        throw formatApiError(res, "Failed to delete option");
       }
       return optionId;
     },

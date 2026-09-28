@@ -295,9 +295,24 @@ export default function ProductEditor({
 
   // Section / Master Save Handler
   const executeSave = async (formData) => {
+    // 1. Validation checks
+    const regPrice = Number(formData.price);
+    if (isNaN(regPrice) || regPrice < 0) {
+      showToast?.("يرجى إدخال سعر صحيح للمنتج.", "error");
+      return;
+    }
+
+    if (formData.sale_price !== "" && Number(formData.sale_price) > 0) {
+      const saleVal = Number(formData.sale_price);
+      if (saleVal >= regPrice) {
+        showToast?.("سعر الخصم يجب أن يكون أقل من السعر الأساسي للمنتج.", "error");
+        return;
+      }
+    }
+
     const payload = {
       name: formData.name.trim(),
-      price: Number(formData.price),
+      price: regPrice,
       description: formData.description.trim() || undefined,
       subtitle: formData.subtitle.trim() || undefined,
       promotion_title: formData.promotion_title.trim() || undefined,
@@ -309,12 +324,17 @@ export default function ProductEditor({
       metadata_url: slugify(formData.metadata_url) || undefined,
       unlimited_quantity: formData.unlimited_quantity,
       hide_quantity: formData.hide_quantity,
-      maximum_quantity_per_order:
-        formData.maximum_quantity_per_order !== "" &&
-        Number(formData.maximum_quantity_per_order) >= 0
-          ? Number(formData.maximum_quantity_per_order)
-          : 0,
     };
+
+    if (
+      formData.maximum_quantity_per_order !== "" &&
+      formData.maximum_quantity_per_order !== undefined &&
+      Number(formData.maximum_quantity_per_order) > 0
+    ) {
+      payload.maximum_quantity_per_order = Number(
+        formData.maximum_quantity_per_order,
+      );
+    }
 
     // Salla ignores quantity when unlimited_quantity=true, so don't send it
     if (
@@ -328,10 +348,11 @@ export default function ProductEditor({
 
     if (formData.sale_price !== "" && Number(formData.sale_price) > 0) {
       payload.sale_price = Number(formData.sale_price);
-      payload.sale_end = formData.sale_end || null;
+      if (formData.sale_end) {
+        payload.sale_end = formData.sale_end;
+      }
     } else {
       payload.sale_price = null;
-      payload.sale_end = null;
     }
 
     if (formData.cost_price !== "" && !isNaN(Number(formData.cost_price))) {
@@ -351,13 +372,19 @@ export default function ProductEditor({
     }
 
     if (localImages.length > 0) {
-      payload.images = localImages.map((img, idx) => ({
-        ...(img.id ? { id: img.id } : {}),
-        original: img.original,
-        default: idx === 0,
-        sort: idx + 1,
-        alt: img.alt || formData.name || "",
-      }));
+      const validImages = localImages
+        .filter((img) => img && (img.original || img.url))
+        .map((img, idx) => ({
+          ...(img.id ? { id: img.id } : {}),
+          original: img.original || img.url,
+          default: idx === 0,
+          sort: idx + 1,
+          alt: img.alt || formData.name || "",
+        }));
+
+      if (validImages.length > 0) {
+        payload.images = validImages;
+      }
     }
 
     try {
