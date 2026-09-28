@@ -5,6 +5,7 @@ import {
   prepareBulkDiscountPayload,
   prepareRemoveDiscountPayload,
   bulkUpdateProductPrices,
+  getProductRegularPrice,
 } from "../../utils/discountsApi.js";
 import { fetchAllProducts } from "../../utils/productsApi.js";
 import {
@@ -639,10 +640,7 @@ export default function BulkDiscountModal({
                         </tr>
                       ) : (
                         previewProducts.map((p) => {
-                          const regPrice =
-                            typeof p.price === "object"
-                              ? Number(p.price?.amount || 0)
-                              : Number(p.price || 0);
+                          const regPrice = getProductRegularPrice(p);
 
                           const hasCurrentSale = Boolean(
                             p.sale_price?.amount || p.sale_price,

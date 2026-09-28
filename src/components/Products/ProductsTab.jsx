@@ -46,6 +46,42 @@ function formatPrice(price) {
   return String(price);
 }
 
+function getProductRegularPrice(product) {
+  if (!product) return null;
+  const reg = product.regular_price;
+  const regVal = typeof reg === "object" ? reg?.amount : reg;
+  if (
+    regVal !== undefined &&
+    regVal !== null &&
+    regVal !== "" &&
+    !isNaN(Number(regVal)) &&
+    Number(regVal) > 0
+  ) {
+    return typeof reg === "object"
+      ? reg
+      : { amount: Number(regVal), currency: product.price?.currency || "SAR" };
+  }
+  return product.price;
+}
+
+function getProductSalePrice(product) {
+  if (!product) return null;
+  const sale = product.sale_price;
+  const saleVal = typeof sale === "object" ? sale?.amount : sale;
+  if (
+    saleVal !== undefined &&
+    saleVal !== null &&
+    saleVal !== "" &&
+    !isNaN(Number(saleVal)) &&
+    Number(saleVal) > 0
+  ) {
+    return typeof sale === "object"
+      ? sale
+      : { amount: Number(saleVal), currency: product.price?.currency || "SAR" };
+  }
+  return null;
+}
+
 function productImage(product) {
   return (
     product.thumbnail ||
@@ -105,12 +141,39 @@ function ProductRow({
           </div>
         </td>
         <td>
-          <div className="products-price">{formatPrice(product.price)}</div>
-          {product.sale_price?.amount ? (
-            <div className="products-sale-badge">
-              Sale: {formatPrice(product.sale_price)}
-            </div>
-          ) : null}
+          {(() => {
+            const regPrice = getProductRegularPrice(product);
+            const salePrice = getProductSalePrice(product);
+            const regNum = Number(
+              typeof regPrice === "object" ? regPrice?.amount : regPrice,
+            );
+            const saleNum = Number(
+              typeof salePrice === "object" ? salePrice?.amount : salePrice,
+            );
+            const hasSale = Boolean(
+              salePrice &&
+                !isNaN(saleNum) &&
+                saleNum > 0 &&
+                (!isNaN(regNum) ? saleNum < regNum : true),
+            );
+
+            if (hasSale) {
+              return (
+                <div className="products-price-block">
+                  <div className="products-price-original">
+                    {formatPrice(regPrice)}
+                  </div>
+                  <div className="products-sale-badge">
+                    Sale: {formatPrice(salePrice)}
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div className="products-price">{formatPrice(product.price)}</div>
+            );
+          })()}
         </td>
         <td>{stock}</td>
         <td>
@@ -430,17 +493,31 @@ export default function ProductsTab({ embedded, showToast }) {
             (item) => Number(item.id) === Number(p.id),
           );
           if (!updated) return p;
+
+          const baseRegular = p.regular_price || p.price;
+          const currency =
+            typeof baseRegular === "object"
+              ? baseRegular.currency || "SAR"
+              : "SAR";
+
           if (mode === "apply") {
             return {
               ...p,
+              regular_price: baseRegular,
+              price: {
+                amount: updated.sale_price,
+                currency,
+              },
               sale_price: {
                 amount: updated.sale_price,
-                currency: "SAR",
+                currency,
               },
             };
           } else {
             return {
               ...p,
+              price: baseRegular,
+              regular_price: null,
               sale_price: null,
             };
           }

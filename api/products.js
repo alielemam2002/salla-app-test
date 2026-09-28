@@ -264,6 +264,13 @@ export async function POST(request) {
           payload.price = Number(payload.price);
         }
         if (
+          payload.regular_price !== undefined &&
+          payload.regular_price !== null &&
+          payload.regular_price !== ""
+        ) {
+          payload.regular_price = Number(payload.regular_price);
+        }
+        if (
           payload.quantity !== undefined &&
           payload.quantity !== null &&
           payload.quantity !== ""
@@ -276,6 +283,8 @@ export async function POST(request) {
           payload.sale_price !== ""
         ) {
           payload.sale_price = Number(payload.sale_price);
+        } else if (payload.sale_price === null) {
+          payload.sale_price = null;
         }
         if (
           payload.cost_price !== undefined &&

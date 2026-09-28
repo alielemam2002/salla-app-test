@@ -344,4 +344,27 @@ describe("ProductsTab", () => {
       await screen.findByRole("heading", { name: "Bulk Product Discount" }),
     ).toBeInTheDocument();
   });
+
+  it("displays regular price with strikethrough and sale price when product is on sale", async () => {
+    fetchProductsPage.mockResolvedValue({
+      success: true,
+      products: [
+        {
+          id: 99,
+          name: "Discounted Sneakers",
+          regular_price: { amount: 200, currency: "SAR" },
+          price: { amount: 150, currency: "SAR" },
+          sale_price: { amount: 150, currency: "SAR" },
+          status: "sale",
+        },
+      ],
+      pagination: { total: 1, totalPages: 1 },
+    });
+
+    render(<ProductsTab embedded={makeEmbedded()} showToast={vi.fn()} />);
+    await screen.findByText("Discounted Sneakers");
+
+    expect(screen.getByText("200 SAR")).toBeInTheDocument();
+    expect(screen.getByText("Sale: 150 SAR")).toBeInTheDocument();
+  });
 });

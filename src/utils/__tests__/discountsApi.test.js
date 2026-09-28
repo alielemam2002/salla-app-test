@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   calculateDiscountedPrice,
+  getProductRegularPrice,
   prepareBulkDiscountPayload,
   prepareRemoveDiscountPayload,
   bulkUpdateProductPrices,
@@ -10,6 +11,32 @@ import { PRODUCTS_FUNCTION_URL } from "../constants.js";
 describe("discountsApi", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  describe("getProductRegularPrice", () => {
+    it("prioritizes regular_price over sale-discounted price", () => {
+      // In Salla, an on-sale product has regular_price = 150, and price = 100
+      const onSaleProduct = {
+        id: 1,
+        regular_price: { amount: 150, currency: "SAR" },
+        price: { amount: 100, currency: "SAR" },
+        sale_price: { amount: 100, currency: "SAR" },
+      };
+      expect(getProductRegularPrice(onSaleProduct)).toBe(150);
+    });
+
+    it("falls back to price if regular_price is not present", () => {
+      const normalProduct = {
+        id: 2,
+        price: { amount: 200, currency: "SAR" },
+      };
+      expect(getProductRegularPrice(normalProduct)).toBe(200);
+    });
+
+    it("handles number types", () => {
+      expect(getProductRegularPrice({ regular_price: 300, price: 250 })).toBe(300);
+      expect(getProductRegularPrice({ price: 250 })).toBe(250);
+    });
   });
 
   describe("calculateDiscountedPrice", () => {

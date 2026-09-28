@@ -91,10 +91,15 @@ export default function ProductModal({
     setImageUrlInput("");
 
     if (product) {
+      const regPriceObj =
+        product.regular_price !== undefined && product.regular_price !== null
+          ? product.regular_price
+          : product.price;
+
       const priceVal =
-        typeof product.price === "object"
-          ? (product.price?.amount ?? "")
-          : (product.price ?? "");
+        typeof regPriceObj === "object"
+          ? (regPriceObj?.amount ?? "")
+          : (regPriceObj ?? "");
 
       const salePriceVal =
         typeof product.sale_price === "object"
@@ -276,6 +281,12 @@ export default function ProductModal({
     if (formData.sale_price !== "" && !isNaN(Number(formData.sale_price))) {
       if (Number(formData.sale_price) < 0) {
         errors.sale_price = "Sale price cannot be negative.";
+      } else if (
+        formData.price !== "" &&
+        !isNaN(Number(formData.price)) &&
+        Number(formData.sale_price) >= Number(formData.price)
+      ) {
+        errors.sale_price = "Sale price must be lower than the regular price.";
       }
     }
 
@@ -314,6 +325,7 @@ export default function ProductModal({
     const payload = {
       name: formData.name.trim(),
       price: Number(formData.price),
+      regular_price: Number(formData.price),
       status: formData.status,
       description: formData.description.trim() || undefined,
       subtitle: formData.subtitle.trim() || undefined,
@@ -334,6 +346,8 @@ export default function ProductModal({
 
     if (formData.sale_price !== "") {
       payload.sale_price = Number(formData.sale_price);
+    } else if (isEditing) {
+      payload.sale_price = null;
     }
     if (formData.cost_price !== "") {
       payload.cost_price = Number(formData.cost_price);

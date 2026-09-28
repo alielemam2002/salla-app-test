@@ -27,6 +27,41 @@ async function callApi(payload) {
 }
 
 /**
+ * Extract the true regular (base) price of a product.
+ * In Salla, when a product is on sale, `product.price` reflects the discounted price,
+ * while `product.regular_price` holds the original base price.
+ * @param {object} product
+ * @returns {number}
+ */
+export function getProductRegularPrice(product) {
+  if (!product) return 0;
+  const regRaw = product.regular_price;
+  const regVal = typeof regRaw === "object" ? regRaw?.amount : regRaw;
+  if (
+    regVal !== undefined &&
+    regVal !== null &&
+    regVal !== "" &&
+    !isNaN(Number(regVal)) &&
+    Number(regVal) > 0
+  ) {
+    return Number(regVal);
+  }
+
+  const priceRaw = product.price;
+  const priceVal = typeof priceRaw === "object" ? priceRaw?.amount : priceRaw;
+  if (
+    priceVal !== undefined &&
+    priceVal !== null &&
+    priceVal !== "" &&
+    !isNaN(Number(priceVal))
+  ) {
+    return Number(priceVal);
+  }
+
+  return 0;
+}
+
+/**
  * Calculate the new sale price based on regular price, discount type, and value.
  * @param {number} regularPrice
  * @param {"percentage"|"fixed"} discountType
@@ -72,10 +107,7 @@ export function prepareBulkDiscountPayload(
 ) {
   return products
     .map((product) => {
-      const regularPrice =
-        typeof product.price === "object"
-          ? Number(product.price?.amount)
-          : Number(product.price);
+      const regularPrice = getProductRegularPrice(product);
 
       if (isNaN(regularPrice) || regularPrice <= 0) {
         return null;
@@ -110,10 +142,7 @@ export function prepareBulkDiscountPayload(
 export function prepareRemoveDiscountPayload(products) {
   return products
     .map((product) => {
-      const regularPrice =
-        typeof product.price === "object"
-          ? Number(product.price?.amount)
-          : Number(product.price);
+      const regularPrice = getProductRegularPrice(product);
 
       if (isNaN(regularPrice) || regularPrice <= 0) {
         return null;

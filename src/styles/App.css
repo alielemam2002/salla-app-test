@@ -1419,10 +1419,23 @@ pre,
   color: var(--text-primary);
 }
 
-.products-sale-badge {
-  font-size: 0.75rem;
-  color: var(--accent-success);
+.products-price-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.products-price-original {
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  text-decoration: line-through;
   font-weight: 500;
+}
+
+.products-sale-badge {
+  font-size: 0.8rem;
+  color: var(--accent-success);
+  font-weight: 600;
 }
 
 .products-expand-col {
