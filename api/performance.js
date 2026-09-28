@@ -26,6 +26,12 @@ const CRUX_TIMEOUT_MS = 8000;
 // That is a problem with the URL, not with this service.
 const LIGHTHOUSE_DOCUMENT_ERROR = /FAILED_DOCUMENT_REQUEST|ERRORED_DOCUMENT_REQUEST|DNS_FAILURE|NO_FCP|NOT_HTML|INVALID_URL/i;
 
+// Google's generic "Lighthouse returned error: Something went wrong." (HTTP 500).
+// The Lighthouse run crashed on Google's side; a second attempt often succeeds.
+const LIGHTHOUSE_TRANSIENT_ERROR = /Lighthouse returned error|Something went wrong/i;
+// Only retry when enough of the PageSpeed budget is left for a real run.
+const MIN_RETRY_BUDGET_MS = 15000;
+
 // 10 minutes in-memory cache for fast repeated views and zero redundant fetches
 const scanCache = new Map();
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -105,7 +111,7 @@ function parseSafeUrl(rawUrl) {
 /**
  * Executes a single PageSpeed Insights request with timeout and error classification
  */
-async function fetchPageSpeed(url, strategy, apiKey) {
+async function fetchPageSpeed(url, strategy, apiKey, timeoutMs = PAGESPEED_TIMEOUT_MS) {
   const query = new URLSearchParams({
     url,
     strategy,
@@ -120,7 +126,7 @@ async function fetchPageSpeed(url, strategy, apiKey) {
   const endpoint = `${PAGESPEED_API_BASE}?${query.toString()}`;
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), PAGESPEED_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const res = await fetch(endpoint, {
@@ -161,6 +167,14 @@ async function fetchPageSpeed(url, strategy, apiKey) {
           error: `تعذّر على Google تحميل صفحة المتجر. تأكد من أن الرابط صحيح ومتاح للعامة (بدون كلمة مرور أو حماية ضد الزوار الآليين). ${msg}`
         };
       }
+      if (res.status >= 500 && LIGHTHOUSE_TRANSIENT_ERROR.test(msg)) {
+        return {
+          ok: false,
+          status: 502,
+          code: "lighthouse_error",
+          error: "تعطّل محرك Lighthouse لدى Google أثناء فحص الصفحة (خطأ مؤقت من جهة Google). يرجى إعادة المحاولة بعد قليل. إذا تكرر الخطأ فقد تكون الصفحة ثقيلة جداً أو محمية ضد الزوار الآليين."
+        };
+      }
       return {
         ok: false,
         status: 502,
@@ -182,6 +196,23 @@ async function fetchPageSpeed(url, strategy, apiKey) {
         : err.message || "Failed to connect to PageSpeed API"
     };
   }
+}
+
+/**
+ * Runs PageSpeed, retrying once on Google's transient Lighthouse crash
+ * while staying within PAGESPEED_TIMEOUT_MS overall.
+ */
+async function runPageSpeed(url, strategy, apiKey) {
+  const startedAt = Date.now();
+  const first = await fetchPageSpeed(url, strategy, apiKey);
+  if (first.ok || first.code !== "lighthouse_error") return first;
+
+  const remaining = PAGESPEED_TIMEOUT_MS - (Date.now() - startedAt);
+  if (remaining < MIN_RETRY_BUDGET_MS) return first;
+
+  const second = await fetchPageSpeed(url, strategy, apiKey, remaining);
+  // A timeout on the retry is less useful than the original Lighthouse error.
+  return second.ok || second.code !== "timeout" ? second : first;
 }
 
 /**
@@ -318,18 +349,18 @@ async function handleRequest(body) {
 
     // Progressive Strategy Scanning:
     if (requestedStrategy === "mobile") {
-      mobilePsi = await fetchPageSpeed(targetUrl, "mobile", apiKey);
+      mobilePsi = await runPageSpeed(targetUrl, "mobile", apiKey);
       if (apiKey) cruxMobile = await fetchCrux(targetUrl, targetOrigin, "PHONE", apiKey);
     } else if (requestedStrategy === "desktop") {
-      desktopPsi = await fetchPageSpeed(targetUrl, "desktop", apiKey);
+      desktopPsi = await runPageSpeed(targetUrl, "desktop", apiKey);
       if (apiKey) cruxDesktop = await fetchCrux(targetUrl, targetOrigin, "DESKTOP", apiKey);
     } else {
       // "all": fetch mobile first, then desktop sequentially to avoid Google concurrent 429/timeout
-      mobilePsi = await fetchPageSpeed(targetUrl, "mobile", apiKey);
+      mobilePsi = await runPageSpeed(targetUrl, "mobile", apiKey);
 
       // Only attempt desktop if mobile didn't fail with global quota limit
       if (mobilePsi.code !== "quota_exceeded") {
-        desktopPsi = await fetchPageSpeed(targetUrl, "desktop", apiKey);
+        desktopPsi = await runPageSpeed(targetUrl, "desktop", apiKey);
       } else {
         desktopPsi = { ok: false, error: mobilePsi.error, code: "quota_exceeded", status: 429 };
       }

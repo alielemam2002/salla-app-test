@@ -171,8 +171,8 @@ export function useUpdateProduct(productId, token) {
 
         return merged;
       });
-      // Invalidate list query
-      queryClient.invalidateQueries({ queryKey: productKeys.all });
+      // Invalidate list query only without clobbering current product detail query
+      queryClient.invalidateQueries({ queryKey: productKeys.all, exact: true });
     },
   });
 }

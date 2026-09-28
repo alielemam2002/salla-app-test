@@ -28,7 +28,7 @@ Source docs: https://docs.salla.dev/embedded-sdk/overview.md (index of all pages
   | `ENV`                | No        | Selects the verify-token upstream.                                  |
   | `PAGESPEED_API_KEY` (or `GOOGLE_API_KEY`) | No | Google key for the Performance tab (PageSpeed + CrUX). Without it, scans share Google's anonymous daily quota. |
 
-- **Performance tab:** [api/performance.js](api/performance.js) proxies Google PageSpeed, one strategy per request. A scan can take 20–45 s, so `vercel.json` gives the function `maxDuration: 60`, and the PageSpeed call aborts at 50 s. Errors return 422 `page_unreachable` (Lighthouse couldn't load the URL), 429 `quota_exceeded`, 504 `timeout` or 502 for other upstream failures.
+- **Performance tab:** [api/performance.js](api/performance.js) proxies Google PageSpeed, one strategy per request. A scan can take 20–45 s, so `vercel.json` gives the function `maxDuration: 60`, and the PageSpeed call aborts at 50 s. Errors return 422 `page_unreachable` (Lighthouse couldn't load the URL), 429 `quota_exceeded`, 504 `timeout`, 502 `lighthouse_error` (Google's generic "Lighthouse returned error: Something went wrong."; retried once if at least 15 s of the budget is left) or 502 for other upstream failures.
 
 ------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------- |
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` (or `UPSTASH_REDIS_REST_*`) | Yes | Redis connection. Set automatically when you add Upstash Redis in Vercel. |

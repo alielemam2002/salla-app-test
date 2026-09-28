@@ -18,6 +18,9 @@ import { introspectEmbeddedToken, merchantApi } from "./_lib/salla.js";
 
 const MAX_PER_PAGE = 60; // Salla's per_page limit
 
+// In-memory cache for product metadata like subtitle that might not be echoed in standard Salla GET
+const productMetaOverrides = new Map();
+
 const ERROR_STATUS = {
   token_not_configured: 500,
   token_expired: 401,
@@ -148,11 +151,13 @@ export async function POST(request) {
 
         const product = result.data ? { ...result.data } : result.data;
         if (product && typeof product === "object") {
+          const override = productMetaOverrides.get(String(productId));
           const promo =
             product.promotion_title ||
             product.promotional_title ||
             product.promotion?.title ||
             product.promotion?.name ||
+            override?.promotion_title ||
             "";
           if (promo) {
             product.promotion_title = promo;
@@ -165,6 +170,7 @@ export async function POST(request) {
             product.subTitle ||
             product.metadata?.subtitle ||
             product.metadata?.sub_title ||
+            override?.subtitle ||
             "";
           if (sub) {
             product.subtitle = sub;
@@ -524,6 +530,16 @@ export async function POST(request) {
         if (finalSub) {
           mergedProduct.subtitle = finalSub;
           mergedProduct.sub_title = finalSub;
+        }
+
+        if (finalSub !== undefined) {
+          productMetaOverrides.set(String(productId), {
+            ...(productMetaOverrides.get(String(productId)) || {}),
+            subtitle: finalSub,
+            sub_title: finalSub,
+            promotion_title: finalPromo,
+            promotional_title: finalPromo,
+          });
         }
 
         return Response.json({

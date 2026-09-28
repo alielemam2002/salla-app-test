@@ -75,10 +75,18 @@ export function useProductEditor({
   // Populate form + gallery whenever the product (or its images) arrive
   useEffect(() => {
     if (!product) return;
-    reset(productToFormValues(product));
+    const formVals = productToFormValues(product);
+    const current = getValues();
+    if (!formVals.subtitle && current?.subtitle) {
+      formVals.subtitle = current.subtitle;
+    }
+    if (!formVals.promotion_title && current?.promotion_title) {
+      formVals.promotion_title = current.promotion_title;
+    }
+    reset(formVals);
     const nextImages = normalizeProductImages(product, queryImages);
     if (nextImages) setImages(nextImages);
-  }, [product, queryImages, reset, setImages]);
+  }, [product, queryImages, reset, setImages, getValues]);
 
   const values = watch();
   const scoreData = useCompletionScore({
@@ -97,6 +105,19 @@ export function useProductEditor({
     }
     try {
       await updateProduct.mutateAsync(payload);
+      if (typeof window !== "undefined" && productId) {
+        try {
+          localStorage.setItem(
+            `salla_product_meta_${productId}`,
+            JSON.stringify({
+              subtitle: formData.subtitle || "",
+              promotion_title: formData.promotion_title || "",
+            }),
+          );
+        } catch {
+          // Ignore storage errors
+        }
+      }
       reset(formData);
       notify("تم حفظ بيانات المنتج بنجاح في سلة!", "success");
     } catch (err) {

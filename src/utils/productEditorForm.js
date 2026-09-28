@@ -83,6 +83,16 @@ export function productToFormValues(product) {
         .filter(Boolean)
     : [];
 
+  let savedLocal = null;
+  try {
+    if (typeof window !== "undefined" && product.id) {
+      const raw = localStorage.getItem(`salla_product_meta_${product.id}`);
+      if (raw) savedLocal = JSON.parse(raw);
+    }
+  } catch {
+    // Ignore storage errors
+  }
+
   return {
     name: product.name || "",
     description: product.description || "",
@@ -104,6 +114,7 @@ export function productToFormValues(product) {
       product.promotional_title ||
       product.promotion?.title ||
       product.promotion?.name ||
+      savedLocal?.promotion_title ||
       "",
     subtitle:
       product.subtitle ||
@@ -112,6 +123,7 @@ export function productToFormValues(product) {
       product.subTitle ||
       product.metadata?.subtitle ||
       product.metadata?.sub_title ||
+      savedLocal?.subtitle ||
       "",
     tags: normalizeTags(product.tags),
     metadata_title: product.metadata_title || product.metadata?.title || "",
