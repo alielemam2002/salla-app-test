@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fetchProductsPage, fetchAllProducts } from "../productsApi.js";
+import {
+  fetchProductsPage,
+  fetchAllProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  fetchTaxonomies,
+} from "../productsApi.js";
 
 vi.mock("../constants.js", () => ({
   PRODUCTS_FUNCTION_URL: "/api/products",
@@ -109,5 +116,88 @@ describe("productsApi", () => {
       code: "salla_api_error",
       products: [{ id: 1 }],
     });
+  });
+
+  it("calls createProduct with action create and payload", async () => {
+    global.fetch = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ success: true, product: { id: 10 } }));
+
+    const res = await createProduct("tok", { name: "Test", price: 50 });
+
+    expect(fetch).toHaveBeenCalledWith("/api/products", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "create",
+        token: "tok",
+        appId: "test-app-id",
+        productData: { name: "Test", price: 50 },
+      }),
+    });
+    expect(res.success).toBe(true);
+    expect(res.product.id).toBe(10);
+  });
+
+  it("calls updateProduct with action update and product id", async () => {
+    global.fetch = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ success: true, product: { id: 10 } }));
+
+    const res = await updateProduct("tok", 10, { price: 60 });
+
+    expect(fetch).toHaveBeenCalledWith("/api/products", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "update",
+        token: "tok",
+        appId: "test-app-id",
+        productId: 10,
+        productData: { price: 60 },
+      }),
+    });
+    expect(res.success).toBe(true);
+  });
+
+  it("calls deleteProduct with action delete", async () => {
+    global.fetch = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ success: true, message: "deleted" }));
+
+    const res = await deleteProduct("tok", 10);
+
+    expect(fetch).toHaveBeenCalledWith("/api/products", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "delete",
+        token: "tok",
+        appId: "test-app-id",
+        productId: 10,
+      }),
+    });
+    expect(res.success).toBe(true);
+  });
+
+  it("calls fetchTaxonomies with action taxonomies", async () => {
+    global.fetch = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ success: true, categories: [], brands: [] }),
+      );
+
+    const res = await fetchTaxonomies("tok");
+
+    expect(fetch).toHaveBeenCalledWith("/api/products", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "taxonomies",
+        token: "tok",
+        appId: "test-app-id",
+      }),
+    });
+    expect(res.success).toBe(true);
   });
 });

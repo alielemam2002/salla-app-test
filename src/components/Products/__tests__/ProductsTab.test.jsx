@@ -1,15 +1,31 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import ProductsTab from "../ProductsTab.jsx";
-import { fetchProductsPage } from "../../../utils/productsApi.js";
+import {
+  fetchProductsPage,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  fetchTaxonomies,
+} from "../../../utils/productsApi.js";
 
 vi.mock("../../../utils/productsApi.js", () => ({
   fetchProductsPage: vi.fn(),
   fetchAllProducts: vi.fn(),
+  createProduct: vi.fn(),
+  updateProduct: vi.fn(),
+  deleteProduct: vi.fn(),
+  fetchTaxonomies: vi.fn(() =>
+    Promise.resolve({
+      success: true,
+      categories: [{ id: 101, name: "Clothes" }],
+      brands: [{ id: 201, name: "Nike" }],
+    }),
+  ),
 }));
 
 vi.mock("../../../utils/logger.js", () => ({
-  default: { error: vi.fn() },
+  default: { error: vi.fn(), warn: vi.fn() },
 }));
 
 const makeEmbedded = (token = "tok") => ({
@@ -19,6 +35,11 @@ const makeEmbedded = (token = "tok") => ({
 describe("ProductsTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    fetchTaxonomies.mockResolvedValue({
+      success: true,
+      categories: [{ id: 101, name: "Clothes" }],
+      brands: [{ id: 201, name: "Nike" }],
+    });
   });
 
   it("renders products from the first page", async () => {
@@ -44,6 +65,8 @@ describe("ProductsTab", () => {
     expect(fetchProductsPage).toHaveBeenCalledWith("tok", {
       page: 1,
       perPage: 30,
+      keyword: undefined,
+      status: undefined,
     });
   });
 
@@ -84,5 +107,205 @@ describe("ProductsTab", () => {
         screen.getByText(/Add the store's Merchant API access token/),
       ).toBeInTheDocument(),
     );
+  });
+
+  it("performs search when keyword is submitted", async () => {
+    fetchProductsPage.mockResolvedValue({
+      success: true,
+      products: [
+        {
+          id: 22,
+          name: "Red Shoes",
+          sku: "RS-99",
+          price: 150,
+          quantity: 2,
+          status: "sale",
+        },
+      ],
+      pagination: { total: 1, totalPages: 1 },
+    });
+
+    render(<ProductsTab embedded={makeEmbedded()} showToast={vi.fn()} />);
+    await screen.findByText("Red Shoes");
+
+    const searchInput = screen.getByPlaceholderText(/Search by name or SKU/i);
+    fireEvent.change(searchInput, { target: { value: "Shoes" } });
+
+    const searchButton = screen.getByRole("button", { name: "Search" });
+    fireEvent.click(searchButton);
+
+    await waitFor(() => {
+      expect(fetchProductsPage).toHaveBeenCalledWith("tok", {
+        page: 1,
+        perPage: 30,
+        keyword: "Shoes",
+        status: undefined,
+      });
+    });
+  });
+
+  it("opens Add Product modal and submits new product", async () => {
+    fetchProductsPage.mockResolvedValue({
+      success: true,
+      products: [],
+      pagination: { total: 0, totalPages: 1 },
+    });
+    createProduct.mockResolvedValue({
+      success: true,
+      product: {
+        id: 999,
+        name: "New Summer Cap",
+        price: 45,
+        status: "sale",
+        quantity: 10,
+      },
+    });
+
+    const showToast = vi.fn();
+    render(<ProductsTab embedded={makeEmbedded()} showToast={showToast} />);
+
+    // Click Add Product button in header
+    const addBtn = await screen.findByRole("button", { name: /Add Product/i });
+    fireEvent.click(addBtn);
+
+    // Form modal should be open
+    expect(
+      screen.getByRole("heading", { name: "Add New Product" }),
+    ).toBeInTheDocument();
+
+    // Fill form
+    const nameInput = screen.getByLabelText(/Product Name/i);
+    fireEvent.change(nameInput, { target: { value: "New Summer Cap" } });
+
+    const priceInput = screen.getByLabelText(/Regular Price/i);
+    fireEvent.change(priceInput, { target: { value: "45" } });
+
+    // Submit form
+    const submitBtn = screen.getByRole("button", { name: "Create Product" });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(createProduct).toHaveBeenCalledWith(
+        "tok",
+        expect.objectContaining({
+          name: "New Summer Cap",
+          price: 45,
+          status: "sale",
+        }),
+      );
+      expect(showToast).toHaveBeenCalledWith(
+        expect.stringContaining("created successfully"),
+        "success",
+      );
+    });
+  });
+
+  it("opens Edit Product modal and updates product", async () => {
+    fetchProductsPage.mockResolvedValue({
+      success: true,
+      products: [
+        {
+          id: 55,
+          name: "Green Jacket",
+          price: 200,
+          quantity: 3,
+          status: "sale",
+        },
+      ],
+      pagination: { total: 1, totalPages: 1 },
+    });
+    updateProduct.mockResolvedValue({
+      success: true,
+      product: {
+        id: 55,
+        name: "Green Jacket Premium",
+        price: 220,
+        quantity: 3,
+        status: "sale",
+      },
+    });
+
+    const showToast = vi.fn();
+    render(<ProductsTab embedded={makeEmbedded()} showToast={showToast} />);
+    await screen.findByText("Green Jacket");
+
+    // Click Edit button
+    const editBtn = screen.getByTitle("Edit product");
+    fireEvent.click(editBtn);
+
+    // Form modal should be open with product details
+    expect(
+      screen.getByRole("heading", { name: /Edit Product #55/i }),
+    ).toBeInTheDocument();
+
+    const nameInput = screen.getByLabelText(/Product Name/i);
+    expect(nameInput.value).toBe("Green Jacket");
+
+    fireEvent.change(nameInput, { target: { value: "Green Jacket Premium" } });
+
+    // Submit update
+    const submitBtn = screen.getByRole("button", { name: "Update Product" });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(updateProduct).toHaveBeenCalledWith(
+        "tok",
+        55,
+        expect.objectContaining({
+          name: "Green Jacket Premium",
+        }),
+      );
+      expect(showToast).toHaveBeenCalledWith(
+        expect.stringContaining("updated successfully"),
+        "success",
+      );
+    });
+  });
+
+  it("opens Delete Confirmation dialog and deletes product", async () => {
+    fetchProductsPage.mockResolvedValue({
+      success: true,
+      products: [
+        {
+          id: 77,
+          name: "Old Item",
+          price: 10,
+          status: "out",
+        },
+      ],
+      pagination: { total: 1, totalPages: 1 },
+    });
+    deleteProduct.mockResolvedValue({
+      success: true,
+      productId: 77,
+    });
+
+    const showToast = vi.fn();
+    render(<ProductsTab embedded={makeEmbedded()} showToast={showToast} />);
+    await screen.findByText("Old Item");
+
+    // Click Delete icon
+    const deleteIconBtn = screen.getByTitle("Delete product");
+    fireEvent.click(deleteIconBtn);
+
+    // Confirmation dialog should be visible
+    expect(
+      screen.getByRole("heading", { name: "Delete Product" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Are you sure you want to delete this product/i),
+    ).toBeInTheDocument();
+
+    // Confirm deletion
+    const confirmBtn = screen.getByRole("button", { name: "Delete Product" });
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(deleteProduct).toHaveBeenCalledWith("tok", 77);
+      expect(showToast).toHaveBeenCalledWith(
+        "Product deleted successfully",
+        "success",
+      );
+    });
   });
 });

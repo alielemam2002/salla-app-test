@@ -54,9 +54,11 @@ export async function introspectEmbeddedToken(token, appId) {
 
 /**
  * Call the Merchant API with the access token from SALLA_ACCESS_TOKEN.
+ * @param {string} path - API endpoint path (e.g. '/products')
+ * @param {object} [options] - fetch options (method, body, headers)
  * @returns {Promise<{ status: number, body: any }>}
  */
-export async function merchantApi(path) {
+export async function merchantApi(path, options = {}) {
   // Tolerate common copy/paste mistakes: whitespace, quotes, "Bearer " prefix
   const accessToken = (process.env.SALLA_ACCESS_TOKEN || "")
     .trim()
@@ -70,28 +72,44 @@ export async function merchantApi(path) {
     throw error;
   }
 
+  const method = (options.method || "GET").toUpperCase();
+  const hasBody = options.body !== undefined && options.body !== null;
+  const body = hasBody
+    ? typeof options.body === "string"
+      ? options.body
+      : JSON.stringify(options.body)
+    : undefined;
+
+  const headers = {
+    Authorization: `Bearer ${accessToken}`,
+    Accept: "application/json",
+    ...(hasBody ? { "Content-Type": "application/json" } : {}),
+    ...options.headers,
+  };
+
   const response = await fetch(`${MERCHANT_API_BASE}${path}`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      Accept: "application/json",
-    },
+    method,
+    headers,
+    ...(body ? { body } : {}),
   });
 
-  const body = parseJson(
+  const responseBody = parseJson(
     await response.text(),
     response.status,
     "Merchant API",
   );
 
-  if (response.status === 401) {
+  if (response.status === 401 || response.status === 403) {
     // Surface Salla's own reason (invalid token, missing scope, inactive user…)
-    const reason = body.error?.message || "no reason given";
+    const reason = responseBody.error?.message || "no reason given";
     const error = new Error(
       `Salla rejected SALLA_ACCESS_TOKEN: ${reason} (token starts with "${accessToken.slice(0, 7)}…", length ${accessToken.length})`,
     );
     error.code = /scope/i.test(reason) ? "missing_scope" : "token_expired";
+    error.status = response.status;
+    error.details = responseBody;
     throw error;
   }
 
-  return { status: response.status, body };
+  return { status: response.status, body: responseBody };
 }
