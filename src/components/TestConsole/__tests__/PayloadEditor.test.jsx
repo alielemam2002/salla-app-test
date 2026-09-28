@@ -33,4 +33,12 @@ describe("PayloadEditor", () => {
     const textarea = screen.getByRole("textbox");
     expect(textarea.value).toContain("embedded::ready");
   });
+
+  it("shows an inline error instead of sending invalid JSON", async () => {
+    const onSend = vi.fn();
+    render(<PayloadEditor onSend={onSend} initialPayload="{not json" />);
+    await userEvent.click(screen.getByRole("button", { name: /send/i }));
+    expect(onSend).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/Invalid JSON/);
+  });
 });

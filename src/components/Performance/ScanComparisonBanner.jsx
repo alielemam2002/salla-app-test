@@ -1,90 +1,88 @@
-import React from 'react';
-import { ArrowUpRight, ArrowDownRight, Minus, GitCompare, Clock } from 'lucide-react';
-import { compareScans, getPreviousScan } from '../../utils/performance/historyStorage.js';
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  Clock,
+  GitCompare,
+  Minus,
+} from "lucide-react";
+import { Badge } from "../ui/index.js";
+import {
+  formatDateTime,
+  getStrategyLabel,
+} from "../../utils/performance/formatters.js";
+import PerfSection from "./PerfSection.jsx";
 
-/**
- * Scan Comparison Banner: Compares current test with the previous scan
- */
-export default function ScanComparisonBanner({ currentReport, strategy = 'mobile' }) {
-  if (!currentReport || !currentReport.url) return null;
+const DELTA_ROWS = [
+  { key: "score", title: "Performance Score", isScore: true },
+  { key: "lcp", title: "LCP (سرعة التحميل)" },
+  { key: "cls", title: "CLS (ثبات العناصر)" },
+  { key: "fcp", title: "FCP (أول ظهور)" },
+  { key: "ttfb", title: "TTFB (استجابة الخادم)" },
+];
 
-  const currentDev = currentReport[strategy];
-  if (!currentDev) return null;
+const STATUS = {
+  improved: { icon: ArrowUpRight, label: "تحسن", tone: "success" },
+  regressed: { icon: ArrowDownRight, label: "تراجع", tone: "danger" },
+  stable: { icon: Minus, label: "مستقر", tone: "neutral" },
+};
 
-  const previousScan = getPreviousScan(currentReport.url, strategy, currentReport.fetchedAt);
-  if (!previousScan) return null;
-
-  const comparison = compareScans(currentDev, previousScan);
-  if (!comparison) return null;
-
-  const formatPreviousDate = (dateStr) => {
-    if (!dateStr) return '';
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    } catch {
-      return '';
-    }
-  };
-
-  const renderDeltaItem = (title, diffObj, isScore = false) => {
-    if (!diffObj || diffObj.status === 'no-data') return null;
-
-    const { status, label, current, previous } = diffObj;
-    const isImproved = status === 'improved';
-    const isRegressed = status === 'regressed';
-
-    return (
-      <div className={`perf-comp-item status-${status}`} key={title}>
-        <div className="comp-item-header">
-          <span className="comp-metric-name">{title}</span>
-          <span className={`comp-status-badge ${status}`}>
-            {isImproved && <ArrowUpRight size={14} aria-hidden="true" />}
-            {isRegressed && <ArrowDownRight size={14} aria-hidden="true" />}
-            {!isImproved && !isRegressed && <Minus size={14} aria-hidden="true" />}
-            <span>{isImproved ? 'تحسن' : isRegressed ? 'تراجع' : 'مستقر'}</span>
-          </span>
-        </div>
-
-        <div className="comp-values-row">
-          <span className="comp-curr-val">
-            {isScore ? `${current} نقطة` : diffObj.formattedCur}
-          </span>
-          <span className="comp-arrow">←</span>
-          <span className="comp-prev-val">
-            {isScore ? `${previous}` : diffObj.formattedPrev}
-          </span>
-        </div>
-
-        <div className="comp-label">
-          {label}
-        </div>
-      </div>
-    );
-  };
+function DeltaItem({ title, diff, isScore }) {
+  if (!diff || diff.status === "no-data") return null;
+  const status = STATUS[diff.status] || STATUS.stable;
 
   return (
-    <div className="perf-comparison-box" role="region" aria-label="مقارنة الفحص الحالي بالفحص السابق">
-      <div className="perf-comparison-header">
-        <div className="title-area">
-          <GitCompare size={18} className="text-primary" aria-hidden="true" />
-          <h4 className="comp-title">
-            مقارنة بالفحص السابق ({strategy === 'mobile' ? 'الجوال' : 'الكمبيوتر'})
-          </h4>
-        </div>
-        <span className="comp-prev-time">
-          <Clock size={13} aria-hidden="true" />
-          الفحص السابق: {formatPreviousDate(previousScan.createdAt)}
+    <div className={`perf-delta perf-delta--${diff.status}`}>
+      <div className="perf-delta-head">
+        <span className="perf-delta-name">{title}</span>
+        <Badge tone={status.tone} icon={status.icon}>
+          {status.label}
+        </Badge>
+      </div>
+      <div className="perf-delta-values">
+        <strong>{isScore ? `${diff.current} نقطة` : diff.formattedCur}</strong>
+        <span className="perf-muted" aria-hidden="true">
+          ←
+        </span>
+        <span className="perf-muted">
+          {isScore ? `${diff.previous}` : diff.formattedPrev}
         </span>
       </div>
-
-      <div className="perf-comparison-grid">
-        {renderDeltaItem('Performance Score', comparison.score, true)}
-        {renderDeltaItem('LCP (سرعة التحميل)', comparison.lcp, false)}
-        {renderDeltaItem('CLS (ثبات العناصر)', comparison.cls, false)}
-        {renderDeltaItem('FCP (أول ظهور)', comparison.fcp, false)}
-        {renderDeltaItem('TTFB (استجابة الخادم)', comparison.ttfb, false)}
-      </div>
+      <div className="perf-delta-label">{diff.label}</div>
     </div>
+  );
+}
+
+/**
+ * Current scan vs the previous saved scan. Data comes from
+ * useScanComparison(); renders nothing when there is no previous scan.
+ */
+export default function ScanComparisonBanner({ data, strategy = "mobile" }) {
+  if (!data) return null;
+  const { comparison, previousScan } = data;
+
+  return (
+    <PerfSection
+      icon={GitCompare}
+      className="perf-compare"
+      ariaLabel="مقارنة الفحص الحالي بالفحص السابق"
+      title={`مقارنة بالفحص السابق (${getStrategyLabel(strategy)})`}
+      actions={
+        <span className="perf-muted perf-inline-icon">
+          <Clock size={13} aria-hidden="true" />
+          الفحص السابق: {formatDateTime(previousScan.createdAt)}
+        </span>
+      }
+    >
+      <div className="perf-delta-grid">
+        {DELTA_ROWS.map((row) => (
+          <DeltaItem
+            key={row.key}
+            title={row.title}
+            diff={comparison[row.key]}
+            isScore={row.isScore}
+          />
+        ))}
+      </div>
+    </PerfSection>
   );
 }

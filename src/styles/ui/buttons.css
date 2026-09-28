@@ -1,0 +1,122 @@
+/* ============================================
+   Buttons
+   ============================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn:hover {
+  background: var(--bg-primary);
+  border-color: var(--border-color-strong);
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn:disabled:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+  transform: none;
+}
+
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: var(--radius-md);
+}
+
+.btn-small {
+  padding: 6px 10px;
+  font-size: 0.75rem;
+}
+
+.btn-primary {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--accent-primary-hover);
+  border-color: var(--accent-primary-hover);
+}
+
+[data-theme="dark"] .btn-primary {
+  color: var(--text-inverse);
+}
+
+/* Event Buttons */
+.btn-event {
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--space-sm) var(--space-md);
+  min-height: 52px;
+}
+
+.btn-label {
+  text-align: start;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.btn-hint {
+  text-align: start;
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+
+.btn-event:hover .btn-hint {
+  color: var(--text-secondary);
+}
+
+.btn-toggle {
+  border-inline-start: 3px solid var(--accent-secondary);
+}
+
+.btn-warning {
+  border-inline-start: 3px solid var(--accent-warning);
+}
+
+.btn-accent {
+  border-inline-start: 3px solid var(--accent-primary);
+}
+
+.btn-success {
+  border-inline-start: 3px solid var(--accent-success);
+}
+
+.btn-danger {
+  border-inline-start: 3px solid var(--accent-danger);
+}
+
+.btn-info {
+  border-inline-start: 3px solid var(--accent-info);
+}
+
+/* Lucide icons inherit currentColor */
+.lucide {
+  color: currentColor;
+}

@@ -1,122 +1,106 @@
 import { useState } from "react";
-import { MessageSquare } from "lucide-react";
-import Checkbox from "../forms/Checkbox.jsx";
+import { MessageSquare, Terminal, Trash2 } from "lucide-react";
+import { Badge, Card, Checkbox, EmptyState, IconButton } from "../ui/index.js";
+import { cx } from "../ui/cx.js";
 
+const TYPE_ICONS = {
+  log: "ℹ",
+  error: "✗",
+  warn: "⚠",
+  info: "ℹ",
+  debug: "🔍",
+  result: "✓",
+};
+
+// Keep output on one line: compact valid JSON, leave anything else as-is.
 function formatOutput(args) {
-  // Keep output on one line - don't pretty print JSON
   try {
-    // Try to parse as JSON to validate, but keep compact
-    const parsed = JSON.parse(args);
-    return JSON.stringify(parsed);
+    return JSON.stringify(JSON.parse(args));
   } catch {
     return args;
   }
 }
 
-function getLogTypeColor(type) {
-  switch (type) {
-    case "log":
-      return "var(--accent-info)";
-    case "error":
-      return "var(--accent-danger)";
-    case "warn":
-      return "var(--accent-warning)";
-    case "info":
-      return "var(--accent-primary)";
-    case "debug":
-      return "var(--text-secondary)";
-    case "result":
-      return "var(--accent-success)";
-    default:
-      return "var(--text-secondary)";
-  }
+function OutputEntry({ type, args, showTypeLabel }) {
+  return (
+    <li className={cx("console-entry", `console-${type}`)}>
+      {showTypeLabel && (
+        <span className="console-type">
+          {TYPE_ICONS[type] || "•"} {type}
+        </span>
+      )}
+      <span className="console-data">{args}</span>
+    </li>
+  );
 }
 
-function getLogTypeIcon(type) {
-  switch (type) {
-    case "log":
-      return "ℹ";
-    case "error":
-      return "✗";
-    case "warn":
-      return "⚠";
-    case "info":
-      return "ℹ";
-    case "debug":
-      return "🔍";
-    case "result":
-      return "✓";
-    default:
-      return "•";
-  }
-}
-
-export default function OutputPanel({ output, isExecuting }) {
+/** Console output of the last Playground run. Presentational only. */
+export default function OutputPanel({ output, isExecuting, onClear }) {
   const [showTypeLabels, setShowTypeLabels] = useState(true);
+  const errorCount = output.filter((e) => e.type === "error").length;
 
   return (
-    <div className="panel panel-log">
-      <div className="panel-header">
-        <div>
-          <h2 className="panel-title">Output</h2>
-          <span className="panel-subtitle">Console output and results</span>
-        </div>
-        <div className="panel-actions">
-          <Checkbox
-            checked={showTypeLabels}
-            onChange={setShowTypeLabels}
-            label="Show type labels"
-          />
-        </div>
-      </div>
-      <div className="log-container console-output">
-        {output.length === 0 && !isExecuting ? (
-          <div className="log-empty">
-            <MessageSquare
-              size={48}
-              strokeWidth={1.5}
-              style={{ opacity: 0.3 }}
-            />
-            <p>No output yet</p>
-            <span>Write code and click "Run" to see results</span>
-          </div>
-        ) : (
+    <Card className="playground-output">
+      <Card.Header
+        icon={Terminal}
+        title={
           <>
-            {output.map((entry, index) => (
-              <div
-                key={index}
-                className={`console-entry console-${entry.type}`}
-                style={{
-                  borderLeft: `3px solid ${getLogTypeColor(entry.type)}`,
-                }}
-              >
-                {showTypeLabels && (
-                  <span
-                    className="console-type"
-                    style={{ color: getLogTypeColor(entry.type) }}
-                  >
-                    {getLogTypeIcon(entry.type)} {entry.type}
-                  </span>
-                )}
-                <span className="console-data">{formatOutput(entry.args)}</span>
-              </div>
-            ))}
-            {isExecuting && (
-              <div className="console-entry console-executing">
-                {showTypeLabels && (
-                  <span
-                    className="console-type"
-                    style={{ color: "var(--accent-primary)" }}
-                  >
-                    ⏳ executing
-                  </span>
-                )}
-                <span className="console-data">Running code...</span>
-              </div>
+            Output{" "}
+            {errorCount > 0 && (
+              <Badge tone="danger">
+                {errorCount} error{errorCount > 1 ? "s" : ""}
+              </Badge>
             )}
           </>
+        }
+        subtitle="Console output and results"
+        actions={
+          <>
+            <Checkbox
+              checked={showTypeLabels}
+              onChange={setShowTypeLabels}
+              label="Show type labels"
+            />
+            {onClear && (
+              <IconButton
+                icon={Trash2}
+                label="Clear output"
+                onClick={onClear}
+                disabled={output.length === 0}
+              />
+            )}
+          </>
+        }
+      />
+      <div className="console-output" aria-live="polite">
+        {output.length === 0 && !isExecuting ? (
+          <EmptyState
+            icon={MessageSquare}
+            title="No output yet"
+            description={`Write code and click "Run" to see results`}
+            className="console-empty"
+          />
+        ) : (
+          <ol className="console-list">
+            {output.map((entry, index) => (
+              <OutputEntry
+                key={index}
+                type={entry.type}
+                args={formatOutput(entry.args)}
+                showTypeLabel={showTypeLabels}
+              />
+            ))}
+            {isExecuting && (
+              <li className="console-entry console-executing">
+                {showTypeLabels && (
+                  <span className="console-type">⏳ executing</span>
+                )}
+                <span className="console-data">Running code...</span>
+              </li>
+            )}
+          </ol>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

@@ -1,42 +1,31 @@
 import { createContext, useContext, useState, useCallback } from "react";
+import ToastViewport from "../components/ui/ToastViewport.jsx";
 
 const ToastContext = createContext(null);
 
+const TOAST_DURATION_MS = 3000;
+
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
-
-  const showToast = useCallback((message, type = "info") => {
-    const id = Date.now() + Math.random();
-    const toast = { id, message, type };
-
-    setToasts((prev) => [...prev, toast]);
-
-    // Auto-remove after 3 seconds
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3000);
-
-    return id;
-  }, []);
 
   const removeToast = useCallback((id) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  const showToast = useCallback(
+    (message, type = "info") => {
+      const id = Date.now() + Math.random();
+      setToasts((prev) => [...prev, { id, message, type }]);
+      setTimeout(() => removeToast(id), TOAST_DURATION_MS);
+      return id;
+    },
+    [removeToast],
+  );
+
   return (
     <ToastContext.Provider value={{ toasts, showToast, removeToast }}>
       {children}
-      <div className="toast-container">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={`toast toast-${toast.type}`}
-            onClick={() => removeToast(toast.id)}
-          >
-            {toast.message}
-          </div>
-        ))}
-      </div>
+      <ToastViewport toasts={toasts} onDismiss={removeToast} />
     </ToastContext.Provider>
   );
 }

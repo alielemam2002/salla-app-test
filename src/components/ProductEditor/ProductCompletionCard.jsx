@@ -1,51 +1,84 @@
 import { useState } from "react";
 import {
-  CheckCircle2,
   AlertCircle,
+  ArrowLeft,
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
   Sparkles,
-  ArrowLeft,
 } from "lucide-react";
+import { Button, Card } from "../ui/index.js";
+import { scoreTone } from "../../utils/productEditorForm.js";
 
+function SectionChip({ section }) {
+  const Icon = section.isComplete ? CheckCircle2 : AlertCircle;
+  return (
+    <li
+      className={`completion-chip ${section.isComplete ? "is-done" : ""}`}
+      title={`${section.label}: ${section.currentScore} / ${section.targetWeight}%`}
+    >
+      <Icon size={14} aria-hidden="true" className="completion-chip-icon" />
+      <span className="completion-chip-label">{section.label}</span>
+      <span className="completion-chip-weight">
+        {section.currentScore}/{section.targetWeight}%
+      </span>
+    </li>
+  );
+}
+
+function MissingItem({ item, onNavigate }) {
+  return (
+    <li>
+      <button
+        type="button"
+        className="missing-item"
+        onClick={() => onNavigate?.(item.fieldId)}
+        title={`الانتقال إلى ${item.label} (النسبة المتوقعة بعد الإكمال: ${item.expectedScore}%)`}
+      >
+        <span className="missing-item-bullet" aria-hidden="true" />
+        <span className="missing-item-label">{item.label}</span>
+        <span className="missing-item-gain">
+          {item.weightGain}
+          <span className="missing-item-expected">
+            {" "}
+            ← {item.expectedScore}%
+          </span>
+        </span>
+        <ArrowLeft
+          size={13}
+          className="missing-item-arrow"
+          aria-hidden="true"
+        />
+      </button>
+    </li>
+  );
+}
+
+/** Completion score, per-section progress and click-to-jump missing items. */
 export default function ProductCompletionCard({
   scoreData,
   onNavigateToField,
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
-
   if (!scoreData) return null;
 
   const { score, sections, remainingItems, isComplete } = scoreData;
-
-  const getScoreColor = (val) => {
-    if (val >= 80) return "var(--score-high, #10b981)";
-    if (val >= 50) return "var(--score-mid, #f59e0b)";
-    return "var(--score-low, #ef4444)";
-  };
-
-  const scoreColor = getScoreColor(score);
+  const tone = scoreTone(score);
 
   return (
-    <div className="product-completion-card">
+    <Card
+      className={`product-completion-card completion--${tone}`}
+      aria-label="نسبة اكتمال بيانات المنتج"
+    >
       <div className="completion-card-header">
         <div className="completion-title-area">
-          <div className="completion-icon-badge" style={{ color: scoreColor }}>
+          <span className="completion-icon-badge" aria-hidden="true">
             <Sparkles size={22} />
-          </div>
+          </span>
           <div>
             <div className="completion-title-row">
               <h3 className="completion-title">كمّل بيانات منتجك</h3>
-              <span
-                className="completion-percentage-badge"
-                style={{
-                  backgroundColor: `${scoreColor}15`,
-                  color: scoreColor,
-                  borderColor: `${scoreColor}40`,
-                }}
-              >
-                {score}%
-              </span>
+              <span className="completion-percentage">{score}%</span>
             </div>
             <p className="completion-subtitle">
               {isComplete
@@ -55,77 +88,50 @@ export default function ProductCompletionCard({
           </div>
         </div>
 
-        <button
-          type="button"
-          className="completion-toggle-btn"
-          onClick={() => setIsExpanded(!isExpanded)}
-          aria-expanded={isExpanded}
-        >
-          {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-          <span>{isExpanded ? "إخفاء التفاصيل" : "عرض النواقص"}</span>
-        </button>
-      </div>
-
-      {/* Dynamic Animated Progress Bar */}
-      <div className="completion-bar-container">
-        <div
-          className="completion-bar-fill"
-          style={{
-            width: `${score}%`,
-            backgroundColor: scoreColor,
-            boxShadow: `0 0 12px ${scoreColor}60`,
-          }}
-        />
-      </div>
-
-      {/* Section Weights & Badges */}
-      <div className="completion-sections-chips">
-        {Object.values(sections).map((sec) => (
-          <div
-            key={sec.id}
-            className={`completion-chip ${sec.isComplete ? "completion-chip--done" : "completion-chip--pending"}`}
-            title={`${sec.label}: ${sec.currentScore} / ${sec.targetWeight}%`}
+        {remainingItems.length > 0 && (
+          <Button
+            size="small"
+            variant="ghost"
+            icon={isExpanded ? ChevronUp : ChevronDown}
+            onClick={() => setIsExpanded((v) => !v)}
+            aria-expanded={isExpanded}
           >
-            {sec.isComplete ? (
-              <CheckCircle2 size={14} className="chip-icon chip-icon--done" />
-            ) : (
-              <AlertCircle size={14} className="chip-icon chip-icon--pending" />
-            )}
-            <span className="chip-label">{sec.label}</span>
-            <span className="chip-weight">
-              {sec.currentScore}/{sec.targetWeight}%
-            </span>
-          </div>
-        ))}
+            {isExpanded ? "إخفاء التفاصيل" : "عرض النواقص"}
+          </Button>
+        )}
       </div>
 
-      {/* Expandable Missing Items List with Click-to-Jump */}
+      <div
+        className="completion-bar"
+        role="progressbar"
+        aria-valuenow={score}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label="نسبة الاكتمال"
+      >
+        <div className="completion-bar-fill" style={{ width: `${score}%` }} />
+      </div>
+
+      <ul className="completion-chips">
+        {Object.values(sections).map((sec) => (
+          <SectionChip key={sec.id} section={sec} />
+        ))}
+      </ul>
+
       {isExpanded && remainingItems.length > 0 && (
-        <div className="completion-missing-list">
-          <div className="missing-list-title">ينقصك لإكمال 100%:</div>
-          <div className="missing-items-grid">
+        <div className="completion-missing">
+          <div className="completion-missing-title">ينقصك لإكمال 100%:</div>
+          <ul className="completion-missing-grid">
             {remainingItems.map((item) => (
-              <button
+              <MissingItem
                 key={item.key}
-                type="button"
-                className="missing-item-btn"
-                onClick={() => onNavigateToField?.(item.fieldId)}
-                title={`الانتقال إلى ${item.label} (النسبة المتوقعة بعد الإكمال: ${item.expectedScore}%)`}
-              >
-                <div className="missing-item-bullet" />
-                <span className="missing-item-label">{item.label}</span>
-                <span className="missing-item-gain">
-                  {item.weightGain}
-                  <span className="missing-item-expected">
-                    {" "}← {item.expectedScore}%
-                  </span>
-                </span>
-                <ArrowLeft size={13} className="missing-item-arrow" />
-              </button>
+                item={item}
+                onNavigate={onNavigateToField}
+              />
             ))}
-          </div>
+          </ul>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

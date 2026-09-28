@@ -1,6 +1,6 @@
-import { formatMetricValue } from './thresholds.js';
+import { formatMetricValue } from "./thresholds.js";
 
-const STORAGE_KEY = 'salla_perf_history_v1';
+const STORAGE_KEY = "salla_perf_history_v1";
 const MAX_STORED_SCANS = 150;
 
 /**
@@ -8,11 +8,11 @@ const MAX_STORED_SCANS = 150;
  */
 function getRawStorage() {
   try {
-    if (typeof window === 'undefined' || !window.localStorage) return [];
+    if (typeof window === "undefined" || !window.localStorage) return [];
     const item = window.localStorage.getItem(STORAGE_KEY);
     return item ? JSON.parse(item) : [];
   } catch (err) {
-    console.warn('Failed to read performance history from localStorage:', err);
+    console.warn("Failed to read performance history from localStorage:", err);
     return [];
   }
 }
@@ -22,10 +22,13 @@ function getRawStorage() {
  */
 function setRawStorage(items) {
   try {
-    if (typeof window === 'undefined' || !window.localStorage) return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items.slice(-MAX_STORED_SCANS)));
+    if (typeof window === "undefined" || !window.localStorage) return;
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(items.slice(-MAX_STORED_SCANS)),
+    );
   } catch (err) {
-    console.warn('Failed to save performance history to localStorage:', err);
+    console.warn("Failed to save performance history to localStorage:", err);
   }
 }
 
@@ -35,14 +38,14 @@ function setRawStorage(items) {
  * @param {string} [storeId='default']
  * @returns {Array<object>} The newly saved scan records
  */
-export function saveScanToHistory(report, storeId = 'default') {
+export function saveScanToHistory(report, storeId = "default") {
   if (!report || !report.url) return [];
 
   const now = report.fetchedAt || new Date().toISOString();
   const existing = getRawStorage();
   const newRecords = [];
 
-  ['mobile', 'desktop'].forEach(strategy => {
+  ["mobile", "desktop"].forEach((strategy) => {
     const dev = report[strategy];
     if (!dev) return;
 
@@ -57,7 +60,7 @@ export function saveScanToHistory(report, storeId = 'default') {
       cls: dev.metrics?.cls?.value ?? null,
       fcp: dev.metrics?.fcp?.value ?? null,
       ttfb: dev.metrics?.ttfb?.value ?? null,
-      createdAt: now
+      createdAt: now,
     };
 
     newRecords.push(record);
@@ -76,18 +79,22 @@ export function saveScanToHistory(report, storeId = 'default') {
  * @param {number} [filter.days=30] - 7, 30, or 90
  * @returns {Array<object>} List of scan records sorted by createdAt ASC
  */
-export function getScanHistory({ url, strategy = 'mobile', days = 30 } = {}) {
+export function getScanHistory({ url, strategy = "mobile", days = 30 } = {}) {
   const all = getRawStorage();
-  const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
 
   return all
-    .filter(item => {
+    .filter((item) => {
       if (strategy && item.strategy !== strategy) return false;
-      if (url && item.url.replace(/\/$/, '') !== url.replace(/\/$/, '')) return false;
+      if (url && item.url.replace(/\/$/, "") !== url.replace(/\/$/, ""))
+        return false;
       const itemTime = new Date(item.createdAt).getTime();
       return itemTime >= cutoff;
     })
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    .sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
 }
 
 /**
@@ -99,15 +106,21 @@ export function getScanHistory({ url, strategy = 'mobile', days = 30 } = {}) {
  */
 export function getPreviousScan(url, strategy, currentScanTime) {
   const all = getRawStorage();
-  const curTime = currentScanTime ? new Date(currentScanTime).getTime() : Date.now();
+  const curTime = currentScanTime
+    ? new Date(currentScanTime).getTime()
+    : Date.now();
 
   const matching = all
-    .filter(item => {
+    .filter((item) => {
       if (item.strategy !== strategy) return false;
-      if (url && item.url.replace(/\/$/, '') !== url.replace(/\/$/, '')) return false;
+      if (url && item.url.replace(/\/$/, "") !== url.replace(/\/$/, ""))
+        return false;
       return new Date(item.createdAt).getTime() < curTime;
     })
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
 
   return matching[0] || null;
 }
@@ -132,9 +145,11 @@ export function compareScans(current, previous) {
     return obj[key] ?? null;
   };
 
-  const getScore = obj => {
+  const getScore = (obj) => {
     if (!obj) return null;
-    return typeof obj.score === 'number' ? obj.score : (obj.performanceScore ?? null);
+    return typeof obj.score === "number"
+      ? obj.score
+      : (obj.performanceScore ?? null);
   };
 
   const compareMetric = (key, isHigherBetter = false) => {
@@ -147,20 +162,20 @@ export function compareScans(current, previous) {
         current: curVal,
         previous: prevVal,
         delta: null,
-        status: 'no-data',
-        label: 'No comparison data'
+        status: "no-data",
+        label: "No comparison data",
       };
     }
 
     const delta = curVal - prevVal;
-    const isZero = Math.abs(delta) < (key === 'cls' ? 0.005 : 5);
+    const isZero = Math.abs(delta) < (key === "cls" ? 0.005 : 5);
 
-    let status = 'unchanged';
+    let status = "unchanged";
     if (!isZero) {
       if (isHigherBetter) {
-        status = delta > 0 ? 'improved' : 'regressed';
+        status = delta > 0 ? "improved" : "regressed";
       } else {
-        status = delta < 0 ? 'improved' : 'regressed';
+        status = delta < 0 ? "improved" : "regressed";
       }
     }
 
@@ -169,11 +184,11 @@ export function compareScans(current, previous) {
     const absDelta = Math.abs(delta);
     const formattedDelta = formatMetricValue(key, absDelta);
 
-    let label = 'Unchanged';
-    if (status === 'improved') {
-      label = `${isHigherBetter ? '↑' : '↓'} ${formattedDelta} improvement`;
-    } else if (status === 'regressed') {
-      label = `${isHigherBetter ? '↓' : '↑'} ${formattedDelta} regression`;
+    let label = "Unchanged";
+    if (status === "improved") {
+      label = `${isHigherBetter ? "↑" : "↓"} ${formattedDelta} improvement`;
+    } else if (status === "regressed") {
+      label = `${isHigherBetter ? "↓" : "↑"} ${formattedDelta} regression`;
     }
 
     return {
@@ -185,7 +200,7 @@ export function compareScans(current, previous) {
       formattedPrev,
       formattedDelta,
       status,
-      label
+      label,
     };
   };
 
@@ -196,24 +211,26 @@ export function compareScans(current, previous) {
 
   if (curScore !== null && prevScore !== null) {
     const delta = curScore - prevScore;
-    const status = delta > 0 ? 'improved' : delta < 0 ? 'regressed' : 'unchanged';
+    const status =
+      delta > 0 ? "improved" : delta < 0 ? "regressed" : "unchanged";
     scoreDiff = {
       current: curScore,
       previous: prevScore,
       delta,
       status,
-      label: delta > 0 ? `+${delta} pts` : delta < 0 ? `${delta} pts` : 'No change'
+      label:
+        delta > 0 ? `+${delta} pts` : delta < 0 ? `${delta} pts` : "No change",
     };
   }
 
   return {
     score: scoreDiff,
-    lcp: compareMetric('lcp', false),
-    inp: compareMetric('inp', false),
-    cls: compareMetric('cls', false),
-    fcp: compareMetric('fcp', false),
-    ttfb: compareMetric('ttfb', false),
-    previousTestedAt: previous.createdAt
+    lcp: compareMetric("lcp", false),
+    inp: compareMetric("inp", false),
+    cls: compareMetric("cls", false),
+    fcp: compareMetric("fcp", false),
+    ttfb: compareMetric("ttfb", false),
+    previousTestedAt: previous.createdAt,
   };
 }
 
@@ -222,7 +239,7 @@ export function compareScans(current, previous) {
  */
 export function clearPerformanceHistory() {
   try {
-    if (typeof window !== 'undefined' && window.localStorage) {
+    if (typeof window !== "undefined" && window.localStorage) {
       window.localStorage.removeItem(STORAGE_KEY);
     }
   } catch (e) {

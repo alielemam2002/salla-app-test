@@ -11,20 +11,20 @@ describe("Tabs", () => {
 
   it("renders all tab labels", () => {
     render(<Tabs activeTab="tab1" onTabChange={() => {}} tabs={tabs} />);
-    expect(screen.getByRole("button", { name: "Tab 1" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Tab 2" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Tab 1" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Tab 2" })).toBeInTheDocument();
   });
 
   it("applies active class to active tab", () => {
     render(<Tabs activeTab="tab2" onTabChange={() => {}} tabs={tabs} />);
-    const tab2 = screen.getByRole("button", { name: "Tab 2" });
+    const tab2 = screen.getByRole("tab", { name: "Tab 2" });
     expect(tab2).toHaveClass("active");
   });
 
   it("calls onTabChange with tab id when tab is clicked", async () => {
     const onTabChange = vi.fn();
     render(<Tabs activeTab="tab1" onTabChange={onTabChange} tabs={tabs} />);
-    await userEvent.click(screen.getByRole("button", { name: "Tab 2" }));
+    await userEvent.click(screen.getByRole("tab", { name: "Tab 2" }));
     expect(onTabChange).toHaveBeenCalledWith("tab2");
   });
 });

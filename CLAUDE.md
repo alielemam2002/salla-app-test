@@ -40,6 +40,15 @@ Source docs: https://docs.salla.dev/embedded-sdk/overview.md (index of all pages
 - The SDK is exposed globally as `window.salla.embedded` for the in-app code playground ([src/hooks/useExposeEmbeddedGlobally.js](src/hooks/useExposeEmbeddedGlobally.js)).
 - Tests sit next to code in `__tests__/` folders; `src/test/setup.js` is the Vitest setup.
 
+### Code structure (logic vs. UI)
+
+- **`src/components/ui/`**: shared presentational kit (`Button`, `IconButton`, `Modal`, `ConfirmDialog`, `Card`, `Field`/`TextInput`/`Select`/`Textarea`/`FormRow`, `Badge`, `Alert`, `EmptyState`, `Skeleton`, `Spinner`, `SegmentedTabs`, `Switch`, `KeyValueList`, `CodeBlock`, `StatCard`, `ToastViewport`). Import from `src/components/ui/index.js`. It makes no SDK or API calls. `Modal` renders through a portal into `document.body`, so tests should query it with `screen`, not `container`.
+- **`src/hooks/ui/`**: generic UI hooks (`useDisclosure`, `useAsyncAction`, `useClipboard`).
+- **`src/hooks/app/usePlaygroundApp.js`**: app-level orchestration (bootstrap, theme sync, iframe detection, nav sync, message log). `App.jsx` only renders.
+- **Feature pattern**: `*Tab.jsx` is a thin container that calls the feature hooks in `src/hooks/<feature>/` and passes data and callbacks to presentational components in the same component folder. Pure helpers go in `src/utils/`.
+- **Tabs** are defined once in [src/config/tabs.js](src/config/tabs.js), which is used by both the tab strip and `useNavSync`.
+- **Styles**: [src/styles/index.css](src/styles/index.css) imports everything in cascade order: `tokens.css` (Salla palette, PingARLT, light/dark), `base.css`, `layout.css` (shell), `features/*.css`, and `ui/*.css` (`kit.css` last). Use tokens instead of hardcoded colors, and logical properties (`margin-inline-start`, `inset-inline-end`) for RTL.
+
 ---
 
 ## Salla Embedded SDK reference

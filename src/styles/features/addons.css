@@ -1,0 +1,191 @@
+/* ============================================
+   Addons Tab
+   ============================================ */
+
+.addons-container {
+  width: 100%;
+}
+
+.addons-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+}
+
+.addons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-lg);
+}
+
+@media (max-width: 640px) {
+  .addons-body {
+    padding: var(--space-md);
+  }
+
+  .addons-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Selection bar */
+.addons-selection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+  background: var(--accent-primary-soft);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+
+.addons-selection-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+/* Card */
+.addon-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition:
+    border-color var(--transition-normal),
+    box-shadow var(--transition-normal);
+}
+
+.addon-card:hover {
+  border-color: var(--border-color-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.addon-card--selected {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 1px var(--accent-primary);
+}
+
+.addon-card--pending {
+  border-color: var(--accent-warning);
+}
+
+.addon-card--success {
+  border-color: var(--accent-success);
+}
+
+.addon-card--error {
+  border-color: var(--accent-danger);
+}
+
+.addon-card--skeleton {
+  gap: var(--space-sm);
+  box-shadow: none;
+}
+
+.addon-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.addon-card-select {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+}
+
+.addon-card-header {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.addon-card-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.addon-card-slug {
+  width: fit-content;
+  max-width: 100%;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+
+.addon-card-description {
+  flex: 1;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.addon-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border-color);
+}
+
+.addon-card-price {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+}
+
+.addon-card-amount {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.addon-card-currency {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+}
+
+.addon-card-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.addon-card-quantity-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.addon-card-quantity {
+  width: 64px;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+
+.addon-card-quantity::-webkit-outer-spin-button,
+.addon-card-quantity::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

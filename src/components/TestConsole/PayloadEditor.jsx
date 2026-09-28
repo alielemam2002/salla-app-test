@@ -1,73 +1,51 @@
-import { useState, useEffect } from "react";
-import { Send } from "lucide-react";
-import Button from "./forms/Button.jsx";
+import { Braces, FileCode2, Send } from "lucide-react";
+import { Alert, Button, Card } from "../ui/index.js";
+import { usePayloadEditor } from "../../hooks/testConsole/usePayloadEditor.js";
 
+/** Raw JSON editor for sending custom postMessage payloads to the host. */
 export default function PayloadEditor({
   onSend,
   initialPayload = "",
   eventPayload = null,
 }) {
-  const [payload, setPayload] = useState(
-    initialPayload ||
-      JSON.stringify(
-        // Default payload editor value
-        {
-          event: "embedded::page.navigate",
-          payload: { path: "/products" },
-          timestamp: 1773234520517,
-          source: "embedded-app",
-        },
-        null,
-        2,
-      ),
-  );
-
-  // Update payload when event is clicked
-  useEffect(() => {
-    if (eventPayload) {
-      const { eventName, payload: payloadData } = eventPayload;
-      // Format as BaseMessage structure for the editor
-      const message = {
-        event: eventName,
-        payload: payloadData,
-        timestamp: Date.now(),
-        source: "embedded-app",
-      };
-      setPayload(JSON.stringify(message, null, 2));
-    }
-  }, [eventPayload]);
-
-  const handleSend = () => {
-    try {
-      const parsed = JSON.parse(payload);
-      onSend(parsed);
-    } catch (error) {
-      alert("Invalid JSON: " + error.message);
-    }
-  };
+  const { text, setText, error, send, format } = usePayloadEditor({
+    onSend,
+    initialPayload,
+    eventPayload,
+  });
 
   return (
-    <section className="panel panel-editor">
-      <div className="panel-header">
-        <div>
-          <h2 className="panel-title">Payload Editor</h2>
-          <span className="panel-subtitle">Customize event data</span>
-        </div>
-        <div className="panel-actions">
-          <Button variant="primary" onClick={handleSend}>
-            <Send size={14} />
-            Send
-          </Button>
-        </div>
-      </div>
-      <div className="editor-container">
+    <Card className="console-editor">
+      <Card.Header
+        icon={FileCode2}
+        title="Payload Editor"
+        subtitle="Customize event data"
+        actions={
+          <>
+            <Button size="small" variant="ghost" icon={Braces} onClick={format}>
+              Format
+            </Button>
+            <Button size="small" variant="primary" icon={Send} onClick={send}>
+              Send
+            </Button>
+          </>
+        }
+      />
+      <Card.Body className="console-editor-body">
         <textarea
           className="payload-textarea"
+          aria-label="Payload JSON"
           spellCheck="false"
-          value={payload}
-          onChange={(e) => setPayload(e.target.value)}
+          value={text}
+          aria-invalid={error ? true : undefined}
+          onChange={(e) => setText(e.target.value)}
         />
-      </div>
-    </section>
+        {error && <Alert tone="error">{error}</Alert>}
+        <p className="console-editor-note">
+          Debug only: sends a raw postMessage. Real apps should call SDK
+          methods.
+        </p>
+      </Card.Body>
+    </Card>
   );
 }

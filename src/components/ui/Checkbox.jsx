@@ -1,9 +1,19 @@
-export default function Checkbox({ checked, onChange, label, id, ...props }) {
-  const checkboxId =
-    id || `checkbox-${Math.random().toString(36).substr(2, 9)}`;
+import { useId } from "react";
+import { cx } from "./cx.js";
+
+export default function Checkbox({
+  checked,
+  onChange,
+  label,
+  id,
+  className,
+  ...props
+}) {
+  const autoId = useId();
+  const checkboxId = id || autoId;
 
   return (
-    <label className="filter-checkbox" htmlFor={checkboxId}>
+    <label className={cx("filter-checkbox", className)} htmlFor={checkboxId}>
       <input
         id={checkboxId}
         type="checkbox"

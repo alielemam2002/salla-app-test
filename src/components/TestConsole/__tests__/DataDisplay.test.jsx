@@ -9,7 +9,7 @@ describe("DataDisplay", () => {
         layoutData={null}
         token={null}
         verifiedData={null}
-        verifyStatus="—"
+        verifyStatus="idle"
       />,
     );
     expect(screen.getByText("Layout Data")).toBeInTheDocument();
@@ -21,23 +21,33 @@ describe("DataDisplay", () => {
         layoutData={{ theme: "dark", width: 400 }}
         token={null}
         verifiedData={null}
-        verifyStatus="—"
+        verifyStatus="idle"
       />,
     );
     expect(screen.getByText("dark")).toBeInTheDocument();
     expect(screen.getByText("400px")).toBeInTheDocument();
   });
 
-  it("displays verifyStatus", () => {
-    render(
+  it("maps raw verifyStatus to a readable label", () => {
+    const { rerender } = render(
       <DataDisplay
         layoutData={null}
         token={null}
         verifiedData={null}
-        verifyStatus="✓ Verified"
+        verifyStatus="verified"
       />,
     );
-    expect(screen.getByText("✓ Verified")).toBeInTheDocument();
+    expect(screen.getByText("Verified")).toBeInTheDocument();
+
+    rerender(
+      <DataDisplay
+        layoutData={null}
+        token={null}
+        verifiedData={null}
+        verifyStatus="failed"
+      />,
+    );
+    expect(screen.getByText("Failed")).toBeInTheDocument();
   });
 
   it("displays token (masked when long)", () => {
@@ -46,7 +56,7 @@ describe("DataDisplay", () => {
         layoutData={null}
         token="short"
         verifiedData={null}
-        verifyStatus="—"
+        verifyStatus="idle"
       />,
     );
     expect(screen.getByText("short")).toBeInTheDocument();

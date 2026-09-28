@@ -23,7 +23,8 @@ const mockProduct = {
   promotion_title: "Summer Luxury Sale",
   subtitle: "Pure Mulberry Silk",
   metadata_title: "Buy Silk Shirt Online - Best Luxury Wear",
-  metadata_description: "Discover our premium mulberry silk shirt. Free delivery.",
+  metadata_description:
+    "Discover our premium mulberry silk shirt. Free delivery.",
   metadata_url: "classic-silk-shirt",
   tags: ["silk", "luxury", "shirt"],
   images: [
@@ -49,7 +50,10 @@ const mockProduct = {
     {
       id: 501,
       name: "Size",
-      values: [{ id: 1, name: "Small" }, { id: 2, name: "Medium" }],
+      values: [
+        { id: 1, name: "Small" },
+        { id: 2, name: "Medium" },
+      ],
     },
   ],
   variants: [
@@ -71,9 +75,7 @@ function renderWithClient(ui) {
     },
   });
   return render(
-    <QueryClientProvider client={queryClient}>
-      {ui}
-    </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
   );
 }
 
@@ -88,7 +90,9 @@ describe("ProductEditor", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockMutateUpdateProduct = vi.fn().mockResolvedValue({ success: true, product: mockProduct });
+    mockMutateUpdateProduct = vi
+      .fn()
+      .mockResolvedValue({ success: true, product: mockProduct });
     mockMutateUploadImage = vi.fn().mockResolvedValue({ success: true });
     mockMutateDeleteImage = vi.fn().mockResolvedValue({ success: true });
     mockMutateCreateOption = vi.fn().mockResolvedValue({ success: true });
@@ -175,7 +179,7 @@ describe("ProductEditor", () => {
         initialProduct={mockProduct}
         onBack={onBack}
         showToast={showToast}
-      />
+      />,
     );
 
     // Header title and product id
@@ -196,14 +200,18 @@ describe("ProductEditor", () => {
 
     // Section 3: SEO
     expect(screen.getAllByText("محركات البحث SEO").length).toBeGreaterThan(0);
-    expect(screen.getByDisplayValue("Buy Silk Shirt Online - Best Luxury Wear")).toBeInTheDocument();
+    expect(
+      screen.getByDisplayValue("Buy Silk Shirt Online - Best Luxury Wear"),
+    ).toBeInTheDocument();
 
     // Section 4: Pricing & Inventory
     expect(screen.getAllByText("السعر والمخزون").length).toBeGreaterThan(0);
     expect(screen.getByDisplayValue("SILK-001")).toBeInTheDocument();
 
     // Section 5: Options & Variants
-    expect(screen.getAllByText(/الخيارات والمتغيرات/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/الخيارات والمتغيرات/i).length).toBeGreaterThan(
+      0,
+    );
     expect(screen.getByText("Size")).toBeInTheDocument();
     expect(screen.getByText("SILK-001-S")).toBeInTheDocument();
   });
@@ -222,9 +230,18 @@ describe("ProductEditor", () => {
       isLoading: false,
       refetch: vi.fn(),
     });
-    productQueries.useProductOptions.mockReturnValue({ data: [], isLoading: false });
-    productQueries.useProductVariants.mockReturnValue({ data: [], isLoading: false });
-    productQueries.useProductImages.mockReturnValue({ data: [], isLoading: false });
+    productQueries.useProductOptions.mockReturnValue({
+      data: [],
+      isLoading: false,
+    });
+    productQueries.useProductVariants.mockReturnValue({
+      data: [],
+      isLoading: false,
+    });
+    productQueries.useProductImages.mockReturnValue({
+      data: [],
+      isLoading: false,
+    });
 
     renderWithClient(
       <ProductEditor
@@ -232,7 +249,7 @@ describe("ProductEditor", () => {
         token="tok_test"
         initialProduct={partialProduct}
         onBack={vi.fn()}
-      />
+      />,
     );
 
     // Score should be less than 100%
@@ -254,9 +271,18 @@ describe("ProductEditor", () => {
       isLoading: false,
       refetch: vi.fn(),
     });
-    productQueries.useProductOptions.mockReturnValue({ data: [], isLoading: false });
-    productQueries.useProductVariants.mockReturnValue({ data: [], isLoading: false });
-    productQueries.useProductImages.mockReturnValue({ data: [], isLoading: false });
+    productQueries.useProductOptions.mockReturnValue({
+      data: [],
+      isLoading: false,
+    });
+    productQueries.useProductVariants.mockReturnValue({
+      data: [],
+      isLoading: false,
+    });
+    productQueries.useProductImages.mockReturnValue({
+      data: [],
+      isLoading: false,
+    });
 
     renderWithClient(
       <ProductEditor
@@ -264,11 +290,13 @@ describe("ProductEditor", () => {
         token="tok_test"
         initialProduct={incompleteProduct}
         onBack={vi.fn()}
-      />
+      />,
     );
 
     // Description is empty
-    const descTextarea = screen.getByPlaceholderText(/أدخل وصفًا تفصيليًا وجذابًا/i);
+    const descTextarea = screen.getByPlaceholderText(
+      /أدخل وصفًا تفصيليًا وجذابًا/i,
+    );
     expect(descTextarea.value).toBe("");
 
     // Type a description
@@ -288,7 +316,7 @@ describe("ProductEditor", () => {
         initialProduct={mockProduct}
         onBack={vi.fn()}
         showToast={showToast}
-      />
+      />,
     );
 
     // Change promotional title in Appearance section
@@ -296,14 +324,16 @@ describe("ProductEditor", () => {
     fireEvent.change(promoInput, { target: { value: "Flash Sale 50% Off" } });
 
     // Click "حفظ المظهر" in the Appearance section
-    const appearanceSaveBtn = screen.getByRole("button", { name: /حفظ المظهر/i });
+    const appearanceSaveBtn = screen.getByRole("button", {
+      name: /حفظ المظهر/i,
+    });
     fireEvent.click(appearanceSaveBtn);
 
     await waitFor(() => {
       expect(mockMutateUpdateProduct).toHaveBeenCalledWith(
         expect.objectContaining({
           promotion_title: "Flash Sale 50% Off",
-        })
+        }),
       );
     });
   });
@@ -317,11 +347,13 @@ describe("ProductEditor", () => {
         initialProduct={mockProduct}
         onBack={vi.fn()}
         showToast={showToast}
-      />
+      />,
     );
 
     // Click master save in bottom bar
-    const masterSaveBtn = screen.getByRole("button", { name: /حفظ جميع البيانات/i });
+    const masterSaveBtn = screen.getByRole("button", {
+      name: /حفظ جميع البيانات/i,
+    });
     fireEvent.click(masterSaveBtn);
 
     await waitFor(() => {
@@ -333,7 +365,7 @@ describe("ProductEditor", () => {
           sku: "SILK-001",
           quantity: 15,
           tags: [{ name: "silk" }, { name: "luxury" }, { name: "shirt" }],
-        })
+        }),
       );
       // Not part of Salla's PUT /products/{id} body
       expect(mockMutateUpdateProduct.mock.calls[0][0]).not.toHaveProperty(
@@ -341,7 +373,7 @@ describe("ProductEditor", () => {
       );
       expect(showToast).toHaveBeenCalledWith(
         expect.stringContaining("تم حفظ بيانات المنتج بنجاح"),
-        "success"
+        "success",
       );
     });
   });
@@ -353,7 +385,7 @@ describe("ProductEditor", () => {
         token="tok_test"
         initialProduct={mockProduct}
         onBack={vi.fn()}
-      />
+      />,
     );
     const root = container.querySelector(".product-editor-container");
     expect(root).toHaveAttribute("dir", "rtl");
@@ -375,7 +407,7 @@ describe("ProductEditor", () => {
         initialProduct={product}
         onBack={vi.fn()}
         showToast={vi.fn()}
-      />
+      />,
     );
     fireEvent.click(screen.getByRole("button", { name: /حفظ جميع البيانات/i }));
     await waitFor(() => expect(mockMutateUpdateProduct).toHaveBeenCalled());
@@ -399,12 +431,44 @@ describe("ProductEditor", () => {
         initialProduct={product}
         onBack={vi.fn()}
         showToast={vi.fn()}
-      />
+      />,
     );
     fireEvent.click(screen.getByRole("button", { name: /حفظ جميع البيانات/i }));
     expect(
       await screen.findByText("سعر التخفيض يجب أن يكون أقل من السعر الأساسي"),
     ).toBeInTheDocument();
+    expect(mockMutateUpdateProduct).not.toHaveBeenCalled();
+  });
+
+  it("creates an option from the dialog without saving the product", async () => {
+    renderWithClient(
+      <ProductEditor
+        productId={101}
+        token="tok_test"
+        initialProduct={mockProduct}
+        onBack={vi.fn()}
+        showToast={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /إضافة خيار جديد/ }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(screen.getByPlaceholderText(/المقاس، اللون، السعة/), {
+      target: { value: "Color" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/صغير, متوسط/), {
+      target: { value: "Red, Blue" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /إضافة الخيار/ }));
+
+    await waitFor(() =>
+      expect(mockMutateCreateOption).toHaveBeenCalledWith({
+        name: "Color",
+        type: "text",
+        values: [{ name: "Red" }, { name: "Blue" }],
+      }),
+    );
+    await waitFor(() => expect(dialog).not.toBeInTheDocument());
     expect(mockMutateUpdateProduct).not.toHaveBeenCalled();
   });
 
@@ -416,10 +480,12 @@ describe("ProductEditor", () => {
         token="tok_test"
         initialProduct={mockProduct}
         onBack={onBack}
-      />
+      />,
     );
 
-    const backBtn = screen.getByRole("button", { name: /العودة لقائمة المنتجات/i });
+    const backBtn = screen.getByRole("button", {
+      name: /العودة لقائمة المنتجات/i,
+    });
     fireEvent.click(backBtn);
 
     expect(onBack).toHaveBeenCalledTimes(1);

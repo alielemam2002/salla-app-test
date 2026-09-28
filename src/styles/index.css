@@ -1,0 +1,21 @@
+/* ============================================
+   Salla Embedded SDK Playground - Style entry
+   Import order matters: it preserves the cascade.
+   ============================================ */
+
+@import "./tokens.css";
+@import "./base.css";
+@import "./layout.css";
+@import "./ui/surfaces.css";
+@import "./features/console.css";
+@import "./features/playground.css";
+@import "./ui/buttons.css";
+@import "./ui/toast.css";
+@import "./features/addons.css";
+@import "./features/products.css";
+@import "./ui/modal-forms.css";
+@import "./features/products-modal.css";
+@import "./features/discounts.css";
+@import "./features/product-editor.css";
+@import "./features/performance.css";
+@import "./ui/kit.css";

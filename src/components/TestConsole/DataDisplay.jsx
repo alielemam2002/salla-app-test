@@ -1,126 +1,90 @@
-import logger from "../utils/logger.js";
+import { Check, Copy, KeyRound, LayoutTemplate } from "lucide-react";
+import { Badge, Card, IconButton, KeyValueList } from "../ui/index.js";
+import { useClipboard } from "../../hooks/ui/useClipboard.js";
+import {
+  describeVerifyStatus,
+  maskToken,
+} from "../../utils/testConsoleFormat.js";
 
-function maskToken(token) {
-  if (!token || token.length < 20) return token;
-  return token.substring(0, 10) + "..." + token.substring(token.length - 10);
-}
-
+/**
+ * Layout context and token verification details.
+ * `verifyStatus` is the raw bootstrap status ("verified" | "failed" | "verifying" | …).
+ */
 export default function DataDisplay({
   layoutData,
   token,
   verifiedData,
   verifyStatus,
 }) {
-  const handleTokenClick = async () => {
-    if (token) {
-      try {
-        await navigator.clipboard.writeText(token);
-        // Could show a toast here
-      } catch (error) {
-        logger.error("Failed to copy token:", error);
-      }
-    }
-  };
+  const { copied, copy } = useClipboard();
+  const status = describeVerifyStatus(verifyStatus);
+
+  const layoutItems = [
+    { label: "Theme", value: layoutData?.theme },
+    {
+      label: "Width",
+      value: layoutData?.width ? `${layoutData.width}px` : null,
+    },
+    { label: "Locale", value: layoutData?.locale },
+    { label: "Direction", value: layoutData?.dir },
+    { label: "Currency", value: layoutData?.currency },
+  ];
+
+  const verifyItems = [
+    {
+      label: "Verify Status",
+      mono: false,
+      value: (
+        <Badge tone={status.tone} dot>
+          {status.label}
+        </Badge>
+      ),
+    },
+    { label: "Store ID", value: verifiedData?.store_id },
+    { label: "User ID", value: verifiedData?.user_id },
+    { label: "Owner ID", value: verifiedData?.owner_id },
+    { label: "Expiry", value: verifiedData?.exp },
+  ];
 
   return (
     <>
-      {/* Layout Data Panel */}
-      <section className="panel panel-data">
-        <div className="panel-header">
-          <div>
-            <h2 className="panel-title">Layout Data</h2>
-            <span className="panel-subtitle">
-              From embedded::context.provide
-            </span>
-          </div>
-        </div>
-        <div className="data-container">
-          <div className="data-grid">
-            <div className="data-item">
-              <span className="data-label">Theme</span>
-              <span className="data-value">{layoutData?.theme || "—"}</span>
-            </div>
-            <div className="data-item">
-              <span className="data-label">Width</span>
-              <span className="data-value">
-                {layoutData?.width ? `${layoutData.width}px` : "—"}
-              </span>
-            </div>
-            <div className="data-item">
-              <span className="data-label">Locale</span>
-              <span className="data-value">{layoutData?.locale || "—"}</span>
-            </div>
-            <div className="data-item">
-              <span className="data-label">Direction</span>
-              <span className="data-value">{layoutData?.dir || "—"}</span>
-            </div>
-            <div className="data-item">
-              <span className="data-label">Currency</span>
-              <span className="data-value">{layoutData?.currency || "—"}</span>
-            </div>
-          </div>
-        </div>
-      </section>
+      <Card className="console-data">
+        <Card.Header
+          icon={LayoutTemplate}
+          title="Layout Data"
+          subtitle="From embedded::context.provide"
+        />
+        <Card.Body>
+          <KeyValueList items={layoutItems} className="console-kv-grid" />
+        </Card.Body>
+      </Card>
 
-      {/* Token & Verification Data Panel */}
-      <section className="panel panel-data">
-        <div className="panel-header">
-          <div>
-            <h2 className="panel-title">Token Verification</h2>
-            <span className="panel-subtitle">
-              From URL param & API response
-            </span>
-          </div>
-        </div>
-        <div className="data-container">
-          <div className="data-grid">
-            <div className="data-item data-item-full">
-              <span className="data-label">Token</span>
-              <span
-                className={`data-value data-value-truncate ${token ? "cursor-pointer" : ""}`}
-                onClick={handleTokenClick}
-                title={token ? "Click to copy" : ""}
-              >
+      <Card className="console-data">
+        <Card.Header
+          icon={KeyRound}
+          title="Token Verification"
+          subtitle="From URL param & API response"
+        />
+        <Card.Body>
+          <div className="console-token">
+            <span className="data-label">Token</span>
+            <div className="console-token-row">
+              <code className="data-value console-token-value">
                 {token ? maskToken(token) : "—"}
-              </span>
-            </div>
-            <div className="data-item">
-              <span className="data-label">Verify Status</span>
-              <span
-                className={`data-value ${
-                  verifyStatus === "✓ Verified"
-                    ? "data-value-success"
-                    : verifyStatus === "✗ Failed"
-                      ? "data-value-error"
-                      : ""
-                }`}
-              >
-                {verifyStatus}
-              </span>
-            </div>
-            <div className="data-item">
-              <span className="data-label">Store ID</span>
-              <span className="data-value">
-                {verifiedData?.store_id || "—"}
-              </span>
-            </div>
-            <div className="data-item">
-              <span className="data-label">User ID</span>
-              <span className="data-value">{verifiedData?.user_id || "—"}</span>
-            </div>
-            <div className="data-item">
-              <span className="data-label">Owner ID</span>
-              <span className="data-value">
-                {verifiedData?.owner_id || "—"}
-              </span>
-            </div>
-            <div className="data-item">
-              <span className="data-label">Expiry</span>
-              <span className="data-value">{verifiedData?.exp || "—"}</span>
+              </code>
+              {token && (
+                <IconButton
+                  icon={copied ? Check : Copy}
+                  label={copied ? "Token copied" : "Copy token"}
+                  tone="primary"
+                  onClick={() => copy(token)}
+                />
+              )}
             </div>
           </div>
-        </div>
-      </section>
+          <KeyValueList items={verifyItems} className="console-kv-grid" />
+        </Card.Body>
+      </Card>
     </>
   );
 }

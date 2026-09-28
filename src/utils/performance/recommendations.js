@@ -11,7 +11,8 @@ export const AUDIT_METRIC_MAP = {
     category: "rendering",
     categoryLabel: "موارد تعطل العرض (Rendering)",
     defaultImpact: "high",
-    whyItMatters: "الملفات البرمجية (CSS/JS) التي يتم تنزيلها وتفسيرها قبل رسم محتوى المتجر تؤخر ظهور أول عنصر مفيد للعميل.",
+    whyItMatters:
+      "الملفات البرمجية (CSS/JS) التي يتم تنزيلها وتفسيرها قبل رسم محتوى المتجر تؤخر ظهور أول عنصر مفيد للعميل.",
     howToFix: [
       "تأجيل تحميل ملفات JavaScript غير الأساسية باستخدام خاصية defer أو async.",
       "تضمين الـ Critical CSS المباشر وتأخير الأنماط الثانوية.",
@@ -23,7 +24,8 @@ export const AUDIT_METRIC_MAP = {
     category: "images",
     categoryLabel: "الصور (Images)",
     defaultImpact: "high",
-    whyItMatters: "خدمة صور بأبعاد أكبر بكثير من حجم الشاشة الفعلية يستهلك بيانات إضافية ويبطئ عرض صور البنرات والمنتجات.",
+    whyItMatters:
+      "خدمة صور بأبعاد أكبر بكثير من حجم الشاشة الفعلية يستهلك بيانات إضافية ويبطئ عرض صور البنرات والمنتجات.",
     howToFix: [
       "استخدام صور متجاوبة بأبعاد مناسبة لأجهزة الجوال والكمبيوتر (srcset و sizes).",
       "ضغط صور البنرات قبل رفعها لمتجر سلة.",
@@ -35,9 +37,10 @@ export const AUDIT_METRIC_MAP = {
     category: "images",
     categoryLabel: "الصور (Images)",
     defaultImpact: "medium",
-    whyItMatters: "تنزيل الصور الموجودة أسفل الصفحة فور فتح المتجر ينافس تحميل العناصر العلوية التي يراها العميل أولاً.",
+    whyItMatters:
+      "تنزيل الصور الموجودة أسفل الصفحة فور فتح المتجر ينافس تحميل العناصر العلوية التي يراها العميل أولاً.",
     howToFix: [
-      "تفعيل خاصية التحميل الكسول (Lazy Loading عبر loading=\"lazy\") لصور المنتجات أسفل الصفحة.",
+      'تفعيل خاصية التحميل الكسول (Lazy Loading عبر loading="lazy") لصور المنتجات أسفل الصفحة.',
       "استثناء الصورة الرئيسية الأولى (Hero Image) من الـ Lazy Loading لتظهر فوراً.",
     ],
   },
@@ -46,7 +49,8 @@ export const AUDIT_METRIC_MAP = {
     category: "images",
     categoryLabel: "الصور (Images)",
     defaultImpact: "high",
-    whyItMatters: "صيغ الصور الحديثة مثل WebP و AVIF توفر ضغطاً متفوقاً بنسبة 30% إلى 50% مقارنة بـ JPEG و PNG دون المساس بالجودة.",
+    whyItMatters:
+      "صيغ الصور الحديثة مثل WebP و AVIF توفر ضغطاً متفوقاً بنسبة 30% إلى 50% مقارنة بـ JPEG و PNG دون المساس بالجودة.",
     howToFix: [
       "تحويل صور المنتجات والبنرات إلى صيغة WebP أو AVIF.",
       "الاستفادة من نظام ضغط الصور التلقائي المدمج في منصة سلة.",
@@ -57,7 +61,8 @@ export const AUDIT_METRIC_MAP = {
     category: "images",
     categoryLabel: "الصور (Images)",
     defaultImpact: "medium",
-    whyItMatters: "الصور غير المضغوطة تهدر النطاق الترددي للعميل وتزيد من وقت تنزيل عناصر واجهة المتجر.",
+    whyItMatters:
+      "الصور غير المضغوطة تهدر النطاق الترددي للعميل وتزيد من وقت تنزيل عناصر واجهة المتجر.",
     howToFix: [
       "استخدام أدوات ضغط الصور بدون فقدان جودة (Lossless/Lossy Optimization).",
       "ضبط جودة الصور بين 80% - 85% كحد أقصى للويب.",
@@ -68,7 +73,8 @@ export const AUDIT_METRIC_MAP = {
     category: "network",
     categoryLabel: "الشبكة والخادم (Network)",
     defaultImpact: "high",
-    whyItMatters: "الوقت المستغرق لاستلام أول رد من الخادم يحدد الحد الأدنى لسرعة استجابة المتجر بالكامل.",
+    whyItMatters:
+      "الوقت المستغرق لاستلام أول رد من الخادم يحدد الحد الأدنى لسرعة استجابة المتجر بالكامل.",
     howToFix: [
       "الاعتماد على شبكة توزيع المحتوى (CDN) للبيانات الثابتة.",
       "تقليل استدعاءات قواعد البيانات والاستعلامات المعقدة في التطبيقات المخصصة.",
@@ -82,7 +88,8 @@ export const AUDIT_METRIC_MAP = {
     category: "layout",
     categoryLabel: "تخطيط الصفحة (Layout)",
     defaultImpact: "high",
-    whyItMatters: "تحرك العناصر فجأة أثناء التحميل يربك المتسوق وقد يؤدي لنقرات خاطئة على أزرار الشراء أو الإلغاء.",
+    whyItMatters:
+      "تحرك العناصر فجأة أثناء التحميل يربك المتسوق وقد يؤدي لنقرات خاطئة على أزرار الشراء أو الإلغاء.",
     howToFix: [
       "تحديد أبعاد واضحة (width و height أو aspect-ratio) لكل الصور وبنرات السلايدر.",
       "حجز مساحة مسبقة للإعلانات والرسائل الترويجية قبل تحميلها.",
@@ -94,7 +101,8 @@ export const AUDIT_METRIC_MAP = {
     category: "layout",
     categoryLabel: "تخطيط الصفحة (Layout)",
     defaultImpact: "high",
-    whyItMatters: "الصور بدون أبعاد محددة تسبب قفزات ملحوظة في تخطيط الصفحة فور اكتمال تنزيلها.",
+    whyItMatters:
+      "الصور بدون أبعاد محددة تسبب قفزات ملحوظة في تخطيط الصفحة فور اكتمال تنزيلها.",
     howToFix: [
       "إضافة سمات width و height لجميع علامات <img> في القالب.",
       "استخدام CSS aspect-ratio لحجز المساحة أثناء تنزيل الصورة.",
@@ -107,7 +115,8 @@ export const AUDIT_METRIC_MAP = {
     category: "javascript",
     categoryLabel: "جافاسكريبت (JavaScript)",
     defaultImpact: "medium",
-    whyItMatters: "الأكواد البرمجية الفائضة وغير المستخدمة تستهلك وقت معالج جهاز الجوال وتجعل المتجر بطيئاً في الاستجابة للنقر.",
+    whyItMatters:
+      "الأكواد البرمجية الفائضة وغير المستخدمة تستهلك وقت معالج جهاز الجوال وتجعل المتجر بطيئاً في الاستجابة للنقر.",
     howToFix: [
       "حذف السكريبتات الإضافية وتطبيقات الطرف الثالث غير المستخدمة.",
       "تجزئة الأكواد (Code Splitting) وتحميل كل سكريبت فقط في الصفحة المخصصة له.",
@@ -118,7 +127,8 @@ export const AUDIT_METRIC_MAP = {
     category: "css",
     categoryLabel: "تنسيقات CSS",
     defaultImpact: "medium",
-    whyItMatters: "ملفات الأنماط الضخمة غير المستخدمة تعطل العرض الأولي للصفحة (FCP).",
+    whyItMatters:
+      "ملفات الأنماط الضخمة غير المستخدمة تعطل العرض الأولي للصفحة (FCP).",
     howToFix: [
       "تنظيف ملفات CSS من التنسيقات القديمة وغير المستعملة.",
       "استخراج وتضمين الـ Critical CSS المطلوب للصفحة الحالية فقط.",
@@ -129,7 +139,8 @@ export const AUDIT_METRIC_MAP = {
     category: "javascript",
     categoryLabel: "جافاسكريبت (JavaScript)",
     defaultImpact: "low",
-    whyItMatters: "الملفات النصية غير المصغرة تحتوي على مسافات وتعليقات تزيد من حجم التنزيل دون فائدة.",
+    whyItMatters:
+      "الملفات النصية غير المصغرة تحتوي على مسافات وتعليقات تزيد من حجم التنزيل دون فائدة.",
     howToFix: [
       "تصغير وضغط ملفات JS (Minification via Terser / esbuild).",
       "استخدام حزم الإنتاج المجمعة (Production Bundles).",
@@ -140,17 +151,17 @@ export const AUDIT_METRIC_MAP = {
     category: "css",
     categoryLabel: "تنسيقات CSS",
     defaultImpact: "low",
-    whyItMatters: "عدم تصغير ملفات CSS يستهلك بايتات إضافية أثناء التحميل الأولي.",
-    howToFix: [
-      "تصغير ملفات CSS باستخدام أدوات مثل cssnano أو clean-css.",
-    ],
+    whyItMatters:
+      "عدم تصغير ملفات CSS يستهلك بايتات إضافية أثناء التحميل الأولي.",
+    howToFix: ["تصغير ملفات CSS باستخدام أدوات مثل cssnano أو clean-css."],
   },
   "uses-text-compression": {
     metric: "FCP",
     category: "network",
     categoryLabel: "الشبكة والخادم (Network)",
     defaultImpact: "high",
-    whyItMatters: "عدم تفعيل ضغط النصوص على الخادم (Gzip أو Brotli) يضاعف حجم الملفات المنقولة عبر الشبكة.",
+    whyItMatters:
+      "عدم تفعيل ضغط النصوص على الخادم (Gzip أو Brotli) يضاعف حجم الملفات المنقولة عبر الشبكة.",
     howToFix: [
       "التأكد من تفعيل ضغط Brotli أو Gzip للملفات النصية (HTML, CSS, JS, SVG).",
     ],
@@ -160,7 +171,8 @@ export const AUDIT_METRIC_MAP = {
     category: "fonts",
     categoryLabel: "الخطوط (Fonts)",
     defaultImpact: "medium",
-    whyItMatters: "تأخر تنزيل خط المتجر يجعل النصوص مخفية لفترة من الوقت (FOIT)، مما يعيق قراءة المحتوى.",
+    whyItMatters:
+      "تأخر تنزيل خط المتجر يجعل النصوص مخفية لفترة من الوقت (FOIT)، مما يعيق قراءة المحتوى.",
     howToFix: [
       "استخدام font-display: swap لإظهار خط احتياطي سريعاً ريثما يكتمل تحميل الخط الأصلي.",
       "التحميل المسبق (Preload) للخطوط الأساسية لمتجرك.",
@@ -241,13 +253,19 @@ export function extractRecommendations(audits) {
     if (isPassing) continue;
 
     const details = audit.details || {};
-    const savingsMs = details.overallSavingsMs !== undefined ? details.overallSavingsMs : null;
-    const savingsBytes = details.overallSavingsBytes !== undefined ? details.overallSavingsBytes : null;
+    const savingsMs =
+      details.overallSavingsMs !== undefined ? details.overallSavingsMs : null;
+    const savingsBytes =
+      details.overallSavingsBytes !== undefined
+        ? details.overallSavingsBytes
+        : null;
 
     // Check if we recognize this audit or if it provides actionable savings
     const meta = AUDIT_METRIC_MAP[auditId];
     const hasRecognizedMeta = Boolean(meta);
-    const hasSavings = (savingsMs !== null && savingsMs > 0) || (savingsBytes !== null && savingsBytes > 0);
+    const hasSavings =
+      (savingsMs !== null && savingsMs > 0) ||
+      (savingsBytes !== null && savingsBytes > 0);
 
     if (!hasRecognizedMeta && !hasSavings) {
       continue;
@@ -281,7 +299,9 @@ export function extractRecommendations(audits) {
       affectedMetric: meta?.metric || "Performance",
       category: meta?.category || "other",
       categoryLabel: meta?.categoryLabel || "تحسينات عامة",
-      whyItMatters: meta?.whyItMatters || "يساهم حل هذه المشكلة في تسريع معالجة المتجر وتحسين تجربة العميل.",
+      whyItMatters:
+        meta?.whyItMatters ||
+        "يساهم حل هذه المشكلة في تسريع معالجة المتجر وتحسين تجربة العميل.",
       howToFix: meta?.howToFix || [
         "مراجعة الموارد المستدعاة وتقليل حجم ونطاق البيانات المحملة.",
       ],

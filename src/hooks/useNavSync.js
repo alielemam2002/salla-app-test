@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import logger from "../utils/logger.js";
+import { APP_TABS, DEFAULT_TAB } from "../config/tabs.js";
 
-const STATIC_TAB_ITEMS = [
-  { title: "Test Console", value: "test-console", active: true },
-  { title: "Playground", value: "playground", active: false },
-  { title: "Addons", value: "addons", active: false },
-  { title: "Products", value: "products", active: false },
-  { title: "Performance Center", value: "performance", active: false },
-];
+const STATIC_TAB_ITEMS = APP_TABS.map((tab) => ({
+  title: tab.label,
+  value: tab.id,
+  active: tab.id === DEFAULT_TAB,
+}));
 const STATIC_TAB_VALUE_SET = new Set(
   STATIC_TAB_ITEMS.map((item) => item.value),
 );

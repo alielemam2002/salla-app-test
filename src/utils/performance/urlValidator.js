@@ -89,7 +89,8 @@ export function validateStoreUrl(input) {
   } catch {
     return {
       isValid: false,
-      error: "صيغة الرابط غير صحيحة، يرجى كتابة رابط صالح مثل: https://mystore.salla.sa",
+      error:
+        "صيغة الرابط غير صحيحة، يرجى كتابة رابط صالح مثل: https://mystore.salla.sa",
       normalizedUrl: null,
       hostname: null,
     };

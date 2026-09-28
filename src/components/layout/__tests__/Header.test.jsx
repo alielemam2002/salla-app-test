@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Header from "../Header.jsx";
-import { ThemeProvider } from "../../contexts/ThemeContext.jsx";
+import { ThemeProvider } from "../../../contexts/ThemeContext.jsx";
 
 describe("Header", () => {
   it("renders title and version", () => {

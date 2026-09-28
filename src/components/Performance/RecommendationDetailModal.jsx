@@ -1,14 +1,29 @@
-import React from 'react';
-import { X, AlertTriangle, ArrowRight, ShieldCheck, FileCode, CheckCircle2, ExternalLink } from 'lucide-react';
-import { formatBytes, formatSavingsMs } from '../../utils/performance/recommendations.js';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  FileCode,
+  Lightbulb,
+  ShieldCheck,
+} from "lucide-react";
+import { Badge, Button, Modal, StatCard } from "../ui/index.js";
+import {
+  formatBytes,
+  formatSavingsMs,
+} from "../../utils/performance/recommendations.js";
+import {
+  getPriorityLabel,
+  impactToTone,
+  truncateUrl,
+} from "../../utils/performance/formatters.js";
 
-/**
- * Detailed Audit Modal for an individual recommendation
- */
-export default function RecommendationDetailModal({
-  recommendation,
-  onClose
-}) {
+function itemSavings(item) {
+  if (item.wastedBytes) return formatBytes(item.wastedBytes);
+  if (item.wastedMs) return `${Math.round(item.wastedMs)}ms`;
+  return "—";
+}
+
+/** Full audit detail for a single recommendation. */
+export default function RecommendationDetailModal({ recommendation, onClose }) {
   if (!recommendation) return null;
 
   const {
@@ -22,173 +37,117 @@ export default function RecommendationDetailModal({
     savingsBytes,
     whyItMatters,
     howToFix = [],
-    items = []
+    items = [],
   } = recommendation;
 
   const targetMetric = affectedMetric || metric;
+  const steps = howToFix.length > 0 ? howToFix : [description];
 
   return (
-    <div
-      className="perf-modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="perf-modal-title"
-      onClick={onClose}
+    <Modal
+      isOpen
+      onClose={onClose}
+      size="lg"
+      icon={Lightbulb}
+      title={title}
+      className="perf-modal perf-rec-modal"
+      footer={<Button onClick={onClose}>إغلاق</Button>}
     >
-      <div
-        className="perf-modal-content"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="perf-modal-header">
-          <div className="perf-modal-title-group">
-            <div className="perf-modal-badges">
-              <span className={`perf-impact-badge ${impact}`}>
-                {impact === 'high' ? 'أولوية قصوى' : impact === 'medium' ? 'أولوية متوسطة' : 'تحسين إضافي'}
-              </span>
-              {targetMetric && (
-                <span className="perf-metric-tag">
-                  المؤشر المتأثر: <strong>{targetMetric}</strong>
-                </span>
-              )}
-              {categoryLabel && (
-                <span className="perf-cat-tag">{categoryLabel}</span>
-              )}
-            </div>
-            <h3 id="perf-modal-title" className="perf-modal-title">
-              {title}
-            </h3>
-          </div>
-
-          <button
-            type="button"
-            className="perf-modal-close-btn"
-            onClick={onClose}
-            aria-label="إغلاق النافذة"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="perf-modal-body">
-          {/* Savings Callout if available */}
-          {(savingsMs || savingsBytes) && (
-            <div className="perf-savings-callout">
-              <span className="perf-callout-title">التوفير المتوقع المكتشف بواسطة Google:</span>
-              <div className="perf-callout-values">
-                {savingsMs > 0 && (
-                  <div className="perf-stat-box">
-                    <span className="perf-stat-label">الوقت المحفوظ تقريبياً:</span>
-                    <strong className="perf-stat-num highlight">~{formatSavingsMs(savingsMs)}</strong>
-                  </div>
-                )}
-                {savingsBytes > 0 && (
-                  <div className="perf-stat-box">
-                    <span className="perf-stat-label">حجم البيانات المحفوظ:</span>
-                    <strong className="perf-stat-num highlight">{formatBytes(savingsBytes)}</strong>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Why it matters */}
-          <div className="perf-section-block">
-            <h4 className="perf-block-title">
-              <AlertTriangle size={16} className="text-amber" aria-hidden="true" />
-              لماذا يؤثر هذا على متجرك؟
-            </h4>
-            <p className="perf-block-text">
-              {whyItMatters || description}
-            </p>
-          </div>
-
-          {/* How to fix */}
-          <div className="perf-section-block">
-            <h4 className="perf-block-title">
-              <CheckCircle2 size={16} className="text-emerald" aria-hidden="true" />
-              خطوات الحل والتطبيق
-            </h4>
-            <ul className="perf-steps-list">
-              {howToFix.length > 0 ? (
-                howToFix.map((step, idx) => (
-                  <li key={idx} className="perf-step-item">
-                    <span className="step-number">{idx + 1}</span>
-                    <span className="step-text">{step}</span>
-                  </li>
-                ))
-              ) : (
-                <li className="perf-step-item">
-                  <span className="step-number">1</span>
-                  <span className="step-text">{description}</span>
-                </li>
-              )}
-            </ul>
-          </div>
-
-          {/* Affected Assets / Items if returned by Lighthouse */}
-          {items.length > 0 && (
-            <div className="perf-section-block">
-              <h4 className="perf-block-title">
-                <FileCode size={16} aria-hidden="true" />
-                الملفات والعناصر المتسببة في المشكلة ({items.length})
-              </h4>
-              <div className="perf-items-table-wrapper">
-                <table className="perf-items-table">
-                  <thead>
-                    <tr>
-                      <th>رابط الملف أو العنصر</th>
-                      <th>الحجم / التأخير</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((item, idx) => (
-                      <tr key={idx}>
-                        <td className="item-url-cell" title={item.url || item.label}>
-                          <code>{truncateUrl(item.url || item.label)}</code>
-                        </td>
-                        <td className="item-savings-cell">
-                          {item.wastedBytes ? formatBytes(item.wastedBytes) : item.wastedMs ? `${Math.round(item.wastedMs)}ms` : '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Source Attribution */}
-          <div className="perf-modal-footer-meta">
-            <ShieldCheck size={14} aria-hidden="true" />
-            <span>المصدر: Google Lighthouse Audit Diagnostics</span>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="perf-modal-footer">
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={onClose}
-          >
-            إغلاق
-          </button>
-        </div>
+      <div className="perf-rec-modal-badges">
+        <Badge tone={impactToTone(impact)}>{getPriorityLabel(impact)}</Badge>
+        {targetMetric && (
+          <Badge tone="info">
+            المؤشر المتأثر: <strong>{targetMetric}</strong>
+          </Badge>
+        )}
+        {categoryLabel && <Badge>{categoryLabel}</Badge>}
       </div>
-    </div>
-  );
-}
 
-function truncateUrl(url) {
-  if (!url) return '';
-  if (url.length <= 60) return url;
-  try {
-    const parsed = new URL(url);
-    const path = parsed.pathname.length > 30 ? '...' + parsed.pathname.slice(-25) : parsed.pathname;
-    return `${parsed.origin}${path}`;
-  } catch {
-    return url.slice(0, 30) + '...' + url.slice(-25);
-  }
+      {(savingsMs || savingsBytes) && (
+        <div className="perf-rec-modal-block">
+          <h4 className="perf-block-title">
+            التوفير المتوقع المكتشف بواسطة Google:
+          </h4>
+          <div className="perf-stat-grid">
+            {savingsMs > 0 && (
+              <StatCard
+                tone="success"
+                label="الوقت المحفوظ تقريبياً:"
+                value={`~${formatSavingsMs(savingsMs)}`}
+              />
+            )}
+            {savingsBytes > 0 && (
+              <StatCard
+                tone="success"
+                label="حجم البيانات المحفوظ:"
+                value={formatBytes(savingsBytes)}
+              />
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="perf-rec-modal-block">
+        <h4 className="perf-block-title">
+          <AlertTriangle size={16} className="is-warning" aria-hidden="true" />
+          لماذا يؤثر هذا على متجرك؟
+        </h4>
+        <p className="perf-block-text">{whyItMatters || description}</p>
+      </div>
+
+      <div className="perf-rec-modal-block">
+        <h4 className="perf-block-title">
+          <CheckCircle2 size={16} className="is-success" aria-hidden="true" />
+          خطوات الحل والتطبيق
+        </h4>
+        <ol className="perf-steps">
+          {steps.map((step, idx) => (
+            <li key={idx} className="perf-step">
+              <span className="perf-step-num">{idx + 1}</span>
+              <span>{step}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      {items.length > 0 && (
+        <div className="perf-rec-modal-block">
+          <h4 className="perf-block-title">
+            <FileCode size={16} aria-hidden="true" />
+            الملفات والعناصر المتسببة في المشكلة ({items.length})
+          </h4>
+          <div className="perf-table-wrap">
+            <table className="perf-table perf-table--compact">
+              <thead>
+                <tr>
+                  <th scope="col">رابط الملف أو العنصر</th>
+                  <th scope="col">الحجم / التأخير</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, idx) => (
+                  <tr key={idx}>
+                    <td
+                      className="perf-url-cell"
+                      title={item.url || item.label}
+                    >
+                      <code dir="ltr">
+                        {truncateUrl(item.url || item.label)}
+                      </code>
+                    </td>
+                    <td className="perf-nowrap">{itemSavings(item)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <p className="perf-muted perf-inline-icon">
+        <ShieldCheck size={14} aria-hidden="true" />
+        المصدر: Google Lighthouse Audit Diagnostics
+      </p>
+    </Modal>
+  );
 }

@@ -1,6 +1,6 @@
-import { PERFORMANCE_FUNCTION_URL } from '../constants.js';
-import { normalizePerformanceReport } from './normalizer.js';
-import { saveScanToHistory } from './historyStorage.js';
+import { PERFORMANCE_FUNCTION_URL } from "../constants.js";
+import { normalizePerformanceReport } from "./normalizer.js";
+import { saveScanToHistory } from "./historyStorage.js";
 
 /**
  * Calls server-side /api/performance to run Google PageSpeed Insights + CrUX
@@ -13,30 +13,35 @@ import { saveScanToHistory } from './historyStorage.js';
  * @param {string} [options.storeId='default']
  * @returns {Promise<object>} Standardized PerformanceReport
  */
-export async function runPerformanceTest(url, {
-  strategy = 'all',
-  apiKey = '',
-  force = false,
-  existingReport = null,
-  storeId = 'default'
-} = {}) {
+export async function runPerformanceTest(
+  url,
+  {
+    strategy = "all",
+    apiKey = "",
+    force = false,
+    existingReport = null,
+    storeId = "default",
+  } = {},
+) {
   const response = await fetch(PERFORMANCE_FUNCTION_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      action: 'test',
+      action: "test",
       url,
       strategy,
-      apiKey: apiKey || '',
-      force: Boolean(force)
-    })
+      apiKey: apiKey || "",
+      force: Boolean(force),
+    }),
   });
 
   const data = await response.json();
 
   if (!response.ok || !data.success) {
-    const error = new Error(data.error || 'فشل فحص سرعة المتجر، يرجى المحاولة لاحقاً.');
-    error.code = data.code || 'performance_test_failed';
+    const error = new Error(
+      data.error || "فشل فحص سرعة المتجر، يرجى المحاولة لاحقاً.",
+    );
+    error.code = data.code || "performance_test_failed";
     error.status = response.status;
     throw error;
   }
@@ -47,14 +52,14 @@ export async function runPerformanceTest(url, {
     desktop: data.desktop,
     cruxMobile: data.cruxMobile,
     cruxDesktop: data.cruxDesktop,
-    existingReport
+    existingReport,
   });
 
   // Save to history storage
   try {
     saveScanToHistory(normalized, storeId);
   } catch (err) {
-    console.warn('Failed to auto-save scan to history:', err);
+    console.warn("Failed to auto-save scan to history:", err);
   }
 
   return normalized;
@@ -69,13 +74,13 @@ export async function runPerformanceTest(url, {
 export async function fetchStoreDefaultUrl(token, appId) {
   try {
     const response = await fetch(PERFORMANCE_FUNCTION_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        action: 'store_info',
+        action: "store_info",
         token,
-        appId
-      })
+        appId,
+      }),
     });
 
     if (!response.ok) return null;

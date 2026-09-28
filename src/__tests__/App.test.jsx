@@ -39,10 +39,10 @@ describe("App", () => {
     render(<App />);
     expect(screen.getByText("Embedded SDK Playground")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Test Console" }),
+      screen.getByRole("tab", { name: "Test Console" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Playground" }),
+      screen.getByRole("tab", { name: "Playground" }),
     ).toBeInTheDocument();
   });
 
@@ -53,7 +53,7 @@ describe("App", () => {
 
   it("switches to Playground when Playground tab is clicked", async () => {
     render(<App />);
-    await userEvent.click(screen.getByRole("button", { name: "Playground" }));
+    await userEvent.click(screen.getByRole("tab", { name: "Playground" }));
     expect(screen.getByText("Code Editor")).toBeInTheDocument();
   });
 
