@@ -9,6 +9,10 @@ import {
 import { useCouponFilters } from "../../hooks/coupons/useCouponFilters.js";
 import { describeCouponError } from "../../utils/coupons/couponErrors.js";
 import { moneyCurrency } from "../../utils/coupons/couponModel.js";
+import {
+  saveCouponDisplaySettings,
+  removeCouponDisplaySettings,
+} from "../../utils/coupons/displaySettingsStorage.js";
 import CouponsToolbar from "./CouponsToolbar.jsx";
 import CouponList from "./CouponList.jsx";
 import CouponFormModal from "./CouponFormModal.jsx";
@@ -68,6 +72,9 @@ export default function CouponsTab({ embedded, showToast }) {
   );
 
   const handleSubmit = (input) => {
+    if (input.displaySettings && input.code) {
+      saveCouponDisplaySettings(input.code, input.displaySettings);
+    }
     const onSuccess = () => {
       formDialog.close();
       showToast?.(
@@ -83,6 +90,9 @@ export default function CouponsTab({ embedded, showToast }) {
 
   const handleDelete = () => {
     const coupon = deleteDialog.data;
+    if (coupon?.code) {
+      removeCouponDisplaySettings(coupon.code);
+    }
     remove.mutate(coupon.id, {
       onSuccess: () => {
         deleteDialog.close();

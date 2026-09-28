@@ -10,7 +10,6 @@ import PlaygroundTab from "./components/Playground/PlaygroundTab.jsx";
 import AddonsTab from "./components/Addons/AddonsTab.jsx";
 import ProductsTab from "./components/Products/ProductsTab.jsx";
 import CouponsTab from "./components/Coupons/CouponsTab.jsx";
-import PerformanceCenterTab from "./components/Performance/PerformanceCenterTab.jsx";
 
 function AppContent() {
   const {
@@ -64,9 +63,6 @@ function AppContent() {
       )}
       {activeTab === "coupons" && (
         <CouponsTab embedded={embedded} showToast={showToast} />
-      )}
-      {activeTab === "performance" && (
-        <PerformanceCenterTab token={token} appId={layout?.app_id} />
       )}
     </AppLayout>
   );

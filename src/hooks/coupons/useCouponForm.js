@@ -2,13 +2,14 @@ import { useCallback, useEffect, useState } from "react";
 import {
   couponToForm,
   formToCouponInput,
+  formToDisplaySettings,
   validateCouponForm,
 } from "../../utils/coupons/couponForm.js";
 
 /**
  * Form state for the create/edit dialog. Resets whenever the dialog opens
  * for a different coupon. `submit` validates first and only calls
- * `onValid(input)` when the client-side checks pass.
+ * `onValid(input, displaySettings)` when the client-side checks pass.
  */
 export function useCouponForm({ coupon, isOpen }) {
   const [form, setForm] = useState(() => couponToForm(coupon));
@@ -36,7 +37,7 @@ export function useCouponForm({ coupon, isOpen }) {
       const found = validateCouponForm(form);
       setErrors(found);
       if (Object.keys(found).length) return false;
-      onValid(formToCouponInput(form));
+      onValid(formToCouponInput(form), formToDisplaySettings(form));
       return true;
     },
     [form],

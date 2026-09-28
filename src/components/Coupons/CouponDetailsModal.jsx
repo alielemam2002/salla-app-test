@@ -10,6 +10,8 @@ import {
   moneyValue,
 } from "../../utils/coupons/couponModel.js";
 import CouponScope from "./CouponScope.jsx";
+import CouponStorePreview from "./CouponStorePreview.jsx";
+import { getCouponDisplaySettings } from "../../utils/coupons/displaySettingsStorage.js";
 
 const yesNo = (v) => (v ? "Yes" : "No");
 
@@ -77,6 +79,21 @@ export default function CouponDetailsModal({
           Saving here could remove them.
         </Alert>
       )}
+
+      <CouponStorePreview
+        code={coupon.code}
+        badgeTitle={display.card_badge_title}
+        headlineText={display.card_headline_text}
+        showAnnouncement={display.show_announcement_bar}
+        announcementText={display.announcement_text}
+        announcementBg={display.announcement_bg_color}
+        announcementTextColor={display.announcement_text_color}
+        cardBg={display.card_bg_color}
+        cardTextColor={display.card_text_color}
+        displayProductPage={display.display_product_page}
+        displayCategoryPage={display.display_category_page}
+        displayCartPage={display.display_cart_page}
+      />
     </Modal>
   );
 }

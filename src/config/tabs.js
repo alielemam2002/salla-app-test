@@ -1,6 +1,5 @@
 import {
   Code2,
-  Gauge,
   Package,
   Puzzle,
   Terminal,
@@ -17,7 +16,6 @@ export const APP_TABS = [
   { id: "addons", label: "Addons", icon: Puzzle },
   { id: "products", label: "Products", icon: Package },
   { id: "coupons", label: "Coupons", icon: TicketPercent },
-  { id: "performance", label: "Performance Center", icon: Gauge },
 ];
 
 export const DEFAULT_TAB = APP_TABS[0].id;
