@@ -97,6 +97,7 @@ export function useProductEditor({
     }
     try {
       await updateProduct.mutateAsync(payload);
+      reset(formData);
       notify("تم حفظ بيانات المنتج بنجاح في سلة!", "success");
     } catch (err) {
       notify(err.message || "حدث خطأ أثناء حفظ المنتج في سلة", "error");

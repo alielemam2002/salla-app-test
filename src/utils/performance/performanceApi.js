@@ -35,7 +35,15 @@ export async function runPerformanceTest(
     }),
   });
 
-  const data = await response.json();
+  // A platform timeout/crash returns an HTML error page, not our JSON.
+  const data = await response.json().catch(() => ({
+    success: false,
+    code: response.status === 504 ? "timeout" : "invalid_response",
+    error:
+      response.status === 504
+        ? "استغرق الفحص وقتاً أطول من المسموح. يرجى إعادة المحاولة."
+        : `تعذّر الاتصال بخدمة فحص الأداء (${response.status}).`,
+  }));
 
   if (!response.ok || !data.success) {
     const error = new Error(

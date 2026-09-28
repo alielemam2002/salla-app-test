@@ -100,19 +100,26 @@ export const COMPLETION_RULES = {
         fieldId: "field-promotion_title",
         weight: 2,
         section: "appearance",
-        check: (data) =>
-          Boolean(
-            data?.promotion_title &&
-              String(data.promotion_title).trim().length > 0,
-          ),
+        check: (data) => {
+          const promo =
+            data?.promotion_title ||
+            data?.promotional_title ||
+            data?.promotion?.title;
+          return Boolean(promo && String(promo).trim().length > 0);
+        },
       },
       subtitle: {
         label: "عنوان فرعي للمنتج",
         fieldId: "field-subtitle",
         weight: 2,
         section: "appearance",
-        check: (data) =>
-          Boolean(data?.subtitle && String(data.subtitle).trim().length > 0),
+        check: (data) => {
+          const sub =
+            data?.subtitle ||
+            data?.sub_title ||
+            data?.short_description;
+          return Boolean(sub && String(sub).trim().length > 0);
+        },
       },
     },
   },

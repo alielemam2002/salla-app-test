@@ -26,6 +26,9 @@ Source docs: https://docs.salla.dev/embedded-sdk/overview.md (index of all pages
   | `SALLA_ACCESS_TOKEN` | Yes       | The store's Merchant API access token, needed for the Products tab. |
   | `SALLA_APP_ID`       | Yes       | Used for introspect. Falls back to the `app_id` the page sends.     |
   | `ENV`                | No        | Selects the verify-token upstream.                                  |
+  | `PAGESPEED_API_KEY` (or `GOOGLE_API_KEY`) | No | Google key for the Performance tab (PageSpeed + CrUX). Without it, scans share Google's anonymous daily quota. |
+
+- **Performance tab:** [api/performance.js](api/performance.js) proxies Google PageSpeed, one strategy per request. A scan can take 20–45 s, so `vercel.json` gives the function `maxDuration: 60`, and the PageSpeed call aborts at 50 s. Errors return 422 `page_unreachable` (Lighthouse couldn't load the URL), 429 `quota_exceeded`, 504 `timeout` or 502 for other upstream failures.
 
 ------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------- |
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` (or `UPSTASH_REDIS_REST_*`) | Yes | Redis connection. Set automatically when you add Upstash Redis in Vercel. |

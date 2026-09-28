@@ -135,11 +135,41 @@ export function useUpdateProduct(productId, token) {
       }
       return res.product;
     },
-    onSuccess: (updatedProduct) => {
-      // Optimistically update product cache
+    onSuccess: (updatedProduct, variables) => {
+      // Optimistically update product cache, preserving saved fields from payload
       queryClient.setQueryData(productKeys.detail(productId), (old) => {
-        if (!old) return updatedProduct;
-        return { ...old, ...updatedProduct };
+        const base = old || {};
+        const merged = {
+          ...base,
+          ...variables,
+          ...(updatedProduct || {}),
+        };
+
+        const promo =
+          updatedProduct?.promotion_title ||
+          updatedProduct?.promotional_title ||
+          updatedProduct?.promotion?.title ||
+          variables?.promotion_title ||
+          variables?.promotional_title ||
+          base.promotion_title ||
+          base.promotional_title ||
+          "";
+        merged.promotion_title = promo;
+        merged.promotional_title = promo;
+
+        const sub =
+          updatedProduct?.subtitle ||
+          updatedProduct?.sub_title ||
+          updatedProduct?.short_description ||
+          variables?.subtitle ||
+          variables?.sub_title ||
+          base.subtitle ||
+          base.sub_title ||
+          "";
+        merged.subtitle = sub;
+        merged.sub_title = sub;
+
+        return merged;
       });
       // Invalidate list query
       queryClient.invalidateQueries({ queryKey: productKeys.all });

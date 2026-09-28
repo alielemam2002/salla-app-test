@@ -119,7 +119,12 @@ export function productToFormValues(product) {
     product_type: product.type || product.product_type || "product",
     status: product.status || "sale",
     description: product.description || "",
-    subtitle: product.subtitle || "",
+    subtitle:
+      product.subtitle ||
+      product.sub_title ||
+      product.short_description ||
+      product.subTitle ||
+      "",
     price: toStr(amountOf(regPrice)),
     sale_price: toStr(amountOf(product.sale_price)),
     cost_price: toStr(amountOf(product.cost_price)),

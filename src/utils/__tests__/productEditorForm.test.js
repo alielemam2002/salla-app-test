@@ -42,6 +42,24 @@ describe("productToFormValues", () => {
     expect(values.quantity).toBe("");
     expect(values.unlimited_quantity).toBe(true);
   });
+
+  it("maps promotional_title and sub_title aliases correctly", () => {
+    const values = productToFormValues({
+      promotional_title: "خصم 30%",
+      sub_title: "قطن مصري",
+    });
+    expect(values.promotion_title).toBe("خصم 30%");
+    expect(values.subtitle).toBe("قطن مصري");
+  });
+
+  it("maps promotion.title and short_description aliases correctly", () => {
+    const values = productToFormValues({
+      promotion: { title: "عرض الصيف" },
+      short_description: "وصف توضيحي",
+    });
+    expect(values.promotion_title).toBe("عرض الصيف");
+    expect(values.subtitle).toBe("وصف توضيحي");
+  });
 });
 
 describe("normalizeTags", () => {
@@ -120,6 +138,18 @@ describe("buildProductPayload", () => {
     });
     expect(payload).not.toHaveProperty("quantity");
     expect(payload.sale_price).toBeNull();
+  });
+
+  it("builds payload with both subtitle and promotion_title aliases", () => {
+    const { payload } = buildProductPayload({
+      ...base,
+      subtitle: "قطن مصري عالي الجودة",
+      promotion_title: "خصم 30%",
+    });
+    expect(payload.subtitle).toBe("قطن مصري عالي الجودة");
+    expect(payload.sub_title).toBe("قطن مصري عالي الجودة");
+    expect(payload.promotion_title).toBe("خصم 30%");
+    expect(payload.promotional_title).toBe("خصم 30%");
   });
 });
 

@@ -146,9 +146,35 @@ export async function POST(request) {
           );
         }
 
+        const product = result.data ? { ...result.data } : result.data;
+        if (product && typeof product === "object") {
+          const promo =
+            product.promotion_title ||
+            product.promotional_title ||
+            product.promotion?.title ||
+            product.promotion?.name ||
+            "";
+          if (promo) {
+            product.promotion_title = promo;
+            product.promotional_title = promo;
+          }
+          const sub =
+            product.subtitle ||
+            product.sub_title ||
+            product.short_description ||
+            product.subTitle ||
+            product.metadata?.subtitle ||
+            product.metadata?.sub_title ||
+            "";
+          if (sub) {
+            product.subtitle = sub;
+            product.sub_title = sub;
+          }
+        }
+
         return Response.json({
           success: true,
-          product: result.data,
+          product,
         });
       }
 
@@ -400,7 +426,9 @@ export async function POST(request) {
           "metadata_description",
           "metadata_url",
           "promotion_title",
+          "promotional_title",
           "subtitle",
+          "sub_title",
           "gtin",
           "mpn",
           "sku",
@@ -413,6 +441,17 @@ export async function POST(request) {
               delete payload[strField];
             }
           }
+        }
+
+        if (payload.promotion_title || payload.promotional_title) {
+          const promo = String(payload.promotion_title || payload.promotional_title).trim();
+          payload.promotion_title = promo;
+          payload.promotional_title = promo;
+        }
+        if (payload.subtitle || payload.sub_title) {
+          const sub = String(payload.subtitle || payload.sub_title).trim();
+          payload.subtitle = sub;
+          payload.sub_title = sub;
         }
 
         // Remove immutable or read-only fields on update
@@ -458,9 +497,38 @@ export async function POST(request) {
           );
         }
 
+        // Salla's PUT response often returns a partial product object that omits
+        // fields like promotion_title, subtitle, metadata, etc.
+        // Merge the request payload and returned result.data so that saved fields are never lost!
+        const mergedProduct = {
+          ...payload,
+          ...(result.data || {}),
+        };
+        const finalPromo =
+          result.data?.promotion_title ||
+          result.data?.promotional_title ||
+          result.data?.promotion?.title ||
+          payload.promotion_title ||
+          "";
+        if (finalPromo) {
+          mergedProduct.promotion_title = finalPromo;
+          mergedProduct.promotional_title = finalPromo;
+        }
+
+        const finalSub =
+          result.data?.subtitle ||
+          result.data?.sub_title ||
+          result.data?.short_description ||
+          payload.subtitle ||
+          "";
+        if (finalSub) {
+          mergedProduct.subtitle = finalSub;
+          mergedProduct.sub_title = finalSub;
+        }
+
         return Response.json({
           success: true,
-          product: result.data,
+          product: mergedProduct,
           message: "Product updated successfully",
         });
       }

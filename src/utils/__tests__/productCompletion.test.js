@@ -96,4 +96,15 @@ describe("productCompletion", () => {
     const after = calculateCompletionScore({ ...base, metadata_title: "Title" });
     expect(item.expectedScore).toBe(after.score);
   });
+
+  it("recognizes promotional_title and sub_title aliases in completion score", () => {
+    const res = calculateCompletionScore({
+      name: "Product with Aliases",
+      price: 100,
+      promotional_title: "خصم 20%",
+      sub_title: "وصف مميز",
+    });
+    expect(res.sections.appearance.fields.promotionTitle).toBe(true);
+    expect(res.sections.appearance.fields.subtitle).toBe(true);
+  });
 });

@@ -99,8 +99,20 @@ export function productToFormValues(product) {
     sku: product.sku || "",
     gtin: product.gtin || product.barcode || "",
     mpn: product.mpn || "",
-    promotion_title: product.promotion_title || "",
-    subtitle: product.subtitle || "",
+    promotion_title:
+      product.promotion_title ||
+      product.promotional_title ||
+      product.promotion?.title ||
+      product.promotion?.name ||
+      "",
+    subtitle:
+      product.subtitle ||
+      product.sub_title ||
+      product.short_description ||
+      product.subTitle ||
+      product.metadata?.subtitle ||
+      product.metadata?.sub_title ||
+      "",
     tags: normalizeTags(product.tags),
     metadata_title: product.metadata_title || product.metadata?.title || "",
     metadata_description:
@@ -182,12 +194,17 @@ export function buildProductPayload(formData, images = []) {
     return { error: "سعر الخصم يجب أن يكون أقل من السعر الأساسي للمنتج." };
   }
 
+  const sub = formData.subtitle?.trim() || undefined;
+  const promo = formData.promotion_title?.trim() || undefined;
+
   const payload = {
     name: formData.name.trim(),
     price: regPrice,
     description: formData.description.trim() || undefined,
-    subtitle: formData.subtitle.trim() || undefined,
-    promotion_title: formData.promotion_title.trim() || undefined,
+    subtitle: sub,
+    sub_title: sub,
+    promotion_title: promo,
+    promotional_title: promo,
     sku: formData.sku.trim() || undefined,
     gtin: formData.gtin.trim() || undefined,
     mpn: formData.mpn.trim() || undefined,

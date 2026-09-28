@@ -17,6 +17,15 @@ import { introspectEmbeddedToken, merchantApi } from "./_lib/salla.js";
 const PAGESPEED_API_BASE = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed";
 const CRUX_API_BASE = "https://chromeuxreport.googleapis.com/v1/records:queryRecord";
 
+// One PageSpeed run on a real store page often takes 20-45s. Keep this below
+// the function's maxDuration in vercel.json (60s) so we can still answer.
+const PAGESPEED_TIMEOUT_MS = 50000;
+const CRUX_TIMEOUT_MS = 8000;
+
+// Lighthouse could not load the target page (DNS, TLS, 4xx/5xx, bot protection).
+// That is a problem with the URL, not with this service.
+const LIGHTHOUSE_DOCUMENT_ERROR = /FAILED_DOCUMENT_REQUEST|ERRORED_DOCUMENT_REQUEST|DNS_FAILURE|NO_FCP|NOT_HTML|INVALID_URL/i;
+
 // 10 minutes in-memory cache for fast repeated views and zero redundant fetches
 const scanCache = new Map();
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -111,7 +120,7 @@ async function fetchPageSpeed(url, strategy, apiKey) {
   const endpoint = `${PAGESPEED_API_BASE}?${query.toString()}`;
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 28000); // 28s timeout
+  const timeoutId = setTimeout(() => controller.abort(), PAGESPEED_TIMEOUT_MS);
 
   try {
     const res = await fetch(endpoint, {
@@ -119,9 +128,9 @@ async function fetchPageSpeed(url, strategy, apiKey) {
       headers: { Accept: "application/json" },
       signal: controller.signal
     });
-    clearTimeout(timeoutId);
-
+    // Keep the timer running until the body is read, too.
     const text = await res.text();
+    clearTimeout(timeoutId);
     let data;
     try {
       data = JSON.parse(text);
@@ -136,13 +145,27 @@ async function fetchPageSpeed(url, strategy, apiKey) {
     if (!res.ok) {
       const msg = data.error?.message || `PageSpeed error (${res.status})`;
       const isQuotaExceeded = res.status === 429 || /quota/i.test(msg);
+      if (isQuotaExceeded) {
+        return {
+          ok: false,
+          status: 429,
+          code: "quota_exceeded",
+          error: "تم استنفاد الحصة المجانية العامة لـ Google PageSpeed اليوم. يرجى إدخال Google API Key الخاص بك للاستمرار بلا حدود وبسرعة فائقة."
+        };
+      }
+      if (LIGHTHOUSE_DOCUMENT_ERROR.test(msg)) {
+        return {
+          ok: false,
+          status: 422,
+          code: "page_unreachable",
+          error: `تعذّر على Google تحميل صفحة المتجر. تأكد من أن الرابط صحيح ومتاح للعامة (بدون كلمة مرور أو حماية ضد الزوار الآليين). ${msg}`
+        };
+      }
       return {
         ok: false,
-        status: res.status,
-        code: isQuotaExceeded ? "quota_exceeded" : "pagespeed_error",
-        error: isQuotaExceeded
-          ? "تم استنفاد الحصة المجانية العامة لـ Google PageSpeed اليوم. يرجى إدخال Google API Key الخاص بك للاستمرار بلا حدود وبسرعة فائقة."
-          : msg
+        status: 502,
+        code: "pagespeed_error",
+        error: msg
       };
     }
 
@@ -179,7 +202,8 @@ async function fetchCrux(url, origin, formFactor, apiKey) {
       body: JSON.stringify({
         url,
         formFactor: formFactor || "ALL_FORM_FACTORS"
-      })
+      }),
+      signal: AbortSignal.timeout(CRUX_TIMEOUT_MS)
     });
 
     if (resUrl.ok) {
@@ -195,7 +219,8 @@ async function fetchCrux(url, origin, formFactor, apiKey) {
         body: JSON.stringify({
           origin,
           formFactor: formFactor || "ALL_FORM_FACTORS"
-        })
+        }),
+        signal: AbortSignal.timeout(CRUX_TIMEOUT_MS)
       });
 
       if (resOrigin.ok) {
@@ -324,12 +349,13 @@ async function handleRequest(body) {
 
     if (!hasAnySuccess) {
       const primaryErr = (requestedStrategy === "desktop" ? desktopPsi : mobilePsi) || {};
-      const isQuota = primaryErr.code === "quota_exceeded" || primaryErr.status === 429;
+      // 429 quota, 422 page unreachable, 504 timeout, 502 other upstream failure
+      const status = [422, 429, 504].includes(primaryErr.status) ? primaryErr.status : 502;
       return {
-        status: isQuota ? 429 : 502,
+        status,
         json: {
           success: false,
-          code: isQuota ? "quota_exceeded" : (primaryErr.code || "pagespeed_failed"),
+          code: primaryErr.code || "pagespeed_failed",
           error: primaryErr.error || "فشل فحص سرعة المتجر، يرجى المحاولة لاحقاً."
         }
       };
