@@ -29,25 +29,37 @@ export function useStoreDefaultUrl(token, appId) {
 }
 
 /**
- * Hook to run a live performance scan on mobile & desktop
+ * Hook to run a live performance scan on mobile & desktop with progressive strategy support
  */
 export function useRunPerformanceTest({ storeId = 'default' } = {}) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ url, onProgressStep }) => {
+    mutationFn: async ({
+      url,
+      strategy = 'all',
+      apiKey = '',
+      force = false,
+      existingReport = null,
+      onProgressStep
+    }) => {
       if (typeof onProgressStep === 'function') {
         onProgressStep('preparing');
       }
 
-      // Small async tick so UI reflects the step
-      await new Promise(r => setTimeout(r, 100));
+      await new Promise(r => setTimeout(r, 60));
 
       if (typeof onProgressStep === 'function') {
         onProgressStep('fetching');
       }
 
-      const report = await runPerformanceTest(url, { storeId });
+      const report = await runPerformanceTest(url, {
+        strategy,
+        apiKey,
+        force,
+        existingReport,
+        storeId
+      });
 
       if (typeof onProgressStep === 'function') {
         onProgressStep('completed');
@@ -58,7 +70,6 @@ export function useRunPerformanceTest({ storeId = 'default' } = {}) {
     onSuccess: (report) => {
       if (report?.url) {
         queryClient.setQueryData(performanceKeys.report(report.url), report);
-        // Invalidate history so trend charts refresh automatically
         queryClient.invalidateQueries({ queryKey: ['performance', 'history'] });
       }
     }

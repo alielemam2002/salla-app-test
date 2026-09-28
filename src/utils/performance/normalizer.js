@@ -246,10 +246,16 @@ export function normalizePerformanceReport({
   desktop,
   cruxMobile = null,
   cruxDesktop = null,
-  cruxOrigin = null
+  cruxOrigin = null,
+  existingReport = null
 }) {
-  const normalizedMobile = normalizeDevicePerformance('mobile', mobile);
-  const normalizedDesktop = normalizeDevicePerformance('desktop', desktop);
+  const normalizedMobile = mobile
+    ? normalizeDevicePerformance('mobile', mobile)
+    : (existingReport?.mobile?.score !== null && existingReport?.mobile ? existingReport.mobile : normalizeDevicePerformance('mobile', null));
+
+  const normalizedDesktop = desktop
+    ? normalizeDevicePerformance('desktop', desktop)
+    : (existingReport?.desktop?.score !== null && existingReport?.desktop ? existingReport.desktop : normalizeDevicePerformance('desktop', null));
 
   // CrUX Field Data:
   // First try dedicated CrUX responses; fallback to PageSpeed's embedded loadingExperience/originLoadingExperience

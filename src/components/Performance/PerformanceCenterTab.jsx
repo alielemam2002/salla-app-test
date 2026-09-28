@@ -3,15 +3,12 @@ import {
   Gauge,
   Play,
   RotateCw,
-  ExternalLink,
   AlertCircle,
   CheckCircle2,
   Loader2,
   Globe,
-  Smartphone,
-  Monitor,
-  Info,
-  Layers
+  Key,
+  ExternalLink
 } from 'lucide-react';
 import { validateStoreUrl } from '../../utils/performance/urlValidator.js';
 import {
@@ -25,6 +22,7 @@ import RealUserExperienceSection from './RealUserExperienceSection.jsx';
 import OpportunitiesSection from './OpportunitiesSection.jsx';
 import PerformanceTrendChart from './PerformanceTrendChart.jsx';
 import ScanComparisonBanner from './ScanComparisonBanner.jsx';
+import GoogleApiKeyModal, { getStoredGoogleApiKey } from './GoogleApiKeyModal.jsx';
 
 /**
  * Performance Center Main Tab
@@ -38,8 +36,16 @@ export default function PerformanceCenterTab({ token, appId }) {
   const [scanStep, setScanStep] = useState(null); // 'preparing' | 'fetching' | 'completed' | null
   const [validationError, setValidationError] = useState(null);
 
+  // Background strategy scan tracking
+  const [isDesktopScanning, setIsDesktopScanning] = useState(false);
+  const [isMobileScanning, setIsMobileScanning] = useState(false);
+
+  // Google API Key management
+  const [apiKey, setApiKey] = useState(() => getStoredGoogleApiKey());
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+
   // Auto-detect default store URL from Salla
-  const { data: defaultStoreUrl, isLoading: isLoadingStoreUrl } = useStoreDefaultUrl(token, appId);
+  const { data: defaultStoreUrl } = useStoreDefaultUrl(token, appId);
 
   useEffect(() => {
     if (defaultStoreUrl && !storeUrlInput) {
@@ -58,7 +64,12 @@ export default function PerformanceCenterTab({ token, appId }) {
     days: selectedDays
   });
 
-  const handleStartScan = useCallback(async () => {
+  /**
+   * Progressive scan execution:
+   * Runs the active strategy first (so user sees results in ~8s instead of waiting 30s!),
+   * then progressively runs the secondary strategy in the background.
+   */
+  const handleStartScan = useCallback(async (targetStrategy = selectedStrategy, force = false) => {
     setValidationError(null);
 
     const validation = validateStoreUrl(storeUrlInput);
@@ -71,18 +82,55 @@ export default function PerformanceCenterTab({ token, appId }) {
     setStoreUrlInput(targetUrl);
 
     setScanStep('preparing');
+    if (targetStrategy === 'mobile') setIsMobileScanning(true);
+    if (targetStrategy === 'desktop') setIsDesktopScanning(true);
 
     try {
-      const report = await runTestMutation.mutateAsync({
+      // 1. Run primary requested strategy first
+      const firstReport = await runTestMutation.mutateAsync({
         url: targetUrl,
+        strategy: targetStrategy,
+        apiKey,
+        force,
+        existingReport: activeReport,
         onProgressStep: (step) => setScanStep(step)
       });
-      setActiveReport(report);
+
+      setActiveReport(firstReport);
       setScanStep(null);
+      if (targetStrategy === 'mobile') setIsMobileScanning(false);
+      if (targetStrategy === 'desktop') setIsDesktopScanning(false);
+
+      // 2. If the other device has not been scanned yet, run it smoothly in background
+      const otherStrategy = targetStrategy === 'mobile' ? 'desktop' : 'mobile';
+      const hasOtherScanned = firstReport[otherStrategy]?.score !== null;
+
+      if (!hasOtherScanned) {
+        if (otherStrategy === 'desktop') setIsDesktopScanning(true);
+        if (otherStrategy === 'mobile') setIsMobileScanning(true);
+
+        try {
+          const combinedReport = await runTestMutation.mutateAsync({
+            url: targetUrl,
+            strategy: otherStrategy,
+            apiKey,
+            force,
+            existingReport: firstReport
+          });
+          setActiveReport(combinedReport);
+        } catch (err) {
+          console.warn(`Background scan for ${otherStrategy} encountered error:`, err);
+        } finally {
+          setIsDesktopScanning(false);
+          setIsMobileScanning(false);
+        }
+      }
     } catch (err) {
       setScanStep(null);
+      setIsMobileScanning(false);
+      setIsDesktopScanning(false);
     }
-  }, [storeUrlInput, runTestMutation]);
+  }, [storeUrlInput, selectedStrategy, apiKey, activeReport, runTestMutation]);
 
   const handlePresetSelect = (type) => {
     setUrlType(type);
@@ -92,7 +140,7 @@ export default function PerformanceCenterTab({ token, appId }) {
     }
   };
 
-  const isScanning = runTestMutation.isPending;
+  const isScanning = runTestMutation.isPending && !isDesktopScanning && !isMobileScanning;
   const currentDev = activeReport ? activeReport[selectedStrategy] : null;
 
   return (
@@ -100,10 +148,29 @@ export default function PerformanceCenterTab({ token, appId }) {
       {/* Top Banner & Header */}
       <div className="perf-header-panel">
         <div className="perf-header-info">
-          <div className="perf-badge-label">
-            <Gauge size={16} aria-hidden="true" />
-            <span>Google PageSpeed &amp; CrUX Intelligence</span>
+          <div className="perf-header-badge-row">
+            <div className="perf-badge-label">
+              <Gauge size={16} aria-hidden="true" />
+              <span>Google PageSpeed &amp; CrUX Intelligence</span>
+            </div>
+
+            {/* Google API Key Settings Button */}
+            <button
+              type="button"
+              className="perf-api-key-btn"
+              onClick={() => setIsApiKeyModalOpen(true)}
+              aria-label="إعداد مفتاح Google API"
+            >
+              <Key size={14} />
+              <span>Google API Key</span>
+              {apiKey ? (
+                <span className="key-status-dot configured" title="المفتاح مفعل" />
+              ) : (
+                <span className="key-status-dot missing" title="مفتاح اختياري" />
+              )}
+            </button>
           </div>
+
           <h1 className="perf-main-title">Performance Center (مركز أداء المتجر)</h1>
           <p className="perf-subtitle">
             قياس سرعة متجرك الحقيقية بدقة عبر محركات Google، وتشخيص أسباب البطء، وتتبع مؤشرات Core Web Vitals بدقة.
@@ -136,7 +203,7 @@ export default function PerformanceCenterTab({ token, appId }) {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              handleStartScan();
+              handleStartScan(selectedStrategy, true);
             }}
             className="perf-url-input-row"
           >
@@ -152,7 +219,7 @@ export default function PerformanceCenterTab({ token, appId }) {
                   setStoreUrlInput(e.target.value);
                   if (validationError) setValidationError(null);
                 }}
-                disabled={isScanning}
+                disabled={isScanning || runTestMutation.isPending}
                 className={`perf-url-input ${validationError ? 'has-error' : ''}`}
                 dir="ltr"
               />
@@ -160,11 +227,11 @@ export default function PerformanceCenterTab({ token, appId }) {
 
             <button
               type="submit"
-              disabled={isScanning || !storeUrlInput.trim()}
+              disabled={isScanning || runTestMutation.isPending || !storeUrlInput.trim()}
               className="btn btn-primary perf-scan-submit-btn"
               id="run-performance-test-btn"
             >
-              {isScanning ? (
+              {runTestMutation.isPending ? (
                 <>
                   <Loader2 size={18} className="spin" aria-hidden="true" />
                   <span>جاري الفحص...</span>
@@ -188,14 +255,16 @@ export default function PerformanceCenterTab({ token, appId }) {
       </div>
 
       {/* Multi-step Status Progress Box (No fake percentage bars) */}
-      {isScanning && (
+      {scanStep && (
         <div className="perf-scanning-status-card" role="status" aria-live="polite">
           <div className="status-header">
             <Loader2 size={20} className="spin text-primary" aria-hidden="true" />
-            <h3 className="status-title">جاري فحص سرعة المتجر عبر خوادم Google...</h3>
+            <h3 className="status-title">
+              جاري فحص سرعة المتجر لنسخة {selectedStrategy === 'mobile' ? 'الجوال' : 'الكمبيوتر'}...
+            </h3>
           </div>
           <p className="status-note">
-            قد يستغرق الفحص الكامل لبيئات الجوال والكمبيوتر من 10 إلى 25 ثانية لقياس مؤشرات Lighthouse واستخراج توصيات التحسين.
+            يتم فحص المتجر عبر محرك Lighthouse Lab Data الرسمي من Google لاستخراج درجات السرعة وتوصيات التحسين.
           </p>
 
           <div className="status-steps-list">
@@ -205,21 +274,17 @@ export default function PerformanceCenterTab({ token, appId }) {
             </div>
             <div className={`status-step ${scanStep === 'fetching' ? 'active' : scanStep === 'preparing' ? 'pending' : 'done'}`}>
               <div className="step-bullet" />
-              <span>تشغيل محرك Lighthouse Lab Data لأجهزة الجوال والكمبيوتر</span>
+              <span>تشغيل محرك Lighthouse لقياس Core Web Vitals وتوليد التوصيات</span>
             </div>
             <div className="status-step pending">
               <div className="step-bullet" />
               <span>استرداد بيانات المستخدمين الواقعية من Chrome UX Report (CrUX)</span>
             </div>
-            <div className="status-step pending">
-              <div className="step-bullet" />
-              <span>توليد التوصيات وفرص توفير الحجم والوقت</span>
-            </div>
           </div>
         </div>
       )}
 
-      {/* Error state if mutation failed */}
+      {/* Error state banner */}
       {runTestMutation.isError && (
         <div className="perf-scan-failed-banner" role="alert">
           <AlertCircle size={22} className="error-icon" aria-hidden="true" />
@@ -227,17 +292,27 @@ export default function PerformanceCenterTab({ token, appId }) {
             <h4>تعذر إكمال فحص الأداء</h4>
             <p>
               {runTestMutation.error?.message ||
-                'واجهت خدمة Google PageSpeed صعوبة في الوصول للمتجر. يرجى التأكد من أن المتجر متاح للعامة والمحاولة مرة أخرى.'}
+                'واجهت خدمة Google صعوبة في الوصول للمتجر. يرجى التأكد من أن المتجر متاح للعامة والمحاولة مرة أخرى.'}
             </p>
           </div>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={handleStartScan}
-          >
-            <RotateCw size={14} />
-            <span>إعادة المحاولة</span>
-          </button>
+          <div className="error-actions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => setIsApiKeyModalOpen(true)}
+            >
+              <Key size={14} />
+              <span>إدخال Google API Key</span>
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => handleStartScan(selectedStrategy, true)}
+            >
+              <RotateCw size={14} />
+              <span>إعادة المحاولة</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -255,6 +330,9 @@ export default function PerformanceCenterTab({ token, appId }) {
             report={activeReport}
             selectedStrategy={selectedStrategy}
             onSelectStrategy={(strat) => setSelectedStrategy(strat)}
+            isDesktopScanning={isDesktopScanning}
+            isMobileScanning={isMobileScanning}
+            onRunStrategy={(strat) => handleStartScan(strat, true)}
           />
 
           {/* Core Web Vitals Grid (Lab Data) */}
@@ -297,7 +375,7 @@ export default function PerformanceCenterTab({ token, appId }) {
       )}
 
       {/* Initial Empty State when no test has run yet */}
-      {!activeReport && !isScanning && !runTestMutation.isError && (
+      {!activeReport && !scanStep && !runTestMutation.isError && (
         <div className="perf-initial-welcome-box">
           <div className="welcome-icon-circle">
             <Gauge size={36} aria-hidden="true" />
@@ -311,15 +389,15 @@ export default function PerformanceCenterTab({ token, appId }) {
             <div className="welcome-feat-item">
               <span className="feat-check">✓</span>
               <div>
-                <strong>نقاط الأداء الرسمية من Google</strong>
-                <span>تقييم موضوعي مبني على سرعة استجابة المتجر واستقراره.</span>
+                <strong>فحص سريع ومستقل للجوال والكمبيوتر</strong>
+                <span>ظهور نتائج سريعة وتحديث تلقائي لجميع الأجهزة دون بطء.</span>
               </div>
             </div>
             <div className="welcome-feat-item">
               <span className="feat-check">✓</span>
               <div>
                 <strong>مؤشرات Core Web Vitals المحدثة</strong>
-                <span>فحص LCP, INP, CLS, FCP, TTFB لكل من الجوال والكمبيوتر.</span>
+                <span>فحص LCP, INP, CLS, FCP, TTFB بأحدث معايير Google.</span>
               </div>
             </div>
             <div className="welcome-feat-item">
@@ -339,6 +417,13 @@ export default function PerformanceCenterTab({ token, appId }) {
           </div>
         </div>
       )}
+
+      {/* Google API Key Configuration Modal */}
+      <GoogleApiKeyModal
+        isOpen={isApiKeyModalOpen}
+        onClose={() => setIsApiKeyModalOpen(false)}
+        onKeySaved={(newKey) => setApiKey(newKey)}
+      />
     </div>
   );
 }

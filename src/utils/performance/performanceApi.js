@@ -6,16 +6,29 @@ import { saveScanToHistory } from './historyStorage.js';
  * Calls server-side /api/performance to run Google PageSpeed Insights + CrUX
  * @param {string} url - Target store URL
  * @param {object} [options]
- * @param {string} [options.storeId]
+ * @param {string} [options.strategy='all'] - 'mobile' | 'desktop' | 'all'
+ * @param {string} [options.apiKey=''] - Optional Google API key
+ * @param {boolean} [options.force=false] - Bypass cache
+ * @param {object} [options.existingReport=null] - Merge with existing report
+ * @param {string} [options.storeId='default']
  * @returns {Promise<object>} Standardized PerformanceReport
  */
-export async function runPerformanceTest(url, { storeId = 'default' } = {}) {
+export async function runPerformanceTest(url, {
+  strategy = 'all',
+  apiKey = '',
+  force = false,
+  existingReport = null,
+  storeId = 'default'
+} = {}) {
   const response = await fetch(PERFORMANCE_FUNCTION_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       action: 'test',
-      url
+      url,
+      strategy,
+      apiKey: apiKey || '',
+      force: Boolean(force)
     })
   });
 
@@ -33,7 +46,8 @@ export async function runPerformanceTest(url, { storeId = 'default' } = {}) {
     mobile: data.mobile,
     desktop: data.desktop,
     cruxMobile: data.cruxMobile,
-    cruxDesktop: data.cruxDesktop
+    cruxDesktop: data.cruxDesktop,
+    existingReport
   });
 
   // Save to history storage

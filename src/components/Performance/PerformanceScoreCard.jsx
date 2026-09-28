@@ -1,5 +1,5 @@
 import React from 'react';
-import { Smartphone, Monitor, ShieldCheck, Clock } from 'lucide-react';
+import { Smartphone, Monitor, ShieldCheck, Clock, Loader2, Play } from 'lucide-react';
 import { getScoreRating, getRatingLabel } from '../../utils/performance/thresholds.js';
 
 /**
@@ -8,7 +8,10 @@ import { getScoreRating, getRatingLabel } from '../../utils/performance/threshol
 export default function PerformanceScoreCard({
   report,
   selectedStrategy,
-  onSelectStrategy
+  onSelectStrategy,
+  isDesktopScanning = false,
+  isMobileScanning = false,
+  onRunStrategy = null
 }) {
   if (!report) return null;
 
@@ -18,7 +21,7 @@ export default function PerformanceScoreCard({
   const currentScore = currentDev.score;
 
   const scoreRating = getScoreRating(currentScore);
-  const ratingInfo = getRatingLabel(scoreRating);
+  const ratingLabel = getRatingLabel(scoreRating);
 
   // Score color ring calculation
   const strokeDashoffset = currentScore !== null
@@ -84,11 +87,15 @@ export default function PerformanceScoreCard({
           >
             <Smartphone size={16} aria-hidden="true" />
             <span>جوال (Mobile)</span>
-            {mobileScore !== null && mobileScore !== undefined && (
+            {isMobileScanning ? (
+              <span className="perf-device-badge scanning">
+                <Loader2 size={12} className="spin" />
+              </span>
+            ) : mobileScore !== null && mobileScore !== undefined ? (
               <span className={`perf-device-badge ${getScoreRating(mobileScore)}`}>
                 {mobileScore}
               </span>
-            )}
+            ) : null}
           </button>
 
           <button
@@ -100,9 +107,18 @@ export default function PerformanceScoreCard({
           >
             <Monitor size={16} aria-hidden="true" />
             <span>كمبيوتر (Desktop)</span>
-            {desktopScore !== null && desktopScore !== undefined && (
+            {isDesktopScanning ? (
+              <span className="perf-device-badge scanning">
+                <Loader2 size={12} className="spin" />
+                <span>جاري الفحص...</span>
+              </span>
+            ) : desktopScore !== null && desktopScore !== undefined ? (
               <span className={`perf-device-badge ${getScoreRating(desktopScore)}`}>
                 {desktopScore}
+              </span>
+            ) : (
+              <span className="perf-device-badge pending">
+                غير مفحوص
               </span>
             )}
           </button>
@@ -126,7 +142,7 @@ export default function PerformanceScoreCard({
               r="45"
               style={{
                 strokeDasharray: 283,
-                strokeDashoffset,
+                strokeDashoffset: currentScore !== null ? strokeDashoffset : 283,
                 stroke: currentColor
               }}
             />
@@ -143,24 +159,51 @@ export default function PerformanceScoreCard({
         <div className="perf-hero-info">
           <div className="perf-score-title-row">
             <h2 className="perf-score-heading">
-              Google Performance Score
+              Google Performance Score ({selectedStrategy === 'mobile' ? 'الجوال' : 'الكمبيوتر'})
             </h2>
-            <span className={`perf-rating-pill ${scoreRating}`}>
-              {getRatingLabel(scoreRating)}
-            </span>
+            {currentScore !== null && (
+              <span className={`perf-rating-pill ${scoreRating}`}>
+                {ratingLabel}
+              </span>
+            )}
           </div>
-          <p className="perf-score-desc">
-            {scoreRating === 'good' && 'أداء المتجر ممتاز ومتوافق مع أعلى معايير تجربة المستخدم لعام 2026.'}
-            {scoreRating === 'needs-improvement' && 'أداء المتجر مقبول، ولكن هناك فرص لتحسين سرعة التحميل وتجربة التصفح.'}
-            {scoreRating === 'poor' && 'المتجر يواجه بطئاً ملحوظاً يؤثر على مبيعاتك وتجربة العملاء.'}
-            {scoreRating === 'unknown' && 'لم يتم استلام تقييم أداء لهذا الجهاز.'}
-          </p>
 
-          <div className="perf-score-legend">
-            <span className="legend-item"><span className="dot dot-good"></span> 90-100 جيد</span>
-            <span className="legend-item"><span className="dot dot-warn"></span> 50-89 يحتاج تحسين</span>
-            <span className="legend-item"><span className="dot dot-poor"></span> 0-49 ضعيف</span>
-          </div>
+          {currentScore !== null ? (
+            <>
+              <p className="perf-score-desc">
+                {scoreRating === 'good' && 'أداء المتجر ممتاز ومتوافق مع أعلى معايير تجربة المستخدم لعام 2026.'}
+                {scoreRating === 'needs-improvement' && 'أداء المتجر مقبول، ولكن هناك فرص لتحسين سرعة التحميل وتجربة التصفح.'}
+                {scoreRating === 'poor' && 'المتجر يواجه بطئاً ملحوظاً يؤثر على مبيعاتك وتجربة العملاء.'}
+              </p>
+
+              <div className="perf-score-legend">
+                <span className="legend-item"><span className="dot dot-good"></span> 90-100 جيد</span>
+                <span className="legend-item"><span className="dot dot-warn"></span> 50-89 يحتاج تحسين</span>
+                <span className="legend-item"><span className="dot dot-poor"></span> 0-49 ضعيف</span>
+              </div>
+            </>
+          ) : isDesktopScanning || isMobileScanning ? (
+            <p className="perf-score-desc perf-scanning-hint">
+              <Loader2 size={16} className="spin text-primary" />
+              جاري قياس أداء هذا الجهاز حالياً عبر خوادم Google...
+            </p>
+          ) : (
+            <div className="perf-device-untested-block">
+              <p className="perf-score-desc">
+                لم يتم إجراء فحص لنسخة {selectedStrategy === 'mobile' ? 'الجوال' : 'الكمبيوتر'} بعد.
+              </p>
+              {onRunStrategy && (
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm mt-2"
+                  onClick={() => onRunStrategy(selectedStrategy)}
+                >
+                  <Play size={14} />
+                  <span>فحص {selectedStrategy === 'mobile' ? 'الجوال' : 'الكمبيوتر'} الآن</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

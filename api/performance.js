@@ -5,15 +5,40 @@
  * - action: "test": Runs real Google PageSpeed Insights (Mobile & Desktop) + Chrome UX Report (CrUX)
  * - action: "store_info": Fetches the authenticated merchant's store URL from Salla API if available
  *
- * Security:
- * - Google API Keys (PAGESPEED_API_KEY / GOOGLE_API_KEY) remain strictly server-side.
- * - Prevents SSRF / unsafe URLs.
+ * Performance & Reliability Optimizations:
+ * - In-memory response caching (10 minutes TTL) to prevent redundant slow Google queries.
+ * - Supports targeted strategy scanning ("mobile" or "desktop" or "all") for instant, responsive UX.
+ * - Server-side & user-provided API key support with clear Quota Exceeded guidance.
+ * - Abort timeouts to prevent hanging serverless execution.
  */
 
 import { introspectEmbeddedToken, merchantApi } from "./_lib/salla.js";
 
 const PAGESPEED_API_BASE = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed";
 const CRUX_API_BASE = "https://chromeuxreport.googleapis.com/v1/records:queryRecord";
+
+// 10 minutes in-memory cache for fast repeated views and zero redundant fetches
+const scanCache = new Map();
+const CACHE_TTL_MS = 10 * 60 * 1000;
+
+function getCached(key) {
+  const item = scanCache.get(key);
+  if (!item) return null;
+  if (Date.now() - item.timestamp > CACHE_TTL_MS) {
+    scanCache.delete(key);
+    return null;
+  }
+  return item.data;
+}
+
+function setCached(key, data) {
+  scanCache.set(key, { data, timestamp: Date.now() });
+  // Prevent memory growth
+  if (scanCache.size > 100) {
+    const oldestKey = scanCache.keys().next().value;
+    scanCache.delete(oldestKey);
+  }
+}
 
 /**
  * Validates and extracts safe URL and origin
@@ -69,7 +94,7 @@ function parseSafeUrl(rawUrl) {
 }
 
 /**
- * Executes a single PageSpeed Insights request
+ * Executes a single PageSpeed Insights request with timeout and error classification
  */
 async function fetchPageSpeed(url, strategy, apiKey) {
   const query = new URLSearchParams({
@@ -85,11 +110,16 @@ async function fetchPageSpeed(url, strategy, apiKey) {
 
   const endpoint = `${PAGESPEED_API_BASE}?${query.toString()}`;
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 28000); // 28s timeout
+
   try {
     const res = await fetch(endpoint, {
       method: "GET",
-      headers: { Accept: "application/json" }
+      headers: { Accept: "application/json" },
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
 
     const text = await res.text();
     let data;
@@ -105,19 +135,28 @@ async function fetchPageSpeed(url, strategy, apiKey) {
 
     if (!res.ok) {
       const msg = data.error?.message || `PageSpeed error (${res.status})`;
+      const isQuotaExceeded = res.status === 429 || /quota/i.test(msg);
       return {
         ok: false,
         status: res.status,
-        error: msg
+        code: isQuotaExceeded ? "quota_exceeded" : "pagespeed_error",
+        error: isQuotaExceeded
+          ? "تم استنفاد الحصة المجانية العامة لـ Google PageSpeed اليوم. يرجى إدخال Google API Key الخاص بك للاستمرار بلا حدود وبسرعة فائقة."
+          : msg
       };
     }
 
     return { ok: true, data };
   } catch (err) {
+    clearTimeout(timeoutId);
+    const isTimeout = err.name === "AbortError";
     return {
       ok: false,
-      status: 500,
-      error: err.message || "Failed to connect to PageSpeed API"
+      status: isTimeout ? 504 : 500,
+      code: isTimeout ? "timeout" : "network_error",
+      error: isTimeout
+        ? "استغرقت Google وقتاً طويلاً للاستجابة لهذا الفحص. يرجى إعادة المحاولة."
+        : err.message || "Failed to connect to PageSpeed API"
     };
   }
 }
@@ -209,7 +248,9 @@ async function fetchSallaStoreUrl(token, appId) {
  */
 async function handleRequest(body) {
   const action = (body.action || "test").toLowerCase();
-  const apiKey = process.env.PAGESPEED_API_KEY || process.env.GOOGLE_API_KEY || "";
+  const apiKey = (body.apiKey && typeof body.apiKey === "string" && body.apiKey.trim())
+    ? body.apiKey.trim()
+    : process.env.PAGESPEED_API_KEY || process.env.GOOGLE_API_KEY || "";
 
   if (action === "store_info") {
     const storeUrl = await fetchSallaStoreUrl(body.token, body.appId || process.env.SALLA_APP_ID);
@@ -230,44 +271,90 @@ async function handleRequest(body) {
 
     const targetUrl = parsed.url;
     const targetOrigin = parsed.origin;
+    const requestedStrategy = (body.strategy || "all").toLowerCase(); // "mobile" | "desktop" | "all"
+    const forceFresh = Boolean(body.force);
 
-    // Fetch Mobile and Desktop PageSpeed in parallel
-    const [mobilePsi, desktopPsi, cruxMobile, cruxDesktop] = await Promise.all([
-      fetchPageSpeed(targetUrl, "mobile", apiKey),
-      fetchPageSpeed(targetUrl, "desktop", apiKey),
-      fetchCrux(targetUrl, targetOrigin, "PHONE", apiKey),
-      fetchCrux(targetUrl, targetOrigin, "DESKTOP", apiKey)
-    ]);
+    // Check cache first (unless forced fresh)
+    const cacheKey = `${targetUrl.toLowerCase()}::${requestedStrategy}::${apiKey ? 'keyed' : 'anon'}`;
+    if (!forceFresh) {
+      const cached = getCached(cacheKey);
+      if (cached) {
+        return {
+          status: 200,
+          json: { ...cached, isFromCache: true }
+        };
+      }
+    }
 
-    // Handle rate limits or critical failures
-    if (!mobilePsi.ok && !desktopPsi.ok) {
-      const isRateLimit = mobilePsi.status === 429 || desktopPsi.status === 429;
+    let mobilePsi = { ok: false, data: null };
+    let desktopPsi = { ok: false, data: null };
+    let cruxMobile = { ok: false, data: null };
+    let cruxDesktop = { ok: false, data: null };
+
+    // Progressive Strategy Scanning:
+    if (requestedStrategy === "mobile") {
+      mobilePsi = await fetchPageSpeed(targetUrl, "mobile", apiKey);
+      if (apiKey) cruxMobile = await fetchCrux(targetUrl, targetOrigin, "PHONE", apiKey);
+    } else if (requestedStrategy === "desktop") {
+      desktopPsi = await fetchPageSpeed(targetUrl, "desktop", apiKey);
+      if (apiKey) cruxDesktop = await fetchCrux(targetUrl, targetOrigin, "DESKTOP", apiKey);
+    } else {
+      // "all": fetch mobile first, then desktop sequentially to avoid Google concurrent 429/timeout
+      mobilePsi = await fetchPageSpeed(targetUrl, "mobile", apiKey);
+
+      // Only attempt desktop if mobile didn't fail with global quota limit
+      if (mobilePsi.code !== "quota_exceeded") {
+        desktopPsi = await fetchPageSpeed(targetUrl, "desktop", apiKey);
+      } else {
+        desktopPsi = { ok: false, error: mobilePsi.error, code: "quota_exceeded", status: 429 };
+      }
+
+      if (apiKey) {
+        [cruxMobile, cruxDesktop] = await Promise.all([
+          fetchCrux(targetUrl, targetOrigin, "PHONE", apiKey),
+          fetchCrux(targetUrl, targetOrigin, "DESKTOP", apiKey)
+        ]);
+      }
+    }
+
+    // If all requested strategies failed
+    const hasAnySuccess = (requestedStrategy === "mobile" && mobilePsi.ok) ||
+                          (requestedStrategy === "desktop" && desktopPsi.ok) ||
+                          (requestedStrategy === "all" && (mobilePsi.ok || desktopPsi.ok));
+
+    if (!hasAnySuccess) {
+      const primaryErr = (requestedStrategy === "desktop" ? desktopPsi : mobilePsi) || {};
+      const isQuota = primaryErr.code === "quota_exceeded" || primaryErr.status === 429;
       return {
-        status: isRateLimit ? 429 : 502,
+        status: isQuota ? 429 : 502,
         json: {
           success: false,
-          code: isRateLimit ? "rate_limited" : "pagespeed_failed",
-          error: isRateLimit
-            ? "Google PageSpeed API rate limit reached. Please wait a minute before running another test."
-            : mobilePsi.error || desktopPsi.error || "Performance test could not be completed. Please try again later."
+          code: isQuota ? "quota_exceeded" : (primaryErr.code || "pagespeed_failed"),
+          error: primaryErr.error || "فشل فحص سرعة المتجر، يرجى المحاولة لاحقاً."
         }
       };
     }
 
+    const responsePayload = {
+      success: true,
+      url: targetUrl,
+      strategy: requestedStrategy,
+      mobile: mobilePsi.ok ? mobilePsi.data : null,
+      desktop: desktopPsi.ok ? desktopPsi.data : null,
+      cruxMobile: cruxMobile.ok ? cruxMobile.data : null,
+      cruxDesktop: cruxDesktop.ok ? cruxDesktop.data : null,
+      errors: {
+        mobile: !mobilePsi.ok ? mobilePsi.error : null,
+        desktop: !desktopPsi.ok ? desktopPsi.error : null
+      }
+    };
+
+    // Store in cache for 10 minutes
+    setCached(cacheKey, responsePayload);
+
     return {
       status: 200,
-      json: {
-        success: true,
-        url: targetUrl,
-        mobile: mobilePsi.ok ? mobilePsi.data : null,
-        desktop: desktopPsi.ok ? desktopPsi.data : null,
-        cruxMobile: cruxMobile.ok ? cruxMobile.data : null,
-        cruxDesktop: cruxDesktop.ok ? cruxDesktop.data : null,
-        errors: {
-          mobile: !mobilePsi.ok ? mobilePsi.error : null,
-          desktop: !desktopPsi.ok ? desktopPsi.error : null
-        }
-      }
+      json: responsePayload
     };
   }
 
