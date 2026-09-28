@@ -20,6 +20,7 @@ import PayloadEditor from "./components/PayloadEditor.jsx";
 import PlaygroundTab from "./components/Playground/PlaygroundTab.jsx";
 import AddonsTab from "./components/Addons/AddonsTab.jsx";
 import ProductsTab from "./components/Products/ProductsTab.jsx";
+import PerformanceCenterTab from "./components/Performance/PerformanceCenterTab.jsx";
 
 function AppContent() {
   const { setTheme } = useTheme();
@@ -194,6 +195,7 @@ function AppContent() {
     { id: "playground", label: "Playground" },
     { id: "addons", label: "Addons" },
     { id: "products", label: "Products" },
+    { id: "performance", label: "Performance Center" },
   ];
 
   return (
@@ -263,6 +265,9 @@ function AppContent() {
         )}
         {activeTab === "products" && (
           <ProductsTab embedded={embedded} showToast={showToast} />
+        )}
+        {activeTab === "performance" && (
+          <PerformanceCenterTab token={token} appId={layout?.app_id} />
         )}
       </main>
     </div>
