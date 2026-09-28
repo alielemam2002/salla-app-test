@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./utils/queryClient.js";
 import { useTheme } from "./contexts/ThemeContext.jsx";
 import { useAppBootstrap } from "./hooks/useAppBootstrap.js";
 import { useExposeEmbeddedGlobally } from "./hooks/useExposeEmbeddedGlobally.js";
@@ -269,11 +271,13 @@ function AppContent() {
 
 function App() {
   return (
-    <ThemeProvider>
-      <ToastProvider>
-        <AppContent />
-      </ToastProvider>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <ToastProvider>
+          <AppContent />
+        </ToastProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
 

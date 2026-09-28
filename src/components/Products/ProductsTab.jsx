@@ -3,6 +3,7 @@ import Button from "../forms/Button.jsx";
 import ProductModal from "./ProductModal.jsx";
 import DeleteConfirmModal from "./DeleteConfirmModal.jsx";
 import BulkDiscountModal from "../Discounts/BulkDiscountModal.jsx";
+import ProductEditor from "../ProductEditor/ProductEditor.jsx";
 import {
   fetchProductsPage,
   fetchAllProducts,
@@ -22,6 +23,7 @@ import {
   ChevronRight,
   Filter,
   Tag,
+  Sparkles,
 } from "lucide-react";
 
 const PER_PAGE = 30;
@@ -128,6 +130,7 @@ function ProductRow({
   expanded,
   onToggle,
   onEdit,
+  onOpenEditor,
   onDelete,
   isSelected,
   onToggleSelect,
@@ -163,7 +166,16 @@ function ProductRow({
           )}
         </td>
         <td>
-          <div className="products-name">{product.name}</div>
+          <div
+            className="products-name products-name--clickable"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenEditor?.(product);
+            }}
+            title="Open Product Details & Completion Score"
+          >
+            {product.name}
+          </div>
           <div className="products-meta">
             #{product.id}
             {product.sku ? ` · SKU ${product.sku}` : ""}
@@ -219,6 +231,14 @@ function ProductRow({
         >
           <button
             type="button"
+            className="action-icon-btn action-icon-btn--editor"
+            onClick={() => onOpenEditor?.(product)}
+            title="Full Editor & Completion Score"
+          >
+            <Sparkles size={15} />
+          </button>
+          <button
+            type="button"
             className="action-icon-btn action-icon-btn--edit"
             onClick={() => onEdit(product)}
             title="Edit product"
@@ -268,6 +288,7 @@ export default function ProductsTab({ embedded, showToast }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBulkDiscountOpen, setIsBulkDiscountOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [activeEditorProduct, setActiveEditorProduct] = useState(null);
   const [deletingProduct, setDeletingProduct] = useState(null);
   const [taxonomies, setTaxonomies] = useState({ categories: [], brands: [] });
 
@@ -449,6 +470,10 @@ export default function ProductsTab({ embedded, showToast }) {
   const handleOpenEdit = (product) => {
     setEditingProduct(product);
     setIsModalOpen(true);
+  };
+
+  const handleOpenEditor = (product) => {
+    setActiveEditorProduct(product);
   };
 
   const handleOpenDelete = (product) => {
@@ -777,6 +802,7 @@ export default function ProductsTab({ embedded, showToast }) {
                   expanded={expandedId === product.id}
                   onToggle={toggleExpanded}
                   onEdit={handleOpenEdit}
+                  onOpenEditor={handleOpenEditor}
                   onDelete={handleOpenDelete}
                   isSelected={selectedIds.includes(product.id)}
                   onToggleSelect={handleToggleSelectProduct}
@@ -811,6 +837,21 @@ export default function ProductsTab({ embedded, showToast }) {
     );
   }
 
+  if (activeEditorProduct) {
+    return (
+      <ProductEditor
+        productId={activeEditorProduct.id}
+        initialProduct={activeEditorProduct}
+        token={getToken()}
+        onBack={() => {
+          setActiveEditorProduct(null);
+          loadPage(page);
+        }}
+        showToast={showToast}
+      />
+    );
+  }
+
   return (
     <div className="products-container">
       <div className="panel">
@@ -826,6 +867,10 @@ export default function ProductsTab({ embedded, showToast }) {
         onSave={handleSaveProduct}
         product={editingProduct}
         taxonomies={taxonomies}
+        onOpenFullEditor={(prod) => {
+          setIsModalOpen(false);
+          setActiveEditorProduct(prod);
+        }}
       />
 
       {/* Delete Product Confirmation Dialog */}

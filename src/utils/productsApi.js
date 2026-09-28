@@ -162,3 +162,120 @@ export async function bulkUpdateProductPrices(token, products) {
     products,
   });
 }
+
+/**
+ * Fetch product options.
+ */
+export async function fetchProductOptions(token, productId) {
+  return callProductsApi({
+    action: "options_list",
+    token,
+    appId: getAppId(),
+    productId,
+  });
+}
+
+/**
+ * Create a new option for a product.
+ */
+export async function createProductOption(token, productId, optionData) {
+  return callProductsApi({
+    action: "option_create",
+    token,
+    appId: getAppId(),
+    productId,
+    optionData,
+  });
+}
+
+/**
+ * Update an existing option.
+ */
+export async function updateProductOption(token, productId, optionId, optionData) {
+  return callProductsApi({
+    action: "option_update",
+    token,
+    appId: getAppId(),
+    productId,
+    optionId,
+    optionData,
+  });
+}
+
+/**
+ * Delete an option.
+ */
+export async function deleteProductOption(token, productId, optionId) {
+  return callProductsApi({
+    action: "option_delete",
+    token,
+    appId: getAppId(),
+    productId,
+    optionId,
+  });
+}
+
+/**
+ * Fetch variants / SKUs for a product.
+ */
+export async function fetchProductVariants(token, productId) {
+  return callProductsApi({
+    action: "variants_list",
+    token,
+    appId: getAppId(),
+    productId,
+  });
+}
+
+/**
+ * Update a product variant.
+ */
+export async function updateProductVariant(token, productId, variantId, variantData) {
+  return callProductsApi({
+    action: "variant_update",
+    token,
+    appId: getAppId(),
+    productId,
+    variantId,
+    variantData,
+  });
+}
+
+/**
+ * Fetch product images.
+ */
+export async function fetchProductImages(token, productId) {
+  return callProductsApi({
+    action: "images_list",
+    token,
+    appId: getAppId(),
+    productId,
+  });
+}
+
+/**
+ * Upload an image to a product.
+ */
+export async function uploadProductImage(token, productId, imageData) {
+  return callProductsApi({
+    action: "image_upload",
+    token,
+    appId: getAppId(),
+    productId,
+    imageData,
+  });
+}
+
+/**
+ * Delete an image from a product.
+ */
+export async function deleteProductImage(token, productId, imageId) {
+  return callProductsApi({
+    action: "image_delete",
+    token,
+    appId: getAppId(),
+    productId,
+    imageId,
+  });
+}
+

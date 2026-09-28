@@ -44,6 +44,7 @@ export default function ProductModal({
   onSave,
   product = null,
   taxonomies = { categories: [], brands: [] },
+  onOpenFullEditor,
 }) {
   const isEditing = Boolean(product);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -550,6 +551,25 @@ export default function ProductModal({
             <Layers size={14} /> Categories & Brand
           </button>
         </div>
+
+        {isEditing && onOpenFullEditor && (
+          <div className="product-modal-full-editor-banner">
+            <div className="full-editor-banner-text">
+              <strong>✨ محرر تفاصيل المنتج المتكامل (Completion Score)</strong>
+              <span>تحكّم في المظهر، تحسين محركات البحث SEO، الخيارات والمتغيرات مع نسبة اكتمال ديناميكية.</span>
+            </div>
+            <button
+              type="button"
+              className="btn-open-full-editor"
+              onClick={() => {
+                onClose();
+                onOpenFullEditor(product);
+              }}
+            >
+              فتح محرر المنتج المتكامل 🚀
+            </button>
+          </div>
+        )}
 
         {/* Modal Body / Form */}
         <form onSubmit={handleSubmit} className="modal-form">

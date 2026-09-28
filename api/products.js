@@ -308,6 +308,44 @@ export async function POST(request) {
           payload.brand_id = Number(payload.brand_id);
         }
 
+        if (payload.tags !== undefined) {
+          if (Array.isArray(payload.tags)) {
+            payload.tags = payload.tags
+              .map((t) => String(t).trim())
+              .filter(Boolean);
+          } else if (typeof payload.tags === "string") {
+            payload.tags = payload.tags
+              .split(/[,;\n]+/)
+              .map((t) => t.trim())
+              .filter(Boolean);
+          }
+        }
+        if (payload.metadata_title !== undefined) {
+          payload.metadata_title = String(payload.metadata_title || "").trim();
+        }
+        if (payload.metadata_description !== undefined) {
+          payload.metadata_description = String(
+            payload.metadata_description || "",
+          ).trim();
+        }
+        if (payload.metadata_url !== undefined) {
+          payload.metadata_url = String(payload.metadata_url || "").trim();
+        }
+        if (payload.promotion_title !== undefined) {
+          payload.promotion_title = String(
+            payload.promotion_title || "",
+          ).trim();
+        }
+        if (payload.subtitle !== undefined) {
+          payload.subtitle = String(payload.subtitle || "").trim();
+        }
+        if (payload.gtin !== undefined) {
+          payload.gtin = String(payload.gtin || "").trim();
+        }
+        if (payload.mpn !== undefined) {
+          payload.mpn = String(payload.mpn || "").trim();
+        }
+
         // Remove immutable or read-only fields on update
         delete payload.product_type;
         delete payload.id;
@@ -379,6 +417,415 @@ export async function POST(request) {
           success: true,
           productId,
           message: result.data?.message || "Product deleted successfully",
+        });
+      }
+
+      // -----------------------------------------------------------------------
+      // OPTIONS MANAGEMENT (GET, CREATE, UPDATE, DELETE)
+      // -----------------------------------------------------------------------
+      case "options_list": {
+        const productId = body.productId;
+        if (!productId) {
+          return fail(400, "bad_request", "Product ID is required");
+        }
+
+        let options = [];
+        try {
+          const res = await merchantApi(
+            `/products/${encodeURIComponent(productId)}/options`,
+          );
+          if (res.body?.success && Array.isArray(res.body?.data)) {
+            options = res.body.data;
+          }
+        } catch {
+          // Fallback: check product details
+          try {
+            const pRes = await merchantApi(
+              `/products/${encodeURIComponent(productId)}`,
+            );
+            options = pRes.body?.data?.options || [];
+          } catch {
+            options = [];
+          }
+        }
+
+        return Response.json({ success: true, options });
+      }
+
+      case "option_create": {
+        const productId = body.productId;
+        const optionData = body.optionData;
+        if (!productId) {
+          return fail(400, "bad_request", "Product ID is required");
+        }
+        if (!optionData || typeof optionData !== "object") {
+          return fail(400, "bad_request", "Option data is required");
+        }
+
+        const { status, body: result } = await merchantApi(
+          `/products/${encodeURIComponent(productId)}/options`,
+          {
+            method: "POST",
+            body: optionData,
+          },
+        );
+
+        if (!result.success) {
+          return fail(
+            status >= 400 ? status : 422,
+            "salla_api_error",
+            result.error?.message ||
+              `Failed to create option (status ${status})`,
+            result.error?.fields,
+          );
+        }
+
+        return Response.json({
+          success: true,
+          option: result.data,
+          message: "Option created successfully",
+        });
+      }
+
+      case "option_update": {
+        const productId = body.productId;
+        const optionId = body.optionId;
+        const optionData = body.optionData;
+        if (!optionId) {
+          return fail(400, "bad_request", "Option ID is required");
+        }
+
+        let result;
+        let status;
+        try {
+          const res = await merchantApi(
+            `/products/${encodeURIComponent(productId)}/options/${encodeURIComponent(optionId)}`,
+            {
+              method: "PUT",
+              body: optionData,
+            },
+          );
+          status = res.status;
+          result = res.body;
+        } catch {
+          const res = await merchantApi(
+            `/products/options/${encodeURIComponent(optionId)}`,
+            {
+              method: "PUT",
+              body: optionData,
+            },
+          );
+          status = res.status;
+          result = res.body;
+        }
+
+        if (!result?.success) {
+          return fail(
+            status >= 400 ? status : 422,
+            "salla_api_error",
+            result?.error?.message || `Failed to update option`,
+          );
+        }
+
+        return Response.json({
+          success: true,
+          option: result.data,
+          message: "Option updated successfully",
+        });
+      }
+
+      case "option_delete": {
+        const productId = body.productId;
+        const optionId = body.optionId;
+        if (!optionId) {
+          return fail(400, "bad_request", "Option ID is required");
+        }
+
+        let result;
+        let status;
+        try {
+          const res = await merchantApi(
+            `/products/${encodeURIComponent(productId)}/options/${encodeURIComponent(optionId)}`,
+            { method: "DELETE" },
+          );
+          status = res.status;
+          result = res.body;
+        } catch {
+          const res = await merchantApi(
+            `/products/options/${encodeURIComponent(optionId)}`,
+            { method: "DELETE" },
+          );
+          status = res.status;
+          result = res.body;
+        }
+
+        if (!result?.success) {
+          return fail(
+            status >= 400 ? status : 422,
+            "salla_api_error",
+            result?.error?.message || `Failed to delete option`,
+          );
+        }
+
+        return Response.json({
+          success: true,
+          optionId,
+          message: "Option deleted successfully",
+        });
+      }
+
+      // -----------------------------------------------------------------------
+      // VARIANTS MANAGEMENT (GET, UPDATE)
+      // -----------------------------------------------------------------------
+      case "variants_list": {
+        const productId = body.productId;
+        if (!productId) {
+          return fail(400, "bad_request", "Product ID is required");
+        }
+
+        let variants = [];
+        try {
+          const res = await merchantApi(
+            `/products/${encodeURIComponent(productId)}/variants`,
+          );
+          if (res.body?.success && Array.isArray(res.body?.data)) {
+            variants = res.body.data;
+          }
+        } catch {
+          try {
+            const pRes = await merchantApi(
+              `/products/${encodeURIComponent(productId)}`,
+            );
+            variants =
+              pRes.body?.data?.skus || pRes.body?.data?.variants || [];
+          } catch {
+            variants = [];
+          }
+        }
+
+        return Response.json({ success: true, variants });
+      }
+
+      case "variant_update": {
+        const productId = body.productId;
+        const variantId = body.variantId;
+        const variantData = body.variantData;
+
+        if (!variantId) {
+          return fail(400, "bad_request", "Variant ID is required");
+        }
+        if (!variantData || typeof variantData !== "object") {
+          return fail(400, "bad_request", "Variant data is required");
+        }
+
+        const payload = {};
+        if (variantData.sku !== undefined) payload.sku = String(variantData.sku);
+        if (variantData.price !== undefined && variantData.price !== "") {
+          payload.price = Number(variantData.price);
+        }
+        if (variantData.sale_price !== undefined) {
+          payload.sale_price =
+            variantData.sale_price === null ? null : Number(variantData.sale_price);
+        }
+        if (variantData.cost_price !== undefined && variantData.cost_price !== "") {
+          payload.cost_price = Number(variantData.cost_price);
+        }
+        if (variantData.quantity !== undefined && variantData.quantity !== "") {
+          payload.quantity = Number(variantData.quantity);
+        }
+        if (variantData.stock_quantity !== undefined && variantData.stock_quantity !== "") {
+          payload.stock_quantity = Number(variantData.stock_quantity);
+        }
+        if (variantData.gtin !== undefined) payload.gtin = String(variantData.gtin);
+        if (variantData.barcode !== undefined) payload.barcode = String(variantData.barcode);
+        if (variantData.mpn !== undefined) payload.mpn = String(variantData.mpn);
+        if (variantData.weight !== undefined && variantData.weight !== "") {
+          payload.weight = Number(variantData.weight);
+        }
+
+        let result;
+        let status;
+        try {
+          const res = await merchantApi(
+            `/products/variants/${encodeURIComponent(variantId)}`,
+            {
+              method: "PUT",
+              body: payload,
+            },
+          );
+          status = res.status;
+          result = res.body;
+        } catch {
+          if (productId) {
+            const res = await merchantApi(
+              `/products/${encodeURIComponent(productId)}/variants/${encodeURIComponent(variantId)}`,
+              {
+                method: "PUT",
+                body: payload,
+              },
+            );
+            status = res.status;
+            result = res.body;
+          }
+        }
+
+        if (!result?.success) {
+          return fail(
+            status >= 400 ? status : 422,
+            "salla_api_error",
+            result?.error?.message || `Failed to update variant`,
+            result?.error?.fields,
+          );
+        }
+
+        return Response.json({
+          success: true,
+          variant: result.data,
+          message: "Variant updated successfully",
+        });
+      }
+
+      // -----------------------------------------------------------------------
+      // PRODUCT IMAGES MANAGEMENT (LIST, UPLOAD, DELETE)
+      // -----------------------------------------------------------------------
+      case "images_list": {
+        const productId = body.productId;
+        if (!productId) {
+          return fail(400, "bad_request", "Product ID is required");
+        }
+
+        let images = [];
+        try {
+          const res = await merchantApi(
+            `/products/${encodeURIComponent(productId)}/images`,
+          );
+          if (res.body?.success && Array.isArray(res.body?.data)) {
+            images = res.body.data;
+          }
+        } catch {
+          try {
+            const pRes = await merchantApi(
+              `/products/${encodeURIComponent(productId)}`,
+            );
+            images = pRes.body?.data?.images || [];
+          } catch {
+            images = [];
+          }
+        }
+
+        return Response.json({ success: true, images });
+      }
+
+      case "image_upload": {
+        const productId = body.productId;
+        const imageData = body.imageData;
+        if (!productId) {
+          return fail(400, "bad_request", "Product ID is required");
+        }
+        if (!imageData || (!imageData.original && !imageData.url)) {
+          return fail(400, "bad_request", "Image URL or original is required");
+        }
+
+        const imgPayload = {
+          original: imageData.original || imageData.url,
+          default: Boolean(imageData.default),
+          sort: imageData.sort || 1,
+          alt: imageData.alt || "",
+        };
+
+        let result;
+        let status;
+        try {
+          const res = await merchantApi(
+            `/products/${encodeURIComponent(productId)}/images`,
+            {
+              method: "POST",
+              body: imgPayload,
+            },
+          );
+          status = res.status;
+          result = res.body;
+        } catch {
+          // Fallback: fetch current images and append via product update
+          const pRes = await merchantApi(
+            `/products/${encodeURIComponent(productId)}`,
+          );
+          const currentImages = pRes.body?.data?.images || [];
+          const updatedImages = [...currentImages, imgPayload];
+          const updateRes = await merchantApi(
+            `/products/${encodeURIComponent(productId)}`,
+            {
+              method: "PUT",
+              body: { images: updatedImages },
+            },
+          );
+          status = updateRes.status;
+          result = updateRes.body;
+        }
+
+        if (!result?.success) {
+          return fail(
+            status >= 400 ? status : 422,
+            "salla_api_error",
+            result?.error?.message || "Failed to upload image",
+          );
+        }
+
+        return Response.json({
+          success: true,
+          image: result.data,
+          message: "Image added successfully",
+        });
+      }
+
+      case "image_delete": {
+        const productId = body.productId;
+        const imageId = body.imageId;
+        if (!productId || !imageId) {
+          return fail(400, "bad_request", "Product ID and Image ID are required");
+        }
+
+        let result;
+        let status;
+        try {
+          const res = await merchantApi(
+            `/products/${encodeURIComponent(productId)}/images/${encodeURIComponent(imageId)}`,
+            { method: "DELETE" },
+          );
+          status = res.status;
+          result = res.body;
+        } catch {
+          // Fallback: filter out image by id via product update
+          const pRes = await merchantApi(
+            `/products/${encodeURIComponent(productId)}`,
+          );
+          const currentImages = pRes.body?.data?.images || [];
+          const updatedImages = currentImages.filter(
+            (img) => String(img.id) !== String(imageId),
+          );
+          const updateRes = await merchantApi(
+            `/products/${encodeURIComponent(productId)}`,
+            {
+              method: "PUT",
+              body: { images: updatedImages },
+            },
+          );
+          status = updateRes.status;
+          result = updateRes.body;
+        }
+
+        if (!result?.success) {
+          return fail(
+            status >= 400 ? status : 422,
+            "salla_api_error",
+            result?.error?.message || "Failed to delete image",
+          );
+        }
+
+        return Response.json({
+          success: true,
+          imageId,
+          message: "Image deleted successfully",
         });
       }
 
