@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Button from "../forms/Button.jsx";
 import ProductModal from "./ProductModal.jsx";
 import DeleteConfirmModal from "./DeleteConfirmModal.jsx";
+import BulkDiscountModal from "../Discounts/BulkDiscountModal.jsx";
 import {
   fetchProductsPage,
   fetchAllProducts,
@@ -20,6 +21,7 @@ import {
   ChevronDown,
   ChevronRight,
   Filter,
+  Tag,
 } from "lucide-react";
 
 const PER_PAGE = 30;
@@ -55,13 +57,35 @@ function productImage(product) {
   );
 }
 
-function ProductRow({ product, expanded, onToggle, onEdit, onDelete }) {
+function ProductRow({
+  product,
+  expanded,
+  onToggle,
+  onEdit,
+  onDelete,
+  isSelected,
+  onToggleSelect,
+}) {
   const image = productImage(product);
   const stock = product.unlimited_quantity ? "∞" : (product.quantity ?? "—");
 
   return (
     <>
-      <tr className="products-row" onClick={() => onToggle(product.id)}>
+      <tr
+        className={`products-row ${isSelected ? "products-row--selected" : ""}`}
+        onClick={() => onToggle(product.id)}
+      >
+        <td
+          className="products-select-col"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onToggleSelect(product.id)}
+            aria-label={`Select ${product.name}`}
+          />
+        </td>
         <td className="products-expand-col">
           {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
         </td>
@@ -120,7 +144,7 @@ function ProductRow({ product, expanded, onToggle, onEdit, onDelete }) {
       </tr>
       {expanded && (
         <tr className="products-details">
-          <td colSpan={7}>
+          <td colSpan={8}>
             <pre>{JSON.stringify(product, null, 2)}</pre>
           </td>
         </tr>
@@ -139,6 +163,9 @@ export default function ProductsTab({ embedded, showToast }) {
   const [expandedId, setExpandedId] = useState(null);
   const [showingAll, setShowingAll] = useState(false);
 
+  // Checkbox Selection State
+  const [selectedIds, setSelectedIds] = useState([]);
+
   // Search & Filter State
   const [keywordInput, setKeywordInput] = useState("");
   const [appliedKeyword, setAppliedKeyword] = useState("");
@@ -146,6 +173,7 @@ export default function ProductsTab({ embedded, showToast }) {
 
   // Modals State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBulkDiscountOpen, setIsBulkDiscountOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [deletingProduct, setDeletingProduct] = useState(null);
   const [taxonomies, setTaxonomies] = useState({ categories: [], brands: [] });
@@ -267,6 +295,35 @@ export default function ProductsTab({ embedded, showToast }) {
     loadPage(1);
   }, [loadPage]);
 
+  // Checkbox selection handlers
+  const handleToggleSelectProduct = useCallback((id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  }, []);
+
+  const handleToggleSelectAll = useCallback(() => {
+    const currentPageIds = products.map((p) => p.id);
+    const allSelected =
+      currentPageIds.length > 0 &&
+      currentPageIds.every((id) => selectedIds.includes(id));
+
+    if (allSelected) {
+      setSelectedIds((prev) =>
+        prev.filter((id) => !currentPageIds.includes(id)),
+      );
+    } else {
+      setSelectedIds((prev) =>
+        Array.from(new Set([...prev, ...currentPageIds])),
+      );
+    }
+  }, [products, selectedIds]);
+
+  const isAllSelected =
+    products.length > 0 && products.every((p) => selectedIds.includes(p.id));
+  const isSomeSelected =
+    products.some((p) => selectedIds.includes(p.id)) && !isAllSelected;
+
   // Handle Search Submission
   const handleSearchSubmit = (e) => {
     e?.preventDefault();
@@ -333,7 +390,6 @@ export default function ProductsTab({ embedded, showToast }) {
           `Product "${res.product.name}" created successfully`,
           "success",
         );
-        // Refresh page 1 to sync with Salla pagination
         loadPage(1);
       }
       return res;
@@ -349,6 +405,7 @@ export default function ProductsTab({ embedded, showToast }) {
     const res = await deleteProduct(token, productId);
     if (res.success) {
       setProducts((prev) => prev.filter((p) => p.id !== productId));
+      setSelectedIds((prev) => prev.filter((id) => id !== productId));
       setPagination((prev) =>
         prev
           ? {
@@ -363,6 +420,43 @@ export default function ProductsTab({ embedded, showToast }) {
     return res;
   };
 
+  // Bulk Discount Success Handler
+  const handleBulkSuccess = useCallback(
+    ({ payload, mode }) => {
+      // Update in-memory products state
+      setProducts((currentProducts) =>
+        currentProducts.map((p) => {
+          const updated = payload.find(
+            (item) => Number(item.id) === Number(p.id),
+          );
+          if (!updated) return p;
+          if (mode === "apply") {
+            return {
+              ...p,
+              sale_price: {
+                amount: updated.sale_price,
+                currency: "SAR",
+              },
+            };
+          } else {
+            return {
+              ...p,
+              sale_price: null,
+            };
+          }
+        }),
+      );
+
+      setSelectedIds([]);
+
+      // Trigger background sync after a brief delay to allow Salla async queue to process
+      setTimeout(() => {
+        loadPage(page);
+      }, 1500);
+    },
+    [loadPage, page],
+  );
+
   const totalPages = pagination?.totalPages || 1;
   const total = pagination?.total ?? products.length;
 
@@ -371,10 +465,20 @@ export default function ProductsTab({ embedded, showToast }) {
       <div>
         <h2 className="panel-title">Products Management</h2>
         <span className="panel-subtitle">
-          Full CRUD on Salla Admin API (/admin/v2/products)
+          Full CRUD & Bulk Discounts on Salla Admin API
         </span>
       </div>
       <div className="panel-actions">
+        <Button
+          variant="accent"
+          onClick={() => setIsBulkDiscountOpen(true)}
+          disabled={isLoading}
+        >
+          <Tag size={16} />
+          {selectedIds.length > 0
+            ? `Bulk Discount (${selectedIds.length})`
+            : "Bulk Discount"}
+        </Button>
         <Button variant="primary" onClick={handleOpenAdd} disabled={isLoading}>
           <Plus size={16} /> Add Product
         </Button>
@@ -478,6 +582,27 @@ export default function ProductsTab({ embedded, showToast }) {
   } else {
     content = (
       <>
+        {/* Selection Bar Banner */}
+        {selectedIds.length > 0 && (
+          <div className="products-selection-bar">
+            <div className="products-selection-info">
+              <strong>{selectedIds.length}</strong> products selected
+            </div>
+            <div className="products-selection-actions">
+              <Button
+                size="small"
+                variant="accent"
+                onClick={() => setIsBulkDiscountOpen(true)}
+              >
+                <Tag size={14} /> Bulk Discount ({selectedIds.length})
+              </Button>
+              <Button size="small" onClick={() => setSelectedIds([])}>
+                Deselect all
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div className="products-summary">
           <span>
             {showingAll
@@ -493,10 +618,22 @@ export default function ProductsTab({ embedded, showToast }) {
             <span className="products-filter-tag">Status: {statusFilter}</span>
           )}
         </div>
+
         <div className="products-table-wrapper">
           <table className="products-table">
             <thead>
               <tr>
+                <th style={{ width: 36 }} className="products-select-col">
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = isSomeSelected;
+                    }}
+                    onChange={handleToggleSelectAll}
+                    aria-label="Select all on this page"
+                  />
+                </th>
                 <th style={{ width: 32 }} />
                 <th style={{ width: 60 }}>Thumbnail</th>
                 <th>Product</th>
@@ -515,11 +652,14 @@ export default function ProductsTab({ embedded, showToast }) {
                   onToggle={toggleExpanded}
                   onEdit={handleOpenEdit}
                   onDelete={handleOpenDelete}
+                  isSelected={selectedIds.includes(product.id)}
+                  onToggleSelect={handleToggleSelectProduct}
                 />
               ))}
             </tbody>
           </table>
         </div>
+
         {!showingAll && totalPages > 1 && (
           <div className="products-pagination">
             <Button
@@ -568,6 +708,19 @@ export default function ProductsTab({ embedded, showToast }) {
         product={deletingProduct}
         onClose={() => setDeletingProduct(null)}
         onConfirm={handleDeleteProduct}
+      />
+
+      {/* Bulk Discount Modal */}
+      <BulkDiscountModal
+        isOpen={isBulkDiscountOpen}
+        onClose={() => setIsBulkDiscountOpen(false)}
+        selectedProducts={products.filter((p) => selectedIds.includes(p.id))}
+        allLoadedProducts={products}
+        totalStoreProducts={pagination?.total ?? products.length}
+        categories={taxonomies.categories}
+        token={getToken()}
+        onSuccess={handleBulkSuccess}
+        showToast={showToast}
       />
     </div>
   );

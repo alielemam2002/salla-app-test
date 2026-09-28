@@ -308,4 +308,40 @@ describe("ProductsTab", () => {
       );
     });
   });
+
+  it("selects products via checkboxes and opens Bulk Discount modal", async () => {
+    fetchProductsPage.mockResolvedValue({
+      success: true,
+      products: [
+        {
+          id: 88,
+          name: "Bulk Target Item",
+          price: 150,
+          status: "sale",
+        },
+      ],
+      pagination: { total: 1, totalPages: 1 },
+    });
+
+    render(<ProductsTab embedded={makeEmbedded()} showToast={vi.fn()} />);
+    await screen.findByText("Bulk Target Item");
+
+    // Select row checkbox
+    const rowCheckbox = screen.getByLabelText("Select Bulk Target Item");
+    fireEvent.click(rowCheckbox);
+
+    // Selection bar should appear with count
+    expect(await screen.findByText(/products selected/i)).toBeInTheDocument();
+
+    // Click Bulk Discount button
+    const bulkDiscountBtns = screen.getAllByRole("button", {
+      name: /Bulk Discount/i,
+    });
+    fireEvent.click(bulkDiscountBtns[0]);
+
+    // Bulk Discount Modal should be open
+    expect(
+      await screen.findByRole("heading", { name: "Bulk Product Discount" }),
+    ).toBeInTheDocument();
+  });
 });

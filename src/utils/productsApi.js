@@ -148,3 +148,17 @@ export async function fetchTaxonomies(token) {
     appId: getAppId(),
   });
 }
+
+/**
+ * Update multiple product prices and discounts at once (Bulk Price).
+ * @param {string} token - Embedded session token
+ * @param {Array<object>} products - Array of { id, price, sale_price, sale_end }
+ */
+export async function bulkUpdateProductPrices(token, products) {
+  return callProductsApi({
+    action: "bulk_price",
+    token,
+    appId: getAppId(),
+    products,
+  });
+}

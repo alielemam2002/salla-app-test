@@ -361,6 +361,74 @@ export async function POST(request) {
       }
 
       // -----------------------------------------------------------------------
+      // BULK PRICE & DISCOUNT UPDATE (POST /admin/v2/products/prices/bulkPrice)
+      // -----------------------------------------------------------------------
+      case "bulk_price":
+      case "bulk_discount": {
+        const productsList = body.products;
+        if (!Array.isArray(productsList) || productsList.length === 0) {
+          return fail(400, "bad_request", "Products array is required");
+        }
+
+        // Clean & validate payload
+        const cleanProducts = productsList.map((item) => {
+          const entry = {
+            id: Number(item.id),
+            price: Number(item.price),
+          };
+          if (item.sale_price !== undefined) {
+            entry.sale_price =
+              item.sale_price === null ? null : Number(item.sale_price);
+          }
+          if (item.cost_price !== undefined && item.cost_price !== null) {
+            entry.cost_price = Number(item.cost_price);
+          }
+          if (item.sale_end !== undefined) {
+            entry.sale_end = item.sale_end || null;
+          }
+          return entry;
+        });
+
+        // Salla bulkPrice supports array of products.
+        // Chunk into batches of 100 to avoid payload size limits or gateway timeouts.
+        const BATCH_SIZE = 100;
+        let totalUpdated = 0;
+        let lastMessage = "";
+
+        for (let i = 0; i < cleanProducts.length; i += BATCH_SIZE) {
+          const batch = cleanProducts.slice(i, i + BATCH_SIZE);
+          const { status, body: result } = await merchantApi(
+            "/products/prices/bulkPrice",
+            {
+              method: "POST",
+              body: { products: batch },
+            },
+          );
+
+          if (!result.success) {
+            return fail(
+              status >= 400 ? status : 502,
+              "salla_api_error",
+              result.error?.message ||
+                `Failed to update bulk prices (status ${status})`,
+              result.error?.fields,
+            );
+          }
+
+          totalUpdated += batch.length;
+          lastMessage = result.data?.message || lastMessage;
+        }
+
+        return Response.json({
+          success: true,
+          count: totalUpdated,
+          message:
+            lastMessage ||
+            `Successfully processed ${totalUpdated} product prices`,
+        });
+      }
+
+      // -----------------------------------------------------------------------
       // TAXONOMIES (Categories & Brands for Selectors)
       // -----------------------------------------------------------------------
       case "taxonomies": {
