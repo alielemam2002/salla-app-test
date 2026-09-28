@@ -75,4 +75,25 @@ describe("productCompletion", () => {
     const res = calculateCompletionScore(product);
     expect(res.sections.pricingInventory.fields.quantity).toBe(true);
   });
+
+  it("reports section weights and gains as points of the final 0-100 score", () => {
+    const res = calculateCompletionScore({});
+    const totalTarget = Object.values(res.sections).reduce(
+      (sum, sec) => sum + sec.targetWeight,
+      0,
+    );
+    expect(Math.round(totalTarget)).toBe(100);
+
+    const totalGain = res.remainingItems.reduce((sum, item) => sum + item.gain, 0);
+    expect(Math.round(totalGain)).toBe(100);
+  });
+
+  it("predicts the score reached after completing a missing item", () => {
+    const base = { name: "Basic Product", price: 100, quantity: 10 };
+    const before = calculateCompletionScore(base);
+    const item = before.remainingItems.find((i) => i.key === "seoTitle");
+
+    const after = calculateCompletionScore({ ...base, metadata_title: "Title" });
+    expect(item.expectedScore).toBe(after.score);
+  });
 });

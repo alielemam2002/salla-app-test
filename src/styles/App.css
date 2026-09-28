@@ -2891,7 +2891,7 @@ pre,
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-size: 0.8rem;
-  text-align: right;
+  text-align: start;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -3544,7 +3544,7 @@ pre,
   width: 100%;
   border-collapse: collapse;
   font-size: 0.8rem;
-  text-align: right;
+  text-align: start;
 }
 
 .variants-table th {
@@ -3649,3 +3649,37 @@ pre,
   animation: spin 0.8s linear infinite;
 }
 
+
+/* Pricing / SEO / score additions */
+.missing-item-expected {
+  font-weight: 500;
+  opacity: 0.75;
+}
+
+.profit-insight-banner--loss {
+  background: rgba(245, 67, 74, 0.08);
+  border-color: rgba(245, 67, 74, 0.3);
+  color: var(--accent-danger);
+}
+
+[data-theme="dark"] .profit-insight-banner--loss {
+  color: var(--accent-danger);
+}
+
+.profit-insight-banner--loss .profit-margin-badge {
+  background: var(--accent-danger);
+}
+
+.discount-badge {
+  margin-inline-start: 6px;
+  padding: 0 6px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: white;
+  background: var(--accent-danger);
+}
+
+.form-hint--warn {
+  color: var(--accent-warning);
+}

@@ -10,6 +10,21 @@ import {
   ExternalLink,
 } from "lucide-react";
 import Button from "../forms/Button.jsx";
+import { slugify } from "../../utils/slugify.js";
+
+const tagName = (t) => (typeof t === "object" ? t?.name : t) || "";
+
+/**
+ * Build the storefront URL preview. Salla product URLs look like
+ * https://{store}/{slug}/p{id}, so swap the slug segment when we know it.
+ */
+function buildPreviewUrl(productUrl, slug) {
+  if (productUrl && slug) {
+    const replaced = productUrl.replace(/\/[^/]+\/(p\d+)\/?$/, `/${slug}/$1`);
+    if (replaced !== productUrl) return replaced;
+  }
+  return productUrl || `https://store.salla.sa/${slug || "product-slug"}`;
+}
 
 export default function SeoSection({
   control,
@@ -18,6 +33,7 @@ export default function SeoSection({
   sectionScore,
   onSaveSection,
   isSaving,
+  productUrl,
 }) {
   const [tagInput, setTagInput] = useState("");
 
@@ -27,9 +43,7 @@ export default function SeoSection({
   const watchedSeoUrl = watch("metadata_url") || "";
 
   const displayTitle = watchedSeoTitle || watchedName || "عنوان المنتج في جوجل";
-  const displayUrl = watchedSeoUrl
-    ? `https://store.salla.sa/products/${watchedSeoUrl}`
-    : "https://store.salla.sa/products/product-slug";
+  const displayUrl = buildPreviewUrl(productUrl, slugify(watchedSeoUrl));
   const displayDesc =
     watchedSeoDesc ||
     "أدخل وصف SEO للمنتج ليظهر في نتائج بحث جوجل ويجذب المزيد من العملاء للشراء...";
@@ -135,17 +149,29 @@ export default function SeoSection({
         {/* SEO URL Slug */}
         <div className="form-group" id="field-metadata_url">
           <label className="form-label">رابط المنتج المخصص (metadata_url / Slug)</label>
-          <div className="slug-input-wrapper">
-            <span className="slug-prefix">store.salla.sa/products/</span>
-            <input
-              type="text"
-              className="form-input slug-input"
-              placeholder="premium-cotton-tshirt"
-              {...register("metadata_url")}
-            />
-          </div>
+          <Controller
+            name="metadata_url"
+            control={control}
+            render={({ field }) => (
+              <div className="slug-input-wrapper" dir="ltr">
+                <span className="slug-prefix">/</span>
+                <input
+                  type="text"
+                  className="form-input slug-input"
+                  placeholder="premium-cotton-tshirt"
+                  value={field.value || ""}
+                  onChange={field.onChange}
+                  onBlur={() => {
+                    field.onChange(slugify(field.value));
+                    field.onBlur();
+                  }}
+                />
+              </div>
+            )}
+          />
           <span className="form-hint">
-            استخدم كلمات واضحة بالإنجليزية ومفصولة بشرطات (-) لتعزيز أرشفة الرابط.
+            كلمات قصيرة مفصولة بشرطات (-). تُحوَّل المسافات والرموز تلقائيًا عند
+            الخروج من الحقل.
           </span>
         </div>
 
@@ -157,23 +183,23 @@ export default function SeoSection({
             control={control}
             defaultValue={[]}
             render={({ field }) => {
+              // Tags are { id, name }; new ones have no id yet and are
+              // created on save (Salla's PUT only accepts tag IDs)
               const currentTags = Array.isArray(field.value)
-                ? field.value
-                : typeof field.value === "string"
-                  ? field.value.split(/[,;\n]+/).filter(Boolean)
-                  : [];
+                ? field.value.map((t) => (typeof t === "object" ? t : { name: t }))
+                : [];
 
               const addTag = () => {
                 const trimmed = tagInput.trim().replace(/^#/, "");
                 if (!trimmed) return;
-                if (!currentTags.includes(trimmed)) {
-                  field.onChange([...currentTags, trimmed]);
+                if (!currentTags.some((t) => tagName(t) === trimmed)) {
+                  field.onChange([...currentTags, { name: trimmed }]);
                 }
                 setTagInput("");
               };
 
-              const removeTag = (t) => {
-                field.onChange(currentTags.filter((x) => x !== t));
+              const removeTag = (name) => {
+                field.onChange(currentTags.filter((t) => tagName(t) !== name));
               };
 
               return (
@@ -185,11 +211,12 @@ export default function SeoSection({
                       </span>
                     ) : (
                       currentTags.map((t) => (
-                        <span key={t} className="tag-chip">
-                          #{t}
+                        <span key={tagName(t)} className="tag-chip">
+                          #{tagName(t)}
                           <button
                             type="button"
-                            onClick={() => removeTag(t)}
+                            aria-label={`حذف الوسم ${tagName(t)}`}
+                            onClick={() => removeTag(tagName(t))}
                             className="remove-tag-btn"
                           >
                             ×

@@ -289,21 +289,35 @@ export const COMPLETION_RULES = {
  */
 export function calculateCompletionScore(productData = {}, customRules = COMPLETION_RULES) {
   let totalEarnedNormalized = 0;
-  let totalMaxWeight = 0;
   const sectionsBreakdown = {};
   const remainingItems = [];
   const completedItems = [];
 
-  Object.entries(customRules).forEach(([sectionKey, section]) => {
-    totalMaxWeight += section.weight;
+  // Section weights don't have to add up to 100, so every number we show is
+  // converted to "points of the final 0–100% score".
+  const totalMaxWeight = Object.values(customRules).reduce(
+    (sum, section) => sum + section.weight,
+    0,
+  );
+  const toPercent = (weight) =>
+    totalMaxWeight > 0 ? (weight / totalMaxWeight) * 100 : 0;
+  const round1 = (n) => Math.round(n * 10) / 10;
 
-    let sectionFieldWeightSum = 0;
+  Object.entries(customRules).forEach(([sectionKey, section]) => {
+    const sectionFieldWeightSum = Object.values(section.fields).reduce(
+      (sum, f) => sum + f.weight,
+      0,
+    );
     let sectionEarnedWeight = 0;
     const fieldsStatus = {};
 
     Object.entries(section.fields).forEach(([fieldKey, fieldDef]) => {
-      sectionFieldWeightSum += fieldDef.weight;
       const isCompleted = fieldDef.check(productData);
+      // Real contribution of this field to the final score
+      const gain =
+        sectionFieldWeightSum > 0
+          ? toPercent((fieldDef.weight / sectionFieldWeightSum) * section.weight)
+          : 0;
       fieldsStatus[fieldKey] = isCompleted;
 
       if (isCompleted) {
@@ -323,7 +337,8 @@ export function calculateCompletionScore(productData = {}, customRules = COMPLET
           fieldId: fieldDef.fieldId,
           sectionId: section.id,
           sectionLabel: section.label,
-          weightGain: `+${fieldDef.weight}%`,
+          weightGain: `+${round1(gain)}%`,
+          gain,
           weight: fieldDef.weight,
         });
       }
@@ -343,8 +358,8 @@ export function calculateCompletionScore(productData = {}, customRules = COMPLET
       id: section.id,
       label: section.label,
       labelEn: section.labelEn,
-      targetWeight: section.weight,
-      currentScore: sectionScore,
+      targetWeight: round1(toPercent(section.weight)),
+      currentScore: round1(toPercent(sectionScore)),
       percentage: Math.round(sectionRatio * 100),
       isComplete: isFullyComplete,
       fields: fieldsStatus,
@@ -352,15 +367,14 @@ export function calculateCompletionScore(productData = {}, customRules = COMPLET
   });
 
   // Scale total score to a clean 0-100% integer
-  const finalPercentage = Math.min(
-    100,
-    Math.max(
-      0,
-      totalMaxWeight > 0
-        ? Math.round((totalEarnedNormalized / totalMaxWeight) * 100)
-        : 0,
-    ),
-  );
+  const rawPercentage = toPercent(totalEarnedNormalized);
+  const clampPercent = (n) => Math.min(100, Math.max(0, Math.round(n)));
+  const finalPercentage = clampPercent(rawPercentage);
+
+  // Score the product would reach after completing each missing item
+  remainingItems.forEach((item) => {
+    item.expectedScore = clampPercent(rawPercentage + item.gain);
+  });
 
   return {
     score: finalPercentage,

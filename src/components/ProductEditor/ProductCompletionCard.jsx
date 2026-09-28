@@ -110,11 +110,16 @@ export default function ProductCompletionCard({
                 type="button"
                 className="missing-item-btn"
                 onClick={() => onNavigateToField?.(item.fieldId)}
-                title={`الانتقال إلى ${item.label}`}
+                title={`الانتقال إلى ${item.label} (النسبة المتوقعة بعد الإكمال: ${item.expectedScore}%)`}
               >
                 <div className="missing-item-bullet" />
                 <span className="missing-item-label">{item.label}</span>
-                <span className="missing-item-gain">{item.weightGain}</span>
+                <span className="missing-item-gain">
+                  {item.weightGain}
+                  <span className="missing-item-expected">
+                    {" "}← {item.expectedScore}%
+                  </span>
+                </span>
                 <ArrowLeft size={13} className="missing-item-arrow" />
               </button>
             ))}

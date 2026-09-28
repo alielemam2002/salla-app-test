@@ -263,19 +263,36 @@ export async function POST(request) {
         ) {
           payload.price = Number(payload.price);
         }
-        if (
-          payload.regular_price !== undefined &&
-          payload.regular_price !== null &&
-          payload.regular_price !== ""
-        ) {
-          payload.regular_price = Number(payload.regular_price);
-        }
-        if (
+        // Not in Salla's PUT /products/{id} schema (read-only on the response)
+        delete payload.regular_price;
+        delete payload.notify_quantity;
+
+        if (payload.unlimited_quantity) {
+          // Salla skips quantity when unlimited_quantity=true
+          delete payload.quantity;
+        } else if (
           payload.quantity !== undefined &&
           payload.quantity !== null &&
           payload.quantity !== ""
         ) {
           payload.quantity = Number(payload.quantity);
+        }
+        if (
+          payload.maximum_quantity_per_order !== undefined &&
+          payload.maximum_quantity_per_order !== null &&
+          payload.maximum_quantity_per_order !== ""
+        ) {
+          payload.maximum_quantity_per_order = Number(
+            payload.maximum_quantity_per_order,
+          );
+        }
+        if (payload.hide_quantity !== undefined) {
+          payload.hide_quantity = Boolean(payload.hide_quantity);
+        }
+        for (const dateField of ["sale_start", "sale_end"]) {
+          if (payload[dateField] !== undefined) {
+            payload[dateField] = payload[dateField] || null;
+          }
         }
         if (
           payload.sale_price !== undefined &&
@@ -309,16 +326,42 @@ export async function POST(request) {
         }
 
         if (payload.tags !== undefined) {
-          if (Array.isArray(payload.tags)) {
-            payload.tags = payload.tags
-              .map((t) => String(t).trim())
-              .filter(Boolean);
-          } else if (typeof payload.tags === "string") {
-            payload.tags = payload.tags
-              .split(/[,;\n]+/)
-              .map((t) => t.trim())
-              .filter(Boolean);
+          // Salla's PUT expects tag IDs (numbers). New tags arrive as names
+          // and are created first via POST /products/tags?tag_name=…
+          const rawTags = Array.isArray(payload.tags)
+            ? payload.tags
+            : typeof payload.tags === "string"
+              ? payload.tags.split(/[,;\n]+/)
+              : [];
+          const tagIds = [];
+          for (const tag of rawTags) {
+            const id = typeof tag === "object" ? tag?.id : tag;
+            if (id !== undefined && id !== "" && !isNaN(Number(id))) {
+              tagIds.push(Number(id));
+              continue;
+            }
+            const name = String(
+              typeof tag === "object" ? tag?.name || "" : tag,
+            ).trim();
+            if (!name) continue;
+            const { status, body: created } = await merchantApi(
+              `/products/tags?tag_name=${encodeURIComponent(name)}`,
+              { method: "POST" },
+            );
+            const createdTag = Array.isArray(created.data)
+              ? created.data[0]
+              : created.data;
+            if (!created.success || !createdTag?.id) {
+              return fail(
+                status >= 400 ? status : 502,
+                "salla_api_error",
+                created.error?.message || `Failed to create tag "${name}"`,
+                created.error?.fields,
+              );
+            }
+            tagIds.push(Number(createdTag.id));
           }
+          payload.tags = [...new Set(tagIds)];
         }
         if (payload.metadata_title !== undefined) {
           payload.metadata_title = String(payload.metadata_title || "").trim();

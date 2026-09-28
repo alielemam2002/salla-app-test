@@ -29,6 +29,7 @@ import {
   useUpdateVariant,
 } from "../../hooks/useProductQueries.js";
 import { calculateCompletionScore } from "../../utils/productCompletion.js";
+import { slugify } from "../../utils/slugify.js";
 
 export default function ProductEditor({
   productId,
@@ -81,9 +82,12 @@ export default function ProductEditor({
       brand_id: "",
       price: "",
       sale_price: "",
+      sale_end: "",
       cost_price: "",
       quantity: "",
       unlimited_quantity: false,
+      maximum_quantity_per_order: "",
+      hide_quantity: false,
       sku: "",
       gtin: "",
       mpn: "",
@@ -109,10 +113,12 @@ export default function ProductEditor({
             ? product.price?.amount
             : product.price ?? "");
 
-    const sp =
+    // Salla returns sale_price { amount: 0 } when there is no sale
+    const rawSale =
       typeof product.sale_price === "object"
         ? product.sale_price?.amount
-        : product.sale_price ?? "";
+        : product.sale_price;
+    const sp = Number(rawSale) > 0 ? rawSale : "";
 
     const cp =
       typeof product.cost_price === "object"
@@ -128,9 +134,18 @@ export default function ProductEditor({
 
     let tagList = [];
     if (Array.isArray(product.tags)) {
-      tagList = product.tags.map((t) => (typeof t === "object" ? t.name : t));
+      // Keep { id, name } so saving can send tag IDs, as Salla's PUT expects
+      tagList = product.tags
+        .map((t) =>
+          typeof t === "object" ? { id: t.id, name: t.name } : { name: String(t) },
+        )
+        .filter((t) => t.name);
     } else if (typeof product.tags === "string") {
-      tagList = product.tags.split(/[,;\n]+/).map((t) => t.trim()).filter(Boolean);
+      tagList = product.tags
+        .split(/[,;\n]+/)
+        .map((t) => t.trim())
+        .filter(Boolean)
+        .map((name) => ({ name }));
     }
 
     reset({
@@ -140,9 +155,12 @@ export default function ProductEditor({
       brand_id: product.brand_id || product.brand?.id || "",
       price: p,
       sale_price: sp,
+      sale_end: sp !== "" ? product.sale_end || "" : "",
       cost_price: cp,
       quantity: product.unlimited_quantity ? "" : (product.quantity ?? ""),
       unlimited_quantity: Boolean(product.unlimited_quantity),
+      maximum_quantity_per_order: product.maximum_quantity_per_order || "",
+      hide_quantity: Boolean(product.hide_quantity),
       sku: product.sku || "",
       gtin: product.gtin || product.barcode || "",
       mpn: product.mpn || "",
@@ -280,7 +298,6 @@ export default function ProductEditor({
     const payload = {
       name: formData.name.trim(),
       price: Number(formData.price),
-      regular_price: Number(formData.price),
       description: formData.description.trim() || undefined,
       subtitle: formData.subtitle.trim() || undefined,
       promotion_title: formData.promotion_title.trim() || undefined,
@@ -289,20 +306,32 @@ export default function ProductEditor({
       mpn: formData.mpn.trim() || undefined,
       metadata_title: formData.metadata_title.trim() || undefined,
       metadata_description: formData.metadata_description.trim() || undefined,
-      metadata_url: formData.metadata_url.trim() || undefined,
+      metadata_url: slugify(formData.metadata_url) || undefined,
       unlimited_quantity: formData.unlimited_quantity,
+      hide_quantity: formData.hide_quantity,
+      maximum_quantity_per_order:
+        formData.maximum_quantity_per_order !== "" &&
+        Number(formData.maximum_quantity_per_order) >= 0
+          ? Number(formData.maximum_quantity_per_order)
+          : 0,
     };
 
-    if (formData.unlimited_quantity) {
-      payload.quantity = 0;
-    } else if (formData.quantity !== "" && !isNaN(Number(formData.quantity))) {
+    // Salla ignores quantity when unlimited_quantity=true, so don't send it
+    if (
+      !formData.unlimited_quantity &&
+      formData.quantity !== "" &&
+      formData.quantity !== undefined &&
+      !isNaN(Number(formData.quantity))
+    ) {
       payload.quantity = Number(formData.quantity);
     }
 
-    if (formData.sale_price !== "" && !isNaN(Number(formData.sale_price))) {
+    if (formData.sale_price !== "" && Number(formData.sale_price) > 0) {
       payload.sale_price = Number(formData.sale_price);
+      payload.sale_end = formData.sale_end || null;
     } else {
       payload.sale_price = null;
+      payload.sale_end = null;
     }
 
     if (formData.cost_price !== "" && !isNaN(Number(formData.cost_price))) {
@@ -342,7 +371,7 @@ export default function ProductEditor({
   const handleSaveAll = handleSubmit((data) => executeSave(data));
 
   return (
-    <div className="product-editor-container">
+    <div className="product-editor-container" dir="rtl" lang="ar">
       {/* Editor Top Navigation Bar */}
       <div className="editor-top-nav">
         <div className="editor-nav-start">
@@ -450,6 +479,7 @@ export default function ProductEditor({
           register={register}
           watch={watch}
           sectionScore={scoreData?.sections?.seo}
+          productUrl={product?.urls?.customer || product?.url}
           onSaveSection={handleSaveAll}
           isSaving={updateProductMutation.isPending}
         />
@@ -460,6 +490,12 @@ export default function ProductEditor({
           watch={watch}
           errors={errors}
           sectionScore={scoreData?.sections?.pricingInventory}
+          currency={
+            (typeof product?.price === "object" && product.price?.currency) ||
+            "SAR"
+          }
+          managedByBranches={Boolean(product?.managed_by_branches)}
+          notifyQuantity={product?.notify_quantity}
           onSaveSection={handleSaveAll}
           isSaving={updateProductMutation.isPending}
         />

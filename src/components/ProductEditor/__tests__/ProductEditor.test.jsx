@@ -329,16 +329,83 @@ describe("ProductEditor", () => {
         expect.objectContaining({
           name: "Classic Silk Shirt",
           price: 250,
-          regular_price: 250,
           sale_price: 199,
           sku: "SILK-001",
+          quantity: 15,
+          tags: [{ name: "silk" }, { name: "luxury" }, { name: "shirt" }],
         })
+      );
+      // Not part of Salla's PUT /products/{id} body
+      expect(mockMutateUpdateProduct.mock.calls[0][0]).not.toHaveProperty(
+        "regular_price",
       );
       expect(showToast).toHaveBeenCalledWith(
         expect.stringContaining("تم حفظ بيانات المنتج بنجاح"),
         "success"
       );
     });
+  });
+
+  it("renders the editor right-to-left", () => {
+    const { container } = renderWithClient(
+      <ProductEditor
+        productId={101}
+        token="tok_test"
+        initialProduct={mockProduct}
+        onBack={vi.fn()}
+      />
+    );
+    const root = container.querySelector(".product-editor-container");
+    expect(root).toHaveAttribute("dir", "rtl");
+    expect(root).toHaveAttribute("lang", "ar");
+  });
+
+  it("does not send quantity when stock is unlimited", async () => {
+    const product = { ...mockProduct, unlimited_quantity: true };
+    productQueries.useProduct.mockReturnValue({
+      data: product,
+      isLoading: false,
+      refetch: vi.fn(),
+      isRefetching: false,
+    });
+    renderWithClient(
+      <ProductEditor
+        productId={101}
+        token="tok_test"
+        initialProduct={product}
+        onBack={vi.fn()}
+        showToast={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /حفظ جميع البيانات/i }));
+    await waitFor(() => expect(mockMutateUpdateProduct).toHaveBeenCalled());
+    const payload = mockMutateUpdateProduct.mock.calls.at(-1)[0];
+    expect(payload.unlimited_quantity).toBe(true);
+    expect(payload).not.toHaveProperty("quantity");
+  });
+
+  it("blocks saving when the sale price is not below the regular price", async () => {
+    const product = { ...mockProduct, sale_price: 300 };
+    productQueries.useProduct.mockReturnValue({
+      data: product,
+      isLoading: false,
+      refetch: vi.fn(),
+      isRefetching: false,
+    });
+    renderWithClient(
+      <ProductEditor
+        productId={101}
+        token="tok_test"
+        initialProduct={product}
+        onBack={vi.fn()}
+        showToast={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /حفظ جميع البيانات/i }));
+    expect(
+      await screen.findByText("سعر التخفيض يجب أن يكون أقل من السعر الأساسي"),
+    ).toBeInTheDocument();
+    expect(mockMutateUpdateProduct).not.toHaveBeenCalled();
   });
 
   it("calls onBack when back button is clicked", () => {
