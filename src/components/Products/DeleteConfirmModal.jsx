@@ -31,11 +31,25 @@ export default function DeleteConfirmModal({
     }
   };
 
+  const mainImageFromList =
+    Array.isArray(product?.images) && product.images.length > 0
+      ? product.images.find(
+          (img) =>
+            img &&
+            (img.is_main === true ||
+              img.main === true ||
+              img.default === true ||
+              img.is_default === true),
+        ) ||
+        product.images.find((img) => img && Number(img.sort) === 1) ||
+        product.images[0]
+      : null;
+
   const image =
-    product.thumbnail ||
-    product.main_image ||
-    product.images?.[0]?.url ||
-    product.images?.[0]?.original ||
+    mainImageFromList?.url ||
+    mainImageFromList?.original ||
+    product?.main_image ||
+    product?.thumbnail ||
     null;
 
   return (

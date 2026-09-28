@@ -82,15 +82,45 @@ function getProductSalePrice(product) {
   return null;
 }
 
-function productImage(product) {
-  return (
-    product.thumbnail ||
-    product.main_image ||
-    product.images?.[0]?.url ||
-    product.images?.[0]?.original ||
-    product.image?.url ||
-    null
-  );
+export function productImage(product) {
+  if (!product) return null;
+
+  // 1. Check if any image in product.images has explicit main/default flag
+  if (Array.isArray(product.images) && product.images.length > 0) {
+    const mainImg = product.images.find(
+      (img) =>
+        img &&
+        (img.is_main === true ||
+          img.main === true ||
+          img.default === true ||
+          img.is_default === true),
+    );
+    if (mainImg) {
+      const u = mainImg.url || mainImg.original;
+      if (u) return u;
+    }
+
+    // 2. Check for sort === 1 in images
+    const sort1Img = product.images.find(
+      (img) => img && Number(img.sort) === 1,
+    );
+    if (sort1Img) {
+      const u = sort1Img.url || sort1Img.original;
+      if (u) return u;
+    }
+  }
+
+  // 3. Check explicit main_image
+  if (product.main_image) return product.main_image;
+
+  // 4. Check first item in images array
+  if (Array.isArray(product.images) && product.images.length > 0) {
+    const firstUrl = product.images[0]?.url || product.images[0]?.original;
+    if (firstUrl) return firstUrl;
+  }
+
+  // 5. Fallback to thumbnail or image.url
+  return product.thumbnail || product.image?.url || null;
 }
 
 function ProductRow({
@@ -435,8 +465,27 @@ export default function ProductsTab({ embedded, showToast }) {
       // Update
       const res = await updateProduct(token, productId, payload);
       if (res.success && res.product) {
+        const chosenMainImage =
+          payload.main_image ||
+          (Array.isArray(payload.images) && payload.images.length > 0
+            ? payload.images.find(
+                (img) => img.default || img.is_main || img.main,
+              )?.original || payload.images[0]?.original
+            : null);
+
         setProducts((prev) =>
-          prev.map((p) => (p.id === productId ? { ...p, ...res.product } : p)),
+          prev.map((p) => {
+            if (p.id !== productId) return p;
+            const updated = { ...p, ...res.product };
+            if (payload.images && Array.isArray(payload.images)) {
+              updated.images = payload.images;
+            }
+            if (chosenMainImage) {
+              updated.main_image = chosenMainImage;
+              updated.thumbnail = chosenMainImage;
+            }
+            return updated;
+          }),
         );
         showToast?.(
           `Product "${res.product.name || productId}" updated successfully`,

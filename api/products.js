@@ -308,9 +308,22 @@ export async function POST(request) {
           payload.brand_id = Number(payload.brand_id);
         }
 
-        // Remove immutable fields on update if provided
+        // Remove immutable or read-only fields on update
         delete payload.product_type;
         delete payload.id;
+        delete payload.main_image;
+        delete payload.thumbnail;
+
+        // Normalize images array if present
+        if (Array.isArray(payload.images)) {
+          payload.images = payload.images.map((img, idx) => ({
+            ...(img.id ? { id: img.id } : {}),
+            original: img.original || img.url,
+            default: Boolean(img.default),
+            sort: img.sort !== undefined ? Number(img.sort) : idx + 1,
+            alt: img.alt || "",
+          }));
+        }
 
         const { status, body: result } = await merchantApi(
           `/products/${encodeURIComponent(productId)}`,

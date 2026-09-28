@@ -113,17 +113,66 @@ export default function ProductModal({
 
       const initialImages = [];
       if (Array.isArray(product.images) && product.images.length > 0) {
+        // Priority 1: Explicit is_main / main / default flags on image object
+        let mainIdx = product.images.findIndex(
+          (img) =>
+            img &&
+            typeof img === "object" &&
+            Boolean(img.is_main || img.main || img.default || img.is_default),
+        );
+
+        // Priority 2: Sort order === 1
+        if (mainIdx === -1) {
+          mainIdx = product.images.findIndex(
+            (img) => img && typeof img === "object" && Number(img.sort) === 1,
+          );
+        }
+
+        // Priority 3: Match against product.main_image
+        if (mainIdx === -1 && typeof product.main_image === "string") {
+          const mainUrl = product.main_image;
+          mainIdx = product.images.findIndex((img) => {
+            if (!img) return false;
+            const u = typeof img === "string" ? img : img.url || img.original;
+            return (
+              u && (u === mainUrl || mainUrl.includes(u) || u.includes(mainUrl))
+            );
+          });
+        }
+
+        // Priority 4: Match against product.thumbnail
+        if (mainIdx === -1 && typeof product.thumbnail === "string") {
+          const thumbUrl = product.thumbnail;
+          mainIdx = product.images.findIndex((img) => {
+            if (!img) return false;
+            const u = typeof img === "string" ? img : img.url || img.original;
+            return (
+              u &&
+              (u === thumbUrl || thumbUrl.includes(u) || u.includes(thumbUrl))
+            );
+          });
+        }
+
+        if (mainIdx === -1) mainIdx = 0;
+
         product.images.forEach((img, idx) => {
           const url =
             typeof img === "string" ? img : img.url || img.original || "";
           if (url) {
             initialImages.push({
+              id: typeof img === "object" ? img.id : undefined,
               original: url,
-              default: Boolean(img.default || idx === 0),
-              alt: img.alt || "",
+              default: idx === mainIdx,
+              alt: typeof img === "object" ? img.alt || "" : "",
             });
           }
         });
+
+        // Ensure the identified main image is at index 0 for consistent display & ordering
+        if (mainIdx > 0 && initialImages.length > mainIdx) {
+          const [mainItem] = initialImages.splice(mainIdx, 1);
+          initialImages.unshift(mainItem);
+        }
       } else if (product.thumbnail || product.main_image) {
         const thumbUrl = product.thumbnail || product.main_image;
         initialImages.push({
@@ -243,13 +292,20 @@ export default function ProductModal({
   };
 
   const handleSetDefaultImage = (index) => {
-    setFormData((prev) => ({
-      ...prev,
-      images: prev.images.map((img, idx) => ({
-        ...img,
-        default: idx === index,
-      })),
-    }));
+    setFormData((prev) => {
+      const target = prev.images[index];
+      if (!target) return prev;
+      const reordered = [
+        { ...target, default: true },
+        ...prev.images
+          .filter((_, idx) => idx !== index)
+          .map((img) => ({ ...img, default: false })),
+      ];
+      return {
+        ...prev,
+        images: reordered,
+      };
+    });
   };
 
   const handleToggleCategory = (catId) => {
@@ -371,12 +427,26 @@ export default function ProductModal({
     }
 
     if (formData.images.length > 0) {
-      payload.images = formData.images.map((img, idx) => ({
+      // Order images so the default (main) image is first in the array
+      const sortedImages = [...formData.images].sort((a, b) => {
+        if (a.default && !b.default) return -1;
+        if (!a.default && b.default) return 1;
+        return 0;
+      });
+
+      payload.images = sortedImages.map((img, idx) => ({
+        ...(img.id ? { id: img.id } : {}),
         original: img.original,
-        default: Boolean(img.default),
+        url: img.original,
+        default: idx === 0,
+        is_main: idx === 0,
+        main: idx === 0,
         sort: idx + 1,
         alt: img.alt || formData.name || "",
       }));
+
+      // Explicitly set main_image on product root
+      payload.main_image = sortedImages[0].original;
     }
 
     try {

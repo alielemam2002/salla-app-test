@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import ProductsTab from "../ProductsTab.jsx";
+import ProductsTab, { productImage } from "../ProductsTab.jsx";
 import {
   fetchProductsPage,
   createProduct,
@@ -366,5 +366,48 @@ describe("ProductsTab", () => {
 
     expect(screen.getByText("200 SAR")).toBeInTheDocument();
     expect(screen.getByText("Sale: 150 SAR")).toBeInTheDocument();
+  });
+
+  describe("productImage resolution", () => {
+    it("prioritizes image with is_main: true over thumbnail", () => {
+      const product = {
+        thumbnail: "https://example.com/old_thumb.jpg",
+        images: [
+          { original: "https://example.com/img1.jpg", is_main: false },
+          { original: "https://example.com/img2.jpg", is_main: true },
+        ],
+      };
+      expect(productImage(product)).toBe("https://example.com/img2.jpg");
+    });
+
+    it("prioritizes image with default: true over thumbnail", () => {
+      const product = {
+        thumbnail: "https://example.com/old_thumb.jpg",
+        images: [
+          { url: "https://example.com/img1.jpg", default: false },
+          { url: "https://example.com/img2.jpg", default: true },
+        ],
+      };
+      expect(productImage(product)).toBe("https://example.com/img2.jpg");
+    });
+
+    it("prioritizes image with sort: 1 when no is_main/default flag is set", () => {
+      const product = {
+        thumbnail: "https://example.com/old_thumb.jpg",
+        images: [
+          { url: "https://example.com/img2.jpg", sort: 2 },
+          { url: "https://example.com/img1.jpg", sort: 1 },
+        ],
+      };
+      expect(productImage(product)).toBe("https://example.com/img1.jpg");
+    });
+
+    it("falls back to thumbnail when images array is empty", () => {
+      const product = {
+        thumbnail: "https://example.com/thumb.jpg",
+        images: [],
+      };
+      expect(productImage(product)).toBe("https://example.com/thumb.jpg");
+    });
   });
 });
