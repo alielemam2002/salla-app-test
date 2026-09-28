@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import PerformanceCenterTab from "../PerformanceCenterTab.jsx";
 import ScanComparisonBanner from "../ScanComparisonBanner.jsx";
 import PerformanceTrendChart from "../PerformanceTrendChart.jsx";
+import ScanErrorBanner from "../ScanErrorBanner.jsx";
 
 function renderTab() {
   const client = new QueryClient({
@@ -119,3 +120,56 @@ describe("PerformanceTrendChart", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("ScanErrorBanner", () => {
+  it("renders error message and action buttons", () => {
+    const onRetry = vi.fn();
+    const onOpenApiKey = vi.fn();
+    const onRetryDesktop = vi.fn();
+
+    render(
+      <ScanErrorBanner
+        message="Lighthouse returned error: Something went wrong."
+        onOpenApiKey={onOpenApiKey}
+        onRetry={onRetry}
+        onRetryDesktop={onRetryDesktop}
+      />,
+    );
+
+    expect(
+      screen.getByText("Lighthouse returned error: Something went wrong."),
+    ).toBeInTheDocument();
+
+    const desktopBtn = screen.getByRole("button", {
+      name: /تجربة فحص ديسكتوب/,
+    });
+    expect(desktopBtn).toBeInTheDocument();
+    fireEvent.click(desktopBtn);
+    expect(onRetryDesktop).toHaveBeenCalledTimes(1);
+
+    const apiKeyBtn = screen.getByRole("button", {
+      name: /إدخال Google API Key/,
+    });
+    fireEvent.click(apiKeyBtn);
+    expect(onOpenApiKey).toHaveBeenCalledTimes(1);
+
+    const retryBtn = screen.getByRole("button", { name: /إعادة المحاولة/ });
+    fireEvent.click(retryBtn);
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not render desktop button when onRetryDesktop is not provided", () => {
+    render(
+      <ScanErrorBanner
+        message="Some error"
+        onOpenApiKey={() => {}}
+        onRetry={() => {}}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: /تجربة فحص ديسكتوب/ }),
+    ).not.toBeInTheDocument();
+  });
+});
+

@@ -172,21 +172,3 @@ export async function bulkUpdateProductPrices(token, products) {
     products,
   });
 }
-
-// =============================================================================
-// Extensible Architecture for Future Storewide Coupons
-// (To be implemented when Coupon Feature is activated)
-// =============================================================================
-/*
-export async function createStorewideCoupon(token, couponData) {
-  // POST /admin/v2/coupons
-}
-
-export async function listStorewideCoupons(token, options) {
-  // GET /admin/v2/coupons
-}
-
-export async function deleteStorewideCoupon(token, couponId) {
-  // DELETE /admin/v2/coupons/{id}
-}
-*/

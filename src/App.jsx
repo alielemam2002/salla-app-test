@@ -9,6 +9,7 @@ import TestConsoleTab from "./components/TestConsole/TestConsoleTab.jsx";
 import PlaygroundTab from "./components/Playground/PlaygroundTab.jsx";
 import AddonsTab from "./components/Addons/AddonsTab.jsx";
 import ProductsTab from "./components/Products/ProductsTab.jsx";
+import CouponsTab from "./components/Coupons/CouponsTab.jsx";
 import PerformanceCenterTab from "./components/Performance/PerformanceCenterTab.jsx";
 
 function AppContent() {
@@ -60,6 +61,9 @@ function AppContent() {
       )}
       {activeTab === "products" && (
         <ProductsTab embedded={embedded} showToast={showToast} />
+      )}
+      {activeTab === "coupons" && (
+        <CouponsTab embedded={embedded} showToast={showToast} />
       )}
       {activeTab === "performance" && (
         <PerformanceCenterTab token={token} appId={layout?.app_id} />

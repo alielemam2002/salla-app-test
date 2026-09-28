@@ -1,4 +1,11 @@
-import { Code2, Gauge, Package, Puzzle, Terminal } from "lucide-react";
+import {
+  Code2,
+  Gauge,
+  Package,
+  Puzzle,
+  Terminal,
+  TicketPercent,
+} from "lucide-react";
 
 /**
  * Top-level tabs. Single source of truth for the in-app tab strip and the
@@ -9,6 +16,7 @@ export const APP_TABS = [
   { id: "playground", label: "Playground", icon: Code2 },
   { id: "addons", label: "Addons", icon: Puzzle },
   { id: "products", label: "Products", icon: Package },
+  { id: "coupons", label: "Coupons", icon: TicketPercent },
   { id: "performance", label: "Performance Center", icon: Gauge },
 ];
 

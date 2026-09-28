@@ -14,7 +14,7 @@
 
 import { introspectEmbeddedToken, merchantApi } from "./_lib/salla.js";
 
-const PAGESPEED_API_BASE = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed";
+const PAGESPEED_API_BASE = "https://pagespeedonline.googleapis.com/pagespeedonline/v5/runPagespeed";
 const CRUX_API_BASE = "https://chromeuxreport.googleapis.com/v1/records:queryRecord";
 
 // One PageSpeed run on a real store page often takes 20-45s. Keep this below
@@ -115,7 +115,7 @@ async function fetchPageSpeed(url, strategy, apiKey, timeoutMs = PAGESPEED_TIMEO
   const query = new URLSearchParams({
     url,
     strategy,
-    category: "PERFORMANCE",
+    category: "performance",
     locale: "ar"
   });
 
@@ -167,12 +167,12 @@ async function fetchPageSpeed(url, strategy, apiKey, timeoutMs = PAGESPEED_TIMEO
           error: `تعذّر على Google تحميل صفحة المتجر. تأكد من أن الرابط صحيح ومتاح للعامة (بدون كلمة مرور أو حماية ضد الزوار الآليين). ${msg}`
         };
       }
-      if (res.status >= 500 && LIGHTHOUSE_TRANSIENT_ERROR.test(msg)) {
+      if (LIGHTHOUSE_TRANSIENT_ERROR.test(msg) || data.error?.code === 500) {
         return {
           ok: false,
           status: 502,
           code: "lighthouse_error",
-          error: "تعطّل محرك Lighthouse لدى Google أثناء فحص الصفحة (خطأ مؤقت من جهة Google). يرجى إعادة المحاولة بعد قليل. إذا تكرر الخطأ فقد تكون الصفحة ثقيلة جداً أو محمية ضد الزوار الآليين."
+          error: "تعذّر على Google إكمال فحص الصفحة عبر Lighthouse (Something went wrong). يحدث هذا عادةً بسبب ثقل سكريبتات المتجر ومحاكاة الجوال البطيئة، أو حماية المتجر ضد الزوار الآليين (WAF/Cloudflare)، أو تجاوز الحصة العامة. جرّب فحص الديسكتوب (Desktop) أو أدخل Google API Key خاص بك."
         };
       }
       return {
@@ -210,7 +210,23 @@ async function runPageSpeed(url, strategy, apiKey) {
   const remaining = PAGESPEED_TIMEOUT_MS - (Date.now() - startedAt);
   if (remaining < MIN_RETRY_BUDGET_MS) return first;
 
-  const second = await fetchPageSpeed(url, strategy, apiKey, remaining);
+  // Toggle trailing slash on root URL (e.g. https://domain.com vs https://domain.com/)
+  // to bypass redirect loop or navigation failures in headless Chrome
+  let retryUrl = url;
+  try {
+    const u = new URL(url);
+    if (u.pathname === "/" || u.pathname === "") {
+      if (url.endsWith("/")) {
+        retryUrl = url.replace(/\/+$/, "");
+      } else {
+        retryUrl = `${url}/`;
+      }
+    }
+  } catch {
+    // Keep retryUrl
+  }
+
+  const second = await fetchPageSpeed(retryUrl, strategy, apiKey, remaining);
   // A timeout on the retry is less useful than the original Lighthouse error.
   return second.ok || second.code !== "timeout" ? second : first;
 }

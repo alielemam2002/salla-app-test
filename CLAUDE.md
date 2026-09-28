@@ -19,6 +19,7 @@ Source docs: https://docs.salla.dev/embedded-sdk/overview.md (index of all pages
   - [api/products.js](api/products.js) introspects the embedded token (to confirm the caller is a real merchant session), then calls `GET /admin/v2/products` with the access token from the `SALLA_ACCESS_TOKEN` env var.
   - There is **no token storage** (Redis was removed on purpose). So this works for one store, and the token must be replaced by hand when it expires after 14 days. Don't reintroduce a webhook or database unless asked.
   - UI: [src/components/Products/ProductsTab.jsx](src/components/Products/ProductsTab.jsx) and [src/utils/productsApi.js](src/utils/productsApi.js).
+- **Coupons tab (storewide coupons):** [api/coupons.js](api/coupons.js) does list/get/create/update/delete on `/admin/v2/coupons` with the same introspect + `SALLA_ACCESS_TOKEN` pattern. The token needs scopes `marketing.read` and `marketing.read_write`. The payload is built from an allow-list and never sends include/exclude lists, so coupons created here always apply to the entire store. Coupons that have rules the form doesn't manage (products, customer groups, payment methods, groups, marketers) are view/delete only, because Salla's update is a `PUT`. Salla dates have no offset; they are read as store time (+03:00). UI: [src/components/Coupons/](src/components/Coupons/), hooks in `src/hooks/coupons/`, pure helpers in `src/utils/coupons/`.
 - **Vercel env vars:**
 
   | Variable             | Required? | Purpose                                                             |

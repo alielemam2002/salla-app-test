@@ -68,6 +68,14 @@ export default function PerformanceCenterTab({ token, appId }) {
           message={scan.error.message}
           onOpenApiKey={openApiKey}
           onRetry={rescan}
+          onRetryDesktop={
+            scan.selectedStrategy !== "desktop"
+              ? () => {
+                  scan.setSelectedStrategy("desktop");
+                  scan.startScan("desktop", true);
+                }
+              : null
+          }
         />
       )}
 
