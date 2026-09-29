@@ -14,7 +14,9 @@ import {
 } from "../../../utils/cartsApi.js";
 import { fetchAllCoupons } from "../../../utils/couponsApi.js";
 import {
+  fetchWhatsAppSettings,
   fetchWhatsAppStatus,
+  saveWhatsAppSettings,
   sendCartWhatsApp,
 } from "../../../utils/whatsappApi.js";
 import {
@@ -33,12 +35,23 @@ vi.mock("../../../utils/couponsApi.js", () => ({
 vi.mock("../../../utils/whatsappApi.js", () => ({
   fetchWhatsAppStatus: vi.fn(),
   sendCartWhatsApp: vi.fn(),
+  fetchWhatsAppSettings: vi.fn(),
+  saveWhatsAppSettings: vi.fn(),
+  deleteWhatsAppSettings: vi.fn(),
+  sendWhatsAppTest: vi.fn(),
 }));
 
-const NOT_CONFIGURED = { success: true, configured: false };
+const NOT_CONFIGURED = {
+  success: true,
+  configured: false,
+  source: null,
+  storageReady: true,
+};
 const CONFIGURED = {
   success: true,
   configured: true,
+  source: "server",
+  storageReady: true,
   template: "hello_world",
   language: "en_US",
   params: [],
@@ -263,7 +276,7 @@ describe("CartRecoveryTab", () => {
     });
     const { showToast } = renderTab();
     expect(
-      await screen.findByText("WhatsApp API connected"),
+      await screen.findByText("WhatsApp connected (server default account)"),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/doesn't include the cart link/),
@@ -335,5 +348,109 @@ describe("CartRecoveryTab", () => {
     expect(sendCartWhatsApp).toHaveBeenCalledTimes(1);
     expect(sendCartWhatsApp).toHaveBeenCalledWith("tok", 11, "");
     expect(maxInFlight).toBe(1);
+  });
+
+  it("lets the merchant connect their own WhatsApp account", async () => {
+    fetchWhatsAppSettings.mockResolvedValue({
+      success: true,
+      storageReady: true,
+      settings: null,
+    });
+    saveWhatsAppSettings.mockImplementation(async (_token, settings) => ({
+      success: true,
+      settings: {
+        ...settings,
+        accessToken: undefined,
+        tokenLast4: "abcd",
+        profile: { displayPhone: "15551890829", verifiedName: "My Store" },
+      },
+    }));
+    const { showToast } = renderTab();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Connect WhatsApp" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await within(dialog).findByLabelText(/Phone Number ID/);
+
+    // The token is required the first time.
+    fireEvent.change(within(dialog).getByLabelText(/Phone Number ID/), {
+      target: { value: "1324055010792496" },
+    });
+    fireEvent.change(within(dialog).getByLabelText(/Template name/), {
+      target: { value: "cart_reminder_ar" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(
+      await within(dialog).findByText("An access token is required"),
+    ).toBeInTheDocument();
+    expect(saveWhatsAppSettings).not.toHaveBeenCalled();
+
+    const token = within(dialog).getByLabelText(/Access token/);
+    expect(token).toHaveAttribute("type", "password");
+    fireEvent.change(token, {
+      target: { value: "EAAmerchantTokenValue1234abcd" },
+    });
+    for (const key of ["customer_name", "cart_total", "checkout_url"]) {
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Add variable" }),
+      );
+      const selects = within(dialog).getAllByLabelText(/Value for \{\{/);
+      fireEvent.change(selects[selects.length - 1], {
+        target: { value: key },
+      });
+    }
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(saveWhatsAppSettings).toHaveBeenCalledWith("tok", {
+        phoneNumberId: "1324055010792496",
+        wabaId: "",
+        accessToken: "EAAmerchantTokenValue1234abcd",
+        template: "cart_reminder_ar",
+        language: "ar",
+        params: ["customer_name", "cart_total", "checkout_url"],
+      }),
+    );
+    expect(showToast).toHaveBeenCalledWith(
+      "WhatsApp settings saved",
+      "success",
+    );
+  });
+
+  it("shows the saved token only as its last 4 characters", async () => {
+    fetchWhatsAppStatus.mockResolvedValue({
+      ...CONFIGURED,
+      source: "merchant",
+      template: "cart_reminder_ar",
+      language: "ar",
+      params: ["customer_name"],
+      profile: { displayPhone: "15551890829", verifiedName: "My Store" },
+    });
+    fetchWhatsAppSettings.mockResolvedValue({
+      success: true,
+      storageReady: true,
+      settings: {
+        phoneNumberId: "1324055010792496",
+        wabaId: null,
+        template: "cart_reminder_ar",
+        language: "ar",
+        params: ["customer_name"],
+        tokenLast4: "abcd",
+        profile: { displayPhone: "15551890829", verifiedName: "My Store" },
+      },
+    });
+    renderTab();
+    expect(
+      await screen.findByText("WhatsApp connected: My Store"),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "WhatsApp settings" }));
+    const dialog = await screen.findByRole("dialog");
+    const token = await within(dialog).findByLabelText(/Access token/);
+    expect(token).toHaveValue("");
+    expect(token).toHaveAttribute("placeholder", "••••abcd");
+    expect(
+      within(dialog).getByText(/Saved \(ends in abcd\)/),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText("Send a test message")).toBeInTheDocument();
   });
 });

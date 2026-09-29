@@ -43,6 +43,7 @@ import AbandonedCartsTable from "./AbandonedCartsTable.jsx";
 import CartDetailsModal from "./CartDetailsModal.jsx";
 import WhatsAppTemplateCard from "./WhatsAppTemplateCard.jsx";
 import WhatsAppApiStatus from "./WhatsAppApiStatus.jsx";
+import WhatsAppSettingsModal from "./WhatsAppSettingsModal.jsx";
 
 const EMPTY = [];
 
@@ -68,6 +69,7 @@ export default function CartRecoveryTab({ embedded, showToast }) {
   const sender = useWhatsAppSender(getToken);
   const apiEnabled = Boolean(waStatus.data?.configured);
   const [confirmBulk, setConfirmBulk] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const [search, setSearch] = useState("");
   const [includeRecent, setIncludeRecent] = useState(false);
@@ -238,7 +240,10 @@ export default function CartRecoveryTab({ embedded, showToast }) {
             your store.
           </Alert>
 
-          <WhatsAppApiStatus status={waStatus} />
+          <WhatsAppApiStatus
+            status={waStatus}
+            onOpenSettings={() => setSettingsOpen(true)}
+          />
 
           {!query.isPending && !query.isError && (
             <CartRecoveryStats
@@ -348,6 +353,14 @@ export default function CartRecoveryTab({ embedded, showToast }) {
         coupons={activeCoupons}
         couponsError={couponsQuery.isError}
       />
+
+      {settingsOpen && (
+        <WhatsAppSettingsModal
+          getToken={getToken}
+          onClose={() => setSettingsOpen(false)}
+          showToast={showToast}
+        />
+      )}
 
       {openCartId && (
         <CartDetailsModal

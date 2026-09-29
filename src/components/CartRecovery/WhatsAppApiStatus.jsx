@@ -1,53 +1,94 @@
-import { Alert } from "../ui/index.js";
+import { Settings2 } from "lucide-react";
+import { Alert, Button } from "../ui/index.js";
 
 /**
- * Whether the WhatsApp Cloud API is set up on the server. Shows the
- * template in use; never anything secret (the server doesn't return it).
+ * Which WhatsApp account the "Send" buttons use: the merchant's own
+ * (WhatsApp settings), the server default (META_WA_* env, for testing), or
+ * none. Never shows anything secret (the server doesn't return it).
  */
-export default function WhatsAppApiStatus({ status }) {
+export default function WhatsAppApiStatus({ status, onOpenSettings }) {
   if (status.isPending || status.isError) return null;
   const {
     configured,
+    source,
     template,
     language,
     params = [],
     invalidParams = [],
+    profile,
+    storageReady,
+    tokenUnreadable,
   } = status.data;
 
-  if (!configured) {
+  const settingsButton = storageReady && (
+    <Button size="small" icon={Settings2} onClick={onOpenSettings}>
+      {source === "merchant" ? "WhatsApp settings" : "Connect WhatsApp"}
+    </Button>
+  );
+
+  if (tokenUnreadable) {
     return (
-      <Alert tone="info" title="WhatsApp API not connected">
-        To send from the app instead of opening WhatsApp, add{" "}
-        <code>META_WA_TOKEN</code> and <code>META_WA_PHONE_NUMBER_ID</code> in
-        Vercel and redeploy.
+      <Alert
+        tone="warning"
+        title="Enter your WhatsApp token again"
+        action={settingsButton}
+      >
+        The saved token can&apos;t be read anymore. Open WhatsApp settings and
+        paste it again.
       </Alert>
     );
   }
 
+  if (!configured) {
+    return (
+      <Alert
+        tone="info"
+        title="WhatsApp API not connected"
+        action={settingsButton}
+      >
+        {storageReady
+          ? "Connect your WhatsApp Business account to send reminders from the app instead of opening WhatsApp."
+          : "Settings storage isn't set up on the server yet (Upstash Redis + WA_SETTINGS_KEY)."}
+      </Alert>
+    );
+  }
+
+  const title =
+    source === "merchant"
+      ? `WhatsApp connected${profile?.verifiedName ? `: ${profile.verifiedName}` : ""}`
+      : "WhatsApp connected (server default account)";
+
   return (
     <Alert
       tone={invalidParams.length ? "warning" : "success"}
-      title="WhatsApp API connected"
+      title={title}
+      action={settingsButton}
     >
       <p>
+        {profile?.displayPhone && (
+          <>
+            From <span dir="ltr">{profile.displayPhone}</span> ·{" "}
+          </>
+        )}
         Template <code>{template}</code> ({language})
         {params.length
           ? ` with variables: ${params.join(", ")}.`
           : " with no variables."}
       </p>
+      {source === "server" && (
+        <p>
+          This is the app&apos;s shared test account. Connect your own WhatsApp
+          Business account to send from your number.
+        </p>
+      )}
       {!params.length && (
         <p>
-          This template doesn&apos;t include the cart link. For real reminders,
-          create an approved template with variables and set{" "}
-          <code>META_WA_TEMPLATE_NAME</code> and{" "}
-          <code>META_WA_TEMPLATE_PARAMS</code>.
+          This template doesn&apos;t include the cart link. Use an approved
+          template with variables for real reminders.
         </p>
       )}
       {invalidParams.length > 0 && (
-        <p>
-          Unknown variables in META_WA_TEMPLATE_PARAMS:{" "}
-          {invalidParams.join(", ")}
-        </p>
+        <p>Unknown template variables: {invalidParams.join(", ")}</p>
       )}
       <p>
         &quot;Sent&quot; means Meta accepted the message; delivery and read

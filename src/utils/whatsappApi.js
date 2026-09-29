@@ -42,3 +42,25 @@ export function fetchWhatsAppStatus(token) {
 export function sendCartWhatsApp(token, cartId, couponCode) {
   return callWhatsAppApi({ action: "send", token, cartId, couponCode });
 }
+
+/** The merchant's saved WhatsApp settings (token masked) + storage state. */
+export function fetchWhatsAppSettings(token) {
+  return callWhatsAppApi({ action: "settings_get", token });
+}
+
+/**
+ * Save settings. The server checks them with Meta first. Leave
+ * `settings.accessToken` empty to keep the saved token.
+ */
+export function saveWhatsAppSettings(token, settings) {
+  return callWhatsAppApi({ action: "settings_save", token, settings });
+}
+
+export function deleteWhatsAppSettings(token) {
+  return callWhatsAppApi({ action: "settings_delete", token });
+}
+
+/** Send the template with sample values to `to` (the merchant's number). */
+export function sendWhatsAppTest(token, to) {
+  return callWhatsAppApi({ action: "send_test", token, to });
+}

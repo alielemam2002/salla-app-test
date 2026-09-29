@@ -1,29 +1,47 @@
 /**
- * Vercel Serverless Function - Send an abandoned-cart reminder through the
- * WhatsApp Cloud API (Meta). Proof of concept: one cart per request, sent
- * when the merchant presses the button. No scheduling, no storage.
+ * Vercel Serverless Function - WhatsApp Cloud API for cart recovery.
  *
- * Meta: POST https://graph.facebook.com/{version}/{phone-number-id}/messages
- * with a pre-approved *template* (a business can't start a chat with free
- * text). docs: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages
+ * Every merchant connects their own WhatsApp Business account in the app
+ * (WhatsApp settings). Settings are stored per Salla merchant (from the
+ * verified embedded session) in Upstash Redis, with the access token
+ * encrypted. Until a merchant saves settings, the META_WA_* env vars are
+ * used as a server default.
  *
- * The cart (customer mobile, total, checkout_url, status) is read from Salla
- * here, never taken from the browser: GET /admin/v2/carts/abandoned/{id}.
+ * Actions (all need a valid embedded session token):
+ * - status           which setup is active (merchant / server / none)
+ * - settings_get     the merchant's settings, token masked
+ * - settings_save    validate, check with Meta (phone number profile), save
+ * - settings_delete  forget the merchant's settings
+ * - send_test        send the template with sample values to a number
+ * - send             send the template for one abandoned cart; the cart is
+ *                    read from Salla (GET /admin/v2/carts/abandoned/{id})
  *
- * Env (server only, never sent to the browser):
- * - META_WA_TOKEN            access token (test token or System User token)
- * - META_WA_PHONE_NUMBER_ID  "Phone number ID" from API Setup
- * - META_WA_TEMPLATE_NAME    approved template (default: hello_world)
- * - META_WA_TEMPLATE_LANG    its language code (default: en_US)
- * - META_WA_TEMPLATE_PARAMS  body variables in order, comma-separated, from:
- *                            customer_name, cart_total, cart_items,
- *                            checkout_url, coupon_code (default: none)
- * - META_GRAPH_VERSION       Graph API version (default: v23.0, as in Meta's docs)
+ * Env: WA_SETTINGS_KEY (32 bytes, base64) + Upstash (KV_REST_API_URL /
+ * KV_REST_API_TOKEN) for per-merchant settings; optional META_WA_TOKEN,
+ * META_WA_PHONE_NUMBER_ID, META_WA_TEMPLATE_NAME, META_WA_TEMPLATE_LANG,
+ * META_WA_TEMPLATE_PARAMS, META_GRAPH_VERSION as the server default.
  */
 
 import { introspectEmbeddedToken, merchantApi } from "./_lib/salla.js";
+import { kvConfigured } from "./_lib/kv.js";
+import { encryptionConfigured, open } from "./_lib/secretBox.js";
 import {
-  TEMPLATE_VARIABLES,
+  buildTemplateMessage,
+  fetchPhoneProfile,
+  metaFailure,
+  sendTemplate,
+} from "./_lib/whatsappGraph.js";
+import {
+  deleteSettings,
+  envConfig,
+  loadStored,
+  publicSettings,
+  recordToConfig,
+  saveSettings,
+  validateSettingsInput,
+} from "./_lib/whatsappSettings.js";
+import {
+  SAMPLE_CART,
   cartMessageValues,
   whatsappNumber,
 } from "../src/utils/cartRecovery/whatsappMessage.js";
@@ -34,87 +52,60 @@ const ERROR_STATUS = {
   missing_scope: 403,
 };
 
-const ALLOWED_PARAMS = new Set(TEMPLATE_VARIABLES.map((v) => v.key));
-
 const fail = (status, code, error, extra = {}) =>
   Response.json({ success: false, status, code, error, ...extra }, { status });
 
-/** WhatsApp settings from env; `configured` is false if a key is missing. */
-export function readConfig(env = process.env) {
-  const params = String(env.META_WA_TEMPLATE_PARAMS || "")
-    .split(",")
-    .map((p) => p.trim())
-    .filter(Boolean);
-  return {
-    configured: Boolean(env.META_WA_TOKEN && env.META_WA_PHONE_NUMBER_ID),
-    token: String(env.META_WA_TOKEN || "").trim(),
-    phoneNumberId: String(env.META_WA_PHONE_NUMBER_ID || "").trim(),
-    template: String(env.META_WA_TEMPLATE_NAME || "hello_world").trim(),
-    language: String(env.META_WA_TEMPLATE_LANG || "en_US").trim(),
-    params,
-    invalidParams: params.filter((p) => !ALLOWED_PARAMS.has(p)),
-    version: String(env.META_GRAPH_VERSION || "v23.0").trim(),
-  };
-}
+const storageReady = () => kvConfigured() && encryptionConfigured();
 
-/** Template request body for Meta, or { error } if a variable is empty. */
-export function buildTemplateMessage(config, to, values) {
-  const template = {
-    name: config.template,
-    language: { code: config.language },
-  };
-  if (config.params.length) {
-    const parameters = [];
-    for (const key of config.params) {
-      const text = String(values[key] || "").trim();
-      // Meta rejects empty template parameters.
-      if (!text) return { error: `No value for {{${key}}} in this cart` };
-      parameters.push({ type: "text", text });
+/** The config to send with: the merchant's own, else the server default. */
+async function resolveConfig(merchantId) {
+  if (storageReady()) {
+    const stored = await loadStored(merchantId);
+    if (stored) {
+      try {
+        return { source: "merchant", stored, config: recordToConfig(stored) };
+      } catch {
+        // Saved with a different WA_SETTINGS_KEY: the token must be re-entered.
+        return { source: "merchant", stored, config: null, unreadable: true };
+      }
     }
-    template.components = [{ type: "body", parameters }];
   }
-  return {
-    body: {
-      messaging_product: "whatsapp",
-      recipient_type: "individual",
-      to,
-      type: "template",
-      template,
-    },
-  };
+  const fallback = envConfig();
+  return fallback
+    ? { source: "server", stored: null, config: fallback }
+    : { source: null, stored: null, config: null };
 }
 
-// Meta error code → short, actionable reason (codes from Meta's error table).
-const META_REASONS = {
-  0: "Meta couldn't authenticate the access token. Generate a new one.",
-  190: "The WhatsApp access token expired. Generate a new one and update META_WA_TOKEN.",
-  10: "The token doesn't have WhatsApp messaging permission.",
-  200: "No WhatsApp access token was sent.",
-  100: "Meta rejected a parameter in the request.",
-  130429: "Meta's sending limit was reached. Wait and try again.",
-  131026: "The customer's number isn't on WhatsApp or can't receive messages.",
-  131030:
-    "Meta's test number can only message recipients you added in API Setup.",
-  131031: "The WhatsApp Business account is restricted.",
-  131042: "The WhatsApp Business account has a billing problem.",
-  131047:
-    "The 24-hour window is closed; only an approved template can be sent.",
-  131049:
-    "Meta held this marketing message to limit messages per customer. Try after 24 hours.",
-  131056: "Too many messages to this customer in a short time.",
-  132000:
-    "The number of template variables doesn't match the template. Check META_WA_TEMPLATE_PARAMS.",
-  132001: "The template doesn't exist in this language or isn't approved yet.",
-  132012: "A template variable has the wrong format.",
-  133010:
-    "The sending phone number isn't registered on the WhatsApp Business Platform.",
-};
+const localeOf = (config) => (config.language.startsWith("ar") ? "ar" : "en");
 
-export function describeMetaError(error = {}) {
-  return (
-    META_REASONS[error.code] ||
-    "Meta rejected the message. See the technical details."
-  );
+/** Send one template message; returns a Response. */
+async function deliver(config, to, values) {
+  if (config.invalidParams?.length) {
+    return fail(
+      500,
+      "whatsapp_bad_config",
+      `Unknown template variables: ${config.invalidParams.join(", ")}`,
+    );
+  }
+  const message = buildTemplateMessage(config, to, values);
+  if (message.error) return fail(422, "missing_value", message.error);
+
+  const result = await sendTemplate(config, message.body);
+  if (!result.ok) {
+    const failure = metaFailure(result);
+    console.error("WhatsApp send failed:", failure.metaCode);
+    return fail(failure.httpStatus, "meta_error", failure.error, {
+      metaCode: failure.metaCode,
+      detail: failure.detail,
+    });
+  }
+  const sent = result.json.messages?.[0] || {};
+  return Response.json({
+    success: true,
+    messageId: sent.id || null,
+    // "accepted" means Meta took it, not that it was delivered.
+    status: sent.message_status || "accepted",
+  });
 }
 
 export async function POST(request) {
@@ -131,128 +122,188 @@ export async function POST(request) {
   if (!token) return fail(400, "bad_request", "Token is required");
   if (!appId) return fail(400, "bad_request", "App ID is required");
 
-  const config = readConfig();
-
   try {
     const session = await introspectEmbeddedToken(token, appId);
     if (!session.ok) {
       return fail(session.status, "session_invalid", session.error);
     }
+    const merchantId = String(session.data.merchant_id);
 
-    if (action === "status") {
-      // Never return the token itself.
-      return Response.json({
-        success: true,
-        configured: config.configured,
-        template: config.template,
-        language: config.language,
-        params: config.params,
-        invalidParams: config.invalidParams,
-      });
-    }
+    switch (action) {
+      case "status": {
+        const { source, stored, config, unreadable } =
+          await resolveConfig(merchantId);
+        // Never return the token.
+        return Response.json({
+          success: true,
+          configured: Boolean(config),
+          source,
+          storageReady: storageReady(),
+          template: config?.template || null,
+          language: config?.language || null,
+          params: config?.params || [],
+          invalidParams: config?.invalidParams || [],
+          profile: stored?.profile || null,
+          tokenUnreadable: Boolean(unreadable),
+        });
+      }
 
-    if (action !== "send") {
-      return fail(400, "bad_request", `Unknown action: "${action}"`);
-    }
-    if (!config.configured) {
-      return fail(
-        503,
-        "whatsapp_not_configured",
-        "Add META_WA_TOKEN and META_WA_PHONE_NUMBER_ID in Vercel, then redeploy.",
-      );
-    }
-    if (config.invalidParams.length) {
-      return fail(
-        500,
-        "whatsapp_bad_config",
-        `Unknown META_WA_TEMPLATE_PARAMS: ${config.invalidParams.join(", ")}`,
-      );
-    }
+      case "settings_get": {
+        const ready = storageReady();
+        const stored = ready ? await loadStored(merchantId) : null;
+        return Response.json({
+          success: true,
+          storageReady: ready,
+          settings: publicSettings(stored),
+        });
+      }
 
-    const cartId = String(body.cartId || "");
-    if (!/^\d+$/.test(cartId)) {
-      return fail(400, "bad_request", "A numeric cart ID is required");
-    }
+      case "settings_save": {
+        if (!storageReady()) {
+          return fail(
+            503,
+            "storage_not_configured",
+            "Settings storage isn't set up on the server (Upstash Redis + WA_SETTINGS_KEY).",
+          );
+        }
+        const stored = await loadStored(merchantId);
+        const { values, fields } = validateSettingsInput(body.settings, {
+          hasSavedToken: Boolean(stored?.token),
+        });
+        if (fields) {
+          return fail(422, "validation_failed", "Some settings are invalid", {
+            fields,
+          });
+        }
+        // Check the id + token with Meta before saving anything.
+        let savedToken = null;
+        if (!values.accessToken) {
+          try {
+            savedToken = open(stored.token);
+          } catch {
+            return fail(
+              422,
+              "validation_failed",
+              "Enter the access token again",
+              {
+                fields: {
+                  accessToken: [
+                    "The saved token can't be read anymore. Enter it again.",
+                  ],
+                },
+              },
+            );
+          }
+        }
+        const probe = {
+          token: values.accessToken || savedToken,
+          phoneNumberId: values.phoneNumberId,
+          version: envConfig()?.version,
+        };
+        const check = await fetchPhoneProfile(probe);
+        if (!check.ok) {
+          return fail(check.httpStatus, "meta_error", check.error, {
+            metaCode: check.metaCode,
+            detail: check.detail,
+          });
+        }
+        const record = await saveSettings(merchantId, values, {
+          stored: stored || {},
+          profile: check.profile,
+        });
+        return Response.json({
+          success: true,
+          settings: publicSettings(record),
+        });
+      }
 
-    const { status, body: result } = await merchantApi(
-      `/carts/abandoned/${encodeURIComponent(cartId)}`,
-    );
-    if (!result.success) {
-      return fail(
-        status >= 400 ? status : 502,
-        "salla_api_error",
-        result.error?.message || "Failed to load the cart",
-      );
-    }
-    const cart = result.data || {};
-    if (cart.status === "purchased") {
-      return fail(
-        409,
-        "cart_purchased",
-        "The customer already completed this order.",
-      );
-    }
-    const to = whatsappNumber(cart.customer?.mobile);
-    if (!to) {
-      return fail(
-        422,
-        "no_phone",
-        "Salla has no international mobile number for this customer.",
-      );
-    }
+      case "settings_delete": {
+        if (storageReady()) await deleteSettings(merchantId);
+        return Response.json({ success: true });
+      }
 
-    const couponCode = /^[\w-]{1,40}$/.test(String(body.couponCode || ""))
-      ? body.couponCode
-      : "";
-    const values = cartMessageValues(cart, {
-      locale: config.language.startsWith("ar") ? "ar" : "en",
-      couponCode,
-    });
-    const message = buildTemplateMessage(config, to, values);
-    if (message.error) return fail(422, "missing_value", message.error);
+      case "send_test": {
+        const { config, unreadable } = await resolveConfig(merchantId);
+        if (!config) {
+          return fail(
+            503,
+            "whatsapp_not_configured",
+            unreadable
+              ? "Your saved WhatsApp token can't be read anymore. Enter it again in WhatsApp settings."
+              : "Connect WhatsApp in WhatsApp settings first.",
+          );
+        }
+        const to = whatsappNumber(body.to);
+        if (!to) {
+          return fail(
+            422,
+            "bad_number",
+            "Enter a full international number, e.g. +966500000000.",
+          );
+        }
+        return deliver(
+          config,
+          to,
+          cartMessageValues(SAMPLE_CART, { locale: localeOf(config) }),
+        );
+      }
 
-    const response = await fetch(
-      `https://graph.facebook.com/${encodeURIComponent(config.version)}/${encodeURIComponent(config.phoneNumberId)}/messages`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${config.token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(message.body),
-      },
-    );
-    let meta = {};
-    try {
-      meta = await response.json();
-    } catch {
-      // Non-JSON from Meta is handled as a failure below.
+      case "send": {
+        const { config, unreadable } = await resolveConfig(merchantId);
+        if (!config) {
+          return fail(
+            503,
+            "whatsapp_not_configured",
+            unreadable
+              ? "Your saved WhatsApp token can't be read anymore. Enter it again in WhatsApp settings."
+              : "Connect WhatsApp in WhatsApp settings first.",
+          );
+        }
+        const cartId = String(body.cartId || "");
+        if (!/^\d+$/.test(cartId)) {
+          return fail(400, "bad_request", "A numeric cart ID is required");
+        }
+        const { status, body: result } = await merchantApi(
+          `/carts/abandoned/${encodeURIComponent(cartId)}`,
+        );
+        if (!result.success) {
+          return fail(
+            status >= 400 ? status : 502,
+            "salla_api_error",
+            result.error?.message || "Failed to load the cart",
+          );
+        }
+        const cart = result.data || {};
+        if (cart.status === "purchased") {
+          return fail(
+            409,
+            "cart_purchased",
+            "The customer already completed this order.",
+          );
+        }
+        const to = whatsappNumber(cart.customer?.mobile);
+        if (!to) {
+          return fail(
+            422,
+            "no_phone",
+            "Salla has no international mobile number for this customer.",
+          );
+        }
+        const couponCode = /^[\w-]{1,40}$/.test(String(body.couponCode || ""))
+          ? body.couponCode
+          : "";
+        return deliver(
+          config,
+          to,
+          cartMessageValues(cart, { locale: localeOf(config), couponCode }),
+        );
+      }
+
+      default:
+        return fail(400, "bad_request", `Unknown action: "${action}"`);
     }
-
-    if (!response.ok || meta.error) {
-      const metaError = meta.error || {};
-      console.error("WhatsApp send failed:", metaError.code, metaError.type);
-      return fail(
-        response.status >= 400 && response.status < 500 ? 422 : 502,
-        "meta_error",
-        describeMetaError(metaError),
-        {
-          metaCode: metaError.code ?? null,
-          // Meta's own text, for the "technical details" box only.
-          detail: metaError.error_data?.details || metaError.message || null,
-        },
-      );
-    }
-
-    const sent = meta.messages?.[0] || {};
-    return Response.json({
-      success: true,
-      messageId: sent.id || null,
-      // "accepted" means Meta took it, not that it was delivered.
-      status: sent.message_status || "accepted",
-    });
   } catch (error) {
-    console.error("WhatsApp endpoint failed:", error.message);
+    console.error("WhatsApp endpoint failed:", error.code || error.message);
     return fail(
       error.status || ERROR_STATUS[error.code] || 500,
       error.code || "server_error",

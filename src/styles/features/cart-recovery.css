@@ -228,3 +228,62 @@
   color: var(--accent-danger);
   font-size: 0.75rem;
 }
+
+/* WhatsApp settings */
+.wa-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.wa-params {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.wa-params > .btn {
+  align-self: flex-start;
+}
+
+.wa-param-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.wa-param-row > select {
+  flex: 1;
+  min-width: 0;
+}
+
+.wa-param-slot {
+  min-inline-size: 44px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.wa-test {
+  padding-block-start: var(--space-md);
+  border-block-start: 1px solid var(--border-color);
+}
+
+.wa-test-row {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.wa-test-row > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.wa-detail {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+}

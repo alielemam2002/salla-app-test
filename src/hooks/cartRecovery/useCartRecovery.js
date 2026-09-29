@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, useSyncExternalStore } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchAbandonedCart,
   fetchAllAbandonedCarts,
@@ -13,8 +13,12 @@ import {
   settingsStore,
 } from "../../utils/cartRecovery/recoveryStorage.js";
 import {
+  deleteWhatsAppSettings,
+  fetchWhatsAppSettings,
   fetchWhatsAppStatus,
+  saveWhatsAppSettings,
   sendCartWhatsApp,
+  sendWhatsAppTest,
 } from "../../utils/whatsappApi.js";
 import { whatsappNumber } from "../../utils/cartRecovery/whatsappMessage.js";
 
@@ -106,7 +110,7 @@ export function useCartContacts() {
 /** Is the WhatsApp Cloud API configured on the server (and which template)? */
 export function useWhatsAppStatus(getToken) {
   return useQuery({
-    queryKey: ["whatsapp-status"],
+    queryKey: whatsappKeys.status,
     queryFn: async () => {
       const token = getToken();
       if (!token) throw new CartsApiError(noToken);
@@ -228,4 +232,56 @@ export function useWhatsAppSender(getToken) {
   const clearBatch = useCallback(() => setBatch(EMPTY_BATCH), []);
 
   return { send, sendMany, stop, clearBatch, sending, errors, batch };
+}
+
+export const whatsappKeys = {
+  status: ["whatsapp-status"],
+  settings: ["whatsapp-settings"],
+};
+
+/** The merchant's WhatsApp settings (token masked) and storage readiness. */
+export function useWhatsAppSettings(getToken, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: whatsappKeys.settings,
+    queryFn: async () => {
+      const token = getToken();
+      if (!token) throw new CartsApiError(noToken);
+      const result = await fetchWhatsAppSettings(token);
+      if (!result.success) throw new CartsApiError(result);
+      return { storageReady: result.storageReady, settings: result.settings };
+    },
+    enabled,
+    retry: false,
+  });
+}
+
+/** Save / delete settings and send a test; each refreshes the status. */
+export function useWhatsAppSettingsMutations(getToken) {
+  const queryClient = useQueryClient();
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: whatsappKeys.status });
+    queryClient.invalidateQueries({ queryKey: whatsappKeys.settings });
+  };
+  const withToken = (fn) => async (vars) => {
+    const token = getToken();
+    if (!token) throw new CartsApiError(noToken);
+    const result = await fn(token, vars);
+    if (!result.success) throw new CartsApiError(result);
+    return result;
+  };
+
+  const save = useMutation({
+    mutationFn: withToken((token, settings) =>
+      saveWhatsAppSettings(token, settings),
+    ),
+    onSuccess: refresh,
+  });
+  const remove = useMutation({
+    mutationFn: withToken((token) => deleteWhatsAppSettings(token)),
+    onSuccess: refresh,
+  });
+  const sendTest = useMutation({
+    mutationFn: withToken((token, to) => sendWhatsAppTest(token, to)),
+  });
+  return { save, remove, sendTest };
 }

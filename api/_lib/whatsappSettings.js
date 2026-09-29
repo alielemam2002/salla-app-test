@@ -1,0 +1,141 @@
+/**
+ * Per-merchant WhatsApp Cloud API settings, keyed by the Salla merchant id
+ * from the verified embedded session. Stored in Upstash Redis; the access
+ * token is encrypted (secretBox) and never returned to the browser.
+ *
+ * Until a merchant saves settings, the META_WA_* env vars act as a server
+ * default (the proof-of-concept setup). Merchant settings always win.
+ */
+
+import { kvDel, kvGetJson, kvSetJson } from "./kv.js";
+import { open, seal } from "./secretBox.js";
+import { ALLOWED_PARAMS, DEFAULT_GRAPH_VERSION } from "./whatsappGraph.js";
+
+const keyFor = (merchantId) => `wa:settings:${merchantId}`;
+
+const TEMPLATE_NAME_RE = /^[a-z0-9_]{1,512}$/;
+const LANGUAGE_RE = /^[a-z]{2,3}(_[A-Z]{2})?$/;
+const ID_RE = /^\d{5,25}$/;
+const MAX_PARAMS = 10;
+
+/** Server default from env (the original single-account setup). */
+export function envConfig(env = process.env) {
+  const params = String(env.META_WA_TEMPLATE_PARAMS || "")
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (!env.META_WA_TOKEN || !env.META_WA_PHONE_NUMBER_ID) return null;
+  return {
+    token: String(env.META_WA_TOKEN).trim(),
+    phoneNumberId: String(env.META_WA_PHONE_NUMBER_ID).trim(),
+    template: String(env.META_WA_TEMPLATE_NAME || "hello_world").trim(),
+    language: String(env.META_WA_TEMPLATE_LANG || "en_US").trim(),
+    params,
+    invalidParams: params.filter((p) => !ALLOWED_PARAMS.has(p)),
+    version: String(env.META_GRAPH_VERSION || DEFAULT_GRAPH_VERSION).trim(),
+  };
+}
+
+/**
+ * Validate what the merchant typed. The token is optional when one is
+ * already saved (leave it blank to keep it).
+ * Returns { values } or { fields: { name: [message] } }.
+ */
+export function validateSettingsInput(
+  input = {},
+  { hasSavedToken = false } = {},
+) {
+  const fields = {};
+  const phoneNumberId = String(input.phoneNumberId || "").trim();
+  const wabaId = String(input.wabaId || "").trim();
+  const accessToken = String(input.accessToken || "")
+    .trim()
+    .replace(/^Bearer\s+/i, "");
+  const template = String(input.template || "").trim();
+  const language = String(input.language || "").trim();
+  const params = Array.isArray(input.params)
+    ? input.params.map((p) => String(p).trim()).filter(Boolean)
+    : [];
+
+  if (!ID_RE.test(phoneNumberId))
+    fields.phoneNumberId = ["Use the numeric Phone Number ID from API Setup"];
+  if (wabaId && !ID_RE.test(wabaId))
+    fields.wabaId = ["Use the numeric WhatsApp Business Account ID"];
+  if (accessToken) {
+    if (accessToken.length < 20 || /\s/.test(accessToken)) {
+      fields.accessToken = ["This doesn't look like a Meta access token"];
+    }
+  } else if (!hasSavedToken) {
+    fields.accessToken = ["An access token is required"];
+  }
+  if (!TEMPLATE_NAME_RE.test(template)) {
+    fields.template = ["Template names use lowercase letters, numbers and _"];
+  }
+  if (!LANGUAGE_RE.test(language))
+    fields.language = ["Use a language code like ar or en_US"];
+  const unknown = params.filter((p) => !ALLOWED_PARAMS.has(p));
+  if (unknown.length)
+    fields.params = [`Unknown variables: ${unknown.join(", ")}`];
+  else if (params.length > MAX_PARAMS)
+    fields.params = [`At most ${MAX_PARAMS} variables`];
+
+  if (Object.keys(fields).length) return { fields };
+  return {
+    values: { phoneNumberId, wabaId, accessToken, template, language, params },
+  };
+}
+
+export async function loadStored(merchantId) {
+  return kvGetJson(keyFor(merchantId));
+}
+
+/** Save (token re-encrypted only when a new one was entered). */
+export async function saveSettings(merchantId, values, { stored, profile }) {
+  const record = {
+    phoneNumberId: values.phoneNumberId,
+    wabaId: values.wabaId || null,
+    template: values.template,
+    language: values.language,
+    params: values.params,
+    token: values.accessToken ? seal(values.accessToken) : stored.token,
+    tokenLast4: values.accessToken
+      ? values.accessToken.slice(-4)
+      : stored.tokenLast4,
+    profile: profile || null,
+    updatedAt: new Date().toISOString(),
+  };
+  await kvSetJson(keyFor(merchantId), record);
+  return record;
+}
+
+export async function deleteSettings(merchantId) {
+  await kvDel(keyFor(merchantId));
+}
+
+/** What the browser may see: never the token, only its last 4 characters. */
+export function publicSettings(record) {
+  if (!record) return null;
+  return {
+    phoneNumberId: record.phoneNumberId,
+    wabaId: record.wabaId,
+    template: record.template,
+    language: record.language,
+    params: record.params || [],
+    tokenLast4: record.tokenLast4 || null,
+    profile: record.profile || null,
+    updatedAt: record.updatedAt,
+  };
+}
+
+/** Stored record → send config (decrypts the token). */
+export function recordToConfig(record, env = process.env) {
+  return {
+    token: open(record.token),
+    phoneNumberId: record.phoneNumberId,
+    template: record.template,
+    language: record.language,
+    params: record.params || [],
+    invalidParams: (record.params || []).filter((p) => !ALLOWED_PARAMS.has(p)),
+    version: String(env.META_GRAPH_VERSION || DEFAULT_GRAPH_VERSION).trim(),
+  };
+}
