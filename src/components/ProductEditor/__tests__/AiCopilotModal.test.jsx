@@ -45,6 +45,8 @@ describe("AiCopilotModal", () => {
 
   it("generates and applies AI content successfully", async () => {
     const mockAiResponse = {
+      promotion_title: "الأكثر مبيعاً 🔥",
+      subtitle: "عباية راقية بتصميم عصري",
       marketing_description: "<p>وصف تسويقي احترافي ومميز</p>",
       short_description: "وصف ترويجي مختصر",
       meta_title: "عباية حرير فاخرة | أفضل متجر",
@@ -88,6 +90,7 @@ describe("AiCopilotModal", () => {
     });
 
     await waitFor(() => {
+      expect(screen.getByText("الأكثر مبيعاً 🔥")).toBeInTheDocument();
       expect(screen.getByText("وصف تسويقي احترافي ومميز")).toBeInTheDocument();
     });
 

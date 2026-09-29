@@ -222,9 +222,61 @@ export default function AiCopilotModal({
               </button>
             </div>
 
-            {/* Tab 1: Marketing Description */}
+            {/* Tab 1: Marketing Description & Promo Badges */}
             {activeTab === "description" && (
               <div className="ai-tab-content">
+                {generatedData.promotion_title && (
+                  <div className="ai-result-block ai-result-block--promo">
+                    <div className="ai-result-header">
+                      <span className="ai-result-title">
+                        العنوان الترويجي (Promotion Title) - شارة المنتج:
+                      </span>
+                      <Button
+                        size="small"
+                        variant="ghost"
+                        icon={copiedKey === "promo" ? Check : Copy}
+                        onClick={() =>
+                          handleCopyText(generatedData.promotion_title, "promo")
+                        }
+                      >
+                        {copiedKey === "promo" ? "تم النسخ" : "نسخ"}
+                      </Button>
+                    </div>
+                    <div className="ai-promo-preview">
+                      <span className="ai-promo-badge">
+                        {generatedData.promotion_title}
+                      </span>
+                      <span className="ai-promo-hint">
+                        يظهر كشارة بارزة فوق بطاقة المنتج في المتجر
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {(generatedData.subtitle || generatedData.short_description) && (
+                  <div className="ai-result-block ai-result-block--secondary">
+                    <div className="ai-result-header">
+                      <span className="ai-result-title">العنوان الفرعي (Subtitle):</span>
+                      <Button
+                        size="small"
+                        variant="ghost"
+                        icon={copiedKey === "sub" ? Check : Copy}
+                        onClick={() =>
+                          handleCopyText(
+                            generatedData.subtitle || generatedData.short_description,
+                            "sub",
+                          )
+                        }
+                      >
+                        {copiedKey === "sub" ? "تم النسخ" : "نسخ"}
+                      </Button>
+                    </div>
+                    <p className="ai-short-description-text">
+                      {generatedData.subtitle || generatedData.short_description}
+                    </p>
+                  </div>
+                )}
+
                 <div className="ai-result-block">
                   <div className="ai-result-header">
                     <span className="ai-result-title">الوصف التسويقي (HTML):</span>
@@ -246,27 +298,6 @@ export default function AiCopilotModal({
                     }}
                   />
                 </div>
-
-                {generatedData.short_description && (
-                  <div className="ai-result-block ai-result-block--secondary">
-                    <div className="ai-result-header">
-                      <span className="ai-result-title">الوصف القصير (Subtitle):</span>
-                      <Button
-                        size="small"
-                        variant="ghost"
-                        icon={copiedKey === "short" ? Check : Copy}
-                        onClick={() =>
-                          handleCopyText(generatedData.short_description, "short")
-                        }
-                      >
-                        {copiedKey === "short" ? "تم النسخ" : "نسخ"}
-                      </Button>
-                    </div>
-                    <p className="ai-short-description-text">
-                      {generatedData.short_description}
-                    </p>
-                  </div>
-                )}
               </div>
             )}
 

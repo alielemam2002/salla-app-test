@@ -1,4 +1,4 @@
-import { Image as ImageIcon } from "lucide-react";
+import { Image as ImageIcon, Sparkles } from "lucide-react";
 import { FormRow, TextInput } from "../ui/index.js";
 import EditorSection from "./EditorSection.jsx";
 import EditorField from "./EditorField.jsx";
@@ -19,6 +19,7 @@ export default function AppearanceSection({
   token,
   altText,
   media,
+  onOpenAi,
 }) {
   return (
     <EditorSection
@@ -63,6 +64,19 @@ export default function AppearanceSection({
         <EditorField
           anchor="promotion_title"
           label="عنوان ترويجي (Promotion Title)"
+          labelExtra={
+            onOpenAi ? (
+              <button
+                type="button"
+                className="ai-inline-trigger-btn"
+                onClick={onOpenAi}
+                title="توليد عنوان ترويجي بالذكاء الاصطناعي"
+              >
+                <Sparkles size={13} aria-hidden="true" />
+                <span>توليد بالذكاء الاصطناعي ✨</span>
+              </button>
+            ) : null
+          }
           hint="يظهر كشارة بارزة فوق بطاقة المنتج في المتجر."
         >
           <TextInput

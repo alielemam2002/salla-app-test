@@ -1645,3 +1645,34 @@
   color: var(--text-secondary);
 }
 
+.ai-result-block--promo {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.05), rgba(249, 115, 22, 0.07)) !important;
+  border-color: rgba(249, 115, 22, 0.3) !important;
+}
+
+.ai-promo-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+
+.ai-promo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #ef4444, #f97316);
+  color: #ffffff;
+  padding: 4px 12px;
+  border-radius: var(--radius-full, 9999px);
+  font-size: 0.85rem;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.25);
+}
+
+.ai-promo-hint {
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+}
+

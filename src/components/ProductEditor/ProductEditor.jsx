@@ -56,8 +56,15 @@ export default function ProductEditor({
         });
       }
 
-      if (aiData.short_description) {
-        setValue("subtitle", aiData.short_description, {
+      if (aiData.promotion_title) {
+        setValue("promotion_title", aiData.promotion_title, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      }
+
+      if (aiData.subtitle || aiData.short_description) {
+        setValue("subtitle", aiData.subtitle || aiData.short_description, {
           shouldDirty: true,
           shouldValidate: true,
         });
@@ -146,6 +153,7 @@ export default function ProductEditor({
           token={token}
           altText={values.name}
           media={editor.media}
+          onOpenAi={() => setIsAiModalOpen(true)}
           {...sectionProps}
         />
 

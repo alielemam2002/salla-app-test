@@ -44,6 +44,8 @@ ${product.current_description ? `- الوصف الحالي: ${product.current_de
 
 المطلوب: أرجع كائن JSON فقط (Strict JSON Object) بدون أي كود ماركداون خارجي، بالهيكل التالي:
 {
+  "promotion_title": "عنوان ترويجي جذاب ومختصر جداً (من 2 إلى 4 كلمات) يظهر كشارة أو ملصق بارز فوق بطاقة المنتج بالمتجر لتشجيع العميل على الشراء (مثل: الأكثر مبيعاً 🔥، عرض خاص لفترة محدودة، خصم 30% اليوم، شحن مجاني وسريع، ضمان ذهبي)",
+  "subtitle": "عنوان فرعي تسويقي موجز (من 4 إلى 8 كلمات) يظهر أسفل اسم المنتج مباشرة في متجر سلة يلخص الميزة التنافسية أو القيمة الأساسية للمنتج",
   "marketing_description": "وصف تسويقي كامل وجذاب منسق في وسوم HTML نظيفة تشمل: <p>فقرة افتتاحية تشويقية تلامس حاجة العميل</p>، <strong>مميزات المنتج:</strong> <ul><li>ميزة وفائدة واضحة</li><li>ميزة أخرى</li></ul>، و <strong>طريقة الاستخدام أو المواصفات:</strong> <p>تفاصيل عملية ومطمئنة للشراء</p>",
   "short_description": "وصف موجز ومركّز في سطرين يلخص القيمة الأساسية للمنتج بأسلوب حماسي",
   "meta_title": "عنوان سيو جذاب لمحركات البحث Google بين 50 إلى 60 حرفاً يدمج اسم المنتج مع أقوى كلمة بحثية",
@@ -116,6 +118,7 @@ async function handleCopilotRequest(body) {
 
   const activeKey =
     (apiKey && typeof apiKey === "string" && apiKey.trim()) ||
+    process.env.GEMINI_API_KEY ||
     DEFAULT_GEMINI_KEY;
 
   if (!activeKey) {
@@ -137,8 +140,10 @@ async function handleCopilotRequest(body) {
       json: {
         success: true,
         data: {
+          promotion_title: (generated.promotion_title || "").trim(),
+          subtitle: (generated.subtitle || generated.short_description || "").trim(),
+          short_description: (generated.short_description || generated.subtitle || "").trim(),
           marketing_description: generated.marketing_description || "",
-          short_description: generated.short_description || "",
           meta_title: generated.meta_title || "",
           meta_description: generated.meta_description || "",
           tags: Array.isArray(generated.tags) ? generated.tags : [],
