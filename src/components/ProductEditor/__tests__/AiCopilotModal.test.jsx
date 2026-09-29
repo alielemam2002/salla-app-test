@@ -41,6 +41,7 @@ describe("AiCopilotModal", () => {
     expect(screen.getByText("فصحى تجارية أنيقة")).toBeInTheDocument();
     expect(screen.getByText("فخامة ومختصرة")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /بدء التوليد السحري/i })).toBeInTheDocument();
+    expect(document.querySelectorAll(".ai-tone-icon svg")).toHaveLength(3);
   });
 
   it("generates and applies AI content successfully", async () => {

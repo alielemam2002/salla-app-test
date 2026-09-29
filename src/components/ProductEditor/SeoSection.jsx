@@ -60,7 +60,7 @@ export default function SeoSection({
             onClick={onOpenAi}
           >
             <Sparkles size={13} aria-hidden="true" />
-            <span>توليد بيانات الـ SEO ✨</span>
+            <span>توليد بيانات الـ SEO</span>
           </button>
         </div>
       )}

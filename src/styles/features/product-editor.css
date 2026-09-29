@@ -1260,7 +1260,7 @@
 
 .ai-tone-card {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
   background: var(--bg-secondary);
@@ -1272,7 +1272,7 @@
 }
 
 .ai-tone-card:hover:not(:disabled) {
-  border-color: var(--color-primary);
+  border-color: #8b5cf6;
   background: var(--bg-hover);
 }
 
@@ -1283,8 +1283,28 @@
 }
 
 .ai-tone-icon {
-  font-size: 1.5rem;
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: #8b5cf6;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.ai-tone-card:hover:not(:disabled) .ai-tone-icon {
+  border-color: #8b5cf6;
+  transform: scale(1.05);
+}
+
+.ai-tone-card--active .ai-tone-icon {
+  background: #8b5cf6;
+  border-color: #8b5cf6;
+  color: #ffffff;
 }
 
 .ai-tone-info {

@@ -55,7 +55,7 @@ export default function BasicInfoSection({
               title="كتابة وتنسيق الوصف بالذكاء الاصطناعي"
             >
               <Sparkles size={13} aria-hidden="true" />
-              <span>توليد بالذكاء الاصطناعي ✨</span>
+              <span>توليد بالذكاء الاصطناعي</span>
             </button>
           ) : null
         }

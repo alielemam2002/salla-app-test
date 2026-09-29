@@ -73,7 +73,7 @@ export default function AppearanceSection({
                 title="توليد عنوان ترويجي بالذكاء الاصطناعي"
               >
                 <Sparkles size={13} aria-hidden="true" />
-                <span>توليد بالذكاء الاصطناعي ✨</span>
+                <span>توليد بالذكاء الاصطناعي</span>
               </button>
             ) : null
           }

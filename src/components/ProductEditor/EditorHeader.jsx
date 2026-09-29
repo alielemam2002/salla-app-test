@@ -69,7 +69,7 @@ export default function EditorHeader({
             onClick={onOpenAi}
             className="editor-ai-btn"
           >
-            توليد بالذكاء الاصطناعي ✨
+            توليد بالذكاء الاصطناعي
           </Button>
         )}
         <Button

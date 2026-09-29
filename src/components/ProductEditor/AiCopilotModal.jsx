@@ -10,6 +10,9 @@ import {
   Wand2,
   AlertCircle,
   ExternalLink,
+  MessageSquareHeart,
+  Briefcase,
+  Crown,
 } from "lucide-react";
 import { Button, Modal } from "../ui/index.js";
 import { generateAiProductContent } from "../../utils/aiCopilotApi.js";
@@ -18,19 +21,19 @@ const TONES = [
   {
     id: "saudi_commercial",
     label: "لهجة سعودية بيضاء",
-    icon: "🇸🇦",
+    icon: MessageSquareHeart,
     desc: "حماسية وجذابة وقريبة لذوق المتسوق السعودي والخليجي",
   },
   {
     id: "formal_commercial",
     label: "فصحى تجارية أنيقة",
-    icon: "💼",
+    icon: Briefcase,
     desc: "لغة عربية تسويقية احترافية ومناسبة لكافة المتاجر",
   },
   {
     id: "luxury",
     label: "فخامة ومختصرة",
-    icon: "👑",
+    icon: Crown,
     desc: "أسلوب راقٍ وموجز للعطور والمجوهرات والبراندات الفاخرة",
   },
 ];
@@ -77,7 +80,7 @@ export default function AiCopilotModal({
       });
 
       setGeneratedData(result);
-      showToast?.("تم توليد المحتوى التسويقي والسيو بنجاح! ✨", "success");
+      showToast?.("تم توليد المحتوى التسويقي والسيو بنجاح!", "success");
     } catch (err) {
       setError(err.message || "حدث خطأ أثناء الاتصال بالذكاء الاصطناعي");
     } finally {
@@ -88,7 +91,7 @@ export default function AiCopilotModal({
   const handleApplyAll = () => {
     if (!generatedData) return;
     onApply?.(generatedData);
-    showToast?.("تم تطبيق المحتوى الذكي على بيانات المنتج بنجاح! 🚀", "success");
+    showToast?.("تم تطبيق المحتوى الذكي على بيانات المنتج بنجاح!", "success");
     onClose();
   };
 
@@ -129,7 +132,7 @@ export default function AiCopilotModal({
                 icon={Check}
                 onClick={handleApplyAll}
               >
-                تطبيق الكل على المنتج ✨
+                تطبيق الكل على المنتج
               </Button>
             </div>
           ) : (
@@ -139,7 +142,7 @@ export default function AiCopilotModal({
               onClick={handleGenerate}
               loading={isGenerating}
             >
-              بدء التوليد السحري ✨
+              بدء التوليد السحري
             </Button>
           )}
         </div>
@@ -150,21 +153,26 @@ export default function AiCopilotModal({
         <section className="ai-section">
           <h4 className="ai-section-title">اختر نبرة الصوت التسويقية (Tone of Voice):</h4>
           <div className="ai-tones-grid">
-            {TONES.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                className={`ai-tone-card ${tone === t.id ? "ai-tone-card--active" : ""}`}
-                onClick={() => setTone(t.id)}
-                disabled={isGenerating}
-              >
-                <div className="ai-tone-icon">{t.icon}</div>
-                <div className="ai-tone-info">
-                  <span className="ai-tone-label">{t.label}</span>
-                  <span className="ai-tone-desc">{t.desc}</span>
-                </div>
-              </button>
-            ))}
+            {TONES.map((t) => {
+              const ToneIcon = t.icon;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  className={`ai-tone-card ${tone === t.id ? "ai-tone-card--active" : ""}`}
+                  onClick={() => setTone(t.id)}
+                  disabled={isGenerating}
+                >
+                  <div className="ai-tone-icon">
+                    <ToneIcon size={20} aria-hidden="true" />
+                  </div>
+                  <div className="ai-tone-info">
+                    <span className="ai-tone-label">{t.label}</span>
+                    <span className="ai-tone-desc">{t.desc}</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </section>
 
