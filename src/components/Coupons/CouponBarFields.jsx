@@ -6,7 +6,8 @@ import { BAR_TEXT_MAX, defaultBarText } from "../../utils/coupons/couponBar.js";
  * "Storefront announcement bar" section of the coupon form: the on/off
  * switch, text, colors and a live preview of the strip shoppers will see.
  * `liveBar` is the bar currently on the storefront (any coupon);
- * `unavailable` is a reason the bar can't be managed right now.
+ * `unavailable` is a reason the bar can't be managed right now;
+ * `storeId` is the store the bar is saved in.
  */
 export default function CouponBarFields({
   form,
@@ -16,6 +17,7 @@ export default function CouponBarFields({
   liveBar,
   originalCode,
   unavailable,
+  storeId,
 }) {
   const suggested = defaultBarText(form, currency);
   const text = form.bar_text.trim() || suggested;
@@ -36,7 +38,7 @@ export default function CouponBarFields({
             Storefront announcement bar
           </span>
         }
-        description="Show a strip at the top of every store page that advertises this code. It hides itself when the coupon ends."
+        description={`Show a strip at the top of every store page that advertises this code. It hides itself when the coupon ends.${storeId ? ` Saved in store ${storeId}.` : ""}`}
         checked={form.bar_enabled}
         disabled={Boolean(unavailable)}
         onChange={(v) => setField("bar_enabled", v)}

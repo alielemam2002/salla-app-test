@@ -10,7 +10,7 @@ export const couponBarKeys = { all: ["coupon-bar"] };
 
 const unwrap = (result) => {
   if (!result?.success) throw new CouponApiError(result);
-  return result.bar ?? null;
+  return result;
 };
 
 const noTokenResult = {
@@ -20,14 +20,23 @@ const noTokenResult = {
   error: "No embedded token found",
 };
 
-/** The storefront announcement bar (null when none is shown). */
+/**
+ * The storefront announcement bar: `{ bar, storeId, merchantId }`.
+ * `bar` is null when none is shown. `storeId` is the store the bar is saved
+ * in (the access token's store), `merchantId` the signed-in store.
+ */
 export function useCouponBarQuery(getToken) {
   return useQuery({
     queryKey: couponBarKeys.all,
     queryFn: async () => {
       const token = getToken();
       if (!token) throw new CouponApiError(noTokenResult);
-      return unwrap(await fetchCouponBar(token));
+      const result = unwrap(await fetchCouponBar(token));
+      return {
+        bar: result.bar ?? null,
+        storeId: result.storeId ?? null,
+        merchantId: result.merchantId ?? null,
+      };
     },
     retry: false,
   });
@@ -39,7 +48,13 @@ export function useCouponBarQuery(getToken) {
  */
 export function useCouponBarMutations(getToken) {
   const queryClient = useQueryClient();
-  const store = (bar) => queryClient.setQueryData(couponBarKeys.all, bar);
+  const store = (result) =>
+    queryClient.setQueryData(couponBarKeys.all, (prev) => ({
+      storeId: null,
+      merchantId: null,
+      ...prev,
+      bar: result.bar ?? null,
+    }));
 
   const withToken = (fn) => async (vars) => {
     const token = getToken();

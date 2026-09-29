@@ -24,7 +24,8 @@ const TYPE_OPTIONS = [
  * Create / edit a storewide coupon.
  * `serverError` is the described Salla error ({ title, reason, fieldErrors }).
  * `bar` is the storefront announcement bar currently shown (any coupon);
- * `barUnavailable` explains why it can't be managed, if so.
+ * `barUnavailable` explains why it can't be managed, if so; `barStoreId`
+ * is the store the bar is saved in.
  * `onSubmit(input, barInput)` gets `barInput = null` when the bar is off.
  */
 export default function CouponFormModal({
@@ -32,6 +33,7 @@ export default function CouponFormModal({
   coupon,
   bar = null,
   barUnavailable = null,
+  barStoreId = null,
   currency = "SAR",
   saving,
   serverError,
@@ -254,6 +256,7 @@ export default function CouponFormModal({
           liveBar={bar}
           originalCode={coupon?.code}
           unavailable={barUnavailable}
+          storeId={barStoreId}
         />
       </form>
     </Modal>

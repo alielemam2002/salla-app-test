@@ -140,6 +140,16 @@ async function loadSettings(appId) {
   };
 }
 
+/** Id of the store SALLA_ACCESS_TOKEN belongs to, or null if unknown. */
+async function tokenStoreId() {
+  try {
+    const { body } = await merchantApi("/store/info");
+    return body.success ? (body.data?.id ?? null) : null;
+  } catch {
+    return null;
+  }
+}
+
 async function saveSettings(appId, settings) {
   return merchantApi(`/apps/${encodeURIComponent(String(appId))}/settings`, {
     method: "POST",
@@ -195,7 +205,14 @@ export async function POST(request) {
     }
 
     if (action === "get") {
-      return Response.json({ success: true, bar: readBar(current.settings) });
+      return Response.json({
+        success: true,
+        bar: readBar(current.settings),
+        // The bar lives in the store SALLA_ACCESS_TOKEN belongs to, which is
+        // not necessarily the store the merchant is signed in to.
+        storeId: await tokenStoreId(),
+        merchantId: session.data.merchant_id ?? null,
+      });
     }
 
     if (action === "clear") {

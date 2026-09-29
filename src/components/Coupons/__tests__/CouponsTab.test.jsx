@@ -422,6 +422,28 @@ describe("CouponsTab", () => {
     ).toBeInTheDocument();
   });
 
+  it("blocks the bar when the access token is for another store", async () => {
+    fetchCouponBar.mockResolvedValue({
+      success: true,
+      bar: null,
+      storeId: 111,
+      merchantId: 222,
+    });
+    renderTab();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Edit SUMMER20" }),
+    );
+    const dialog = screen.getByRole("dialog");
+    expect(
+      await within(dialog).findByText(/belongs to store 111/),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("switch", {
+        name: /Storefront announcement bar/,
+      }),
+    ).toBeDisabled();
+  });
+
   it("offers a session refresh when there is no embedded token", async () => {
     const { embedded } = renderTab({ embedded: makeEmbedded(null) });
     fireEvent.click(

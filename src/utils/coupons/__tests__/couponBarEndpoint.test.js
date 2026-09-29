@@ -92,9 +92,19 @@ describe("api/coupon-bar", () => {
   });
 
   it("returns null when no bar is on", async () => {
-    mockFetch([INTROSPECT_OK, settingsResponse([])]);
+    const calls = mockFetch([
+      INTROSPECT_OK,
+      settingsResponse([]),
+      { status: 200, body: { success: true, data: { id: 77 } } },
+    ]);
     const res = await call({ action: "get" });
-    expect(await res.json()).toEqual({ success: true, bar: null });
+    expect(await res.json()).toEqual({
+      success: true,
+      bar: null,
+      storeId: 77,
+      merchantId: 1,
+    });
+    expect(calls[2].url).toBe("https://api.salla.dev/admin/v2/store/info");
   });
 
   it("treats Salla's 'no settings yet' 404 as empty settings", async () => {
@@ -103,7 +113,7 @@ describe("api/coupon-bar", () => {
       body: { success: false, error: { message: "لايوجد اعدادت للتطبيق" } },
     };
     mockFetch([INTROSPECT_OK, NO_SETTINGS]);
-    expect(await (await call({ action: "get" })).json()).toEqual({
+    expect(await (await call({ action: "get" })).json()).toMatchObject({
       success: true,
       bar: null,
     });

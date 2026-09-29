@@ -19,6 +19,17 @@
 
   var BAR_ID = "app-coupon-announcement-bar";
   var COLOR_RE = /^#[0-9a-f]{6}$/i;
+  var done = false;
+
+  // One line in the Console explaining what happened, to debug on a live store.
+  function log(message, detail) {
+    if (window.console && console.info) {
+      console.info(
+        "[coupon-bar] " + message,
+        detail === undefined ? "" : detail,
+      );
+    }
+  }
 
   function setting(key) {
     try {
@@ -28,8 +39,10 @@
     }
   }
 
+  // Salla may send a checkbox as true, "true", 1, "1" or a one-item list.
   function isOn(value) {
-    return value === true || value === "true" || value === 1;
+    if (Array.isArray(value)) return value.length > 0 && isOn(value[0]);
+    return value === true || value === 1 || /^(true|1|on|yes)$/i.test(value);
   }
 
   function isArabic() {
@@ -56,39 +69,54 @@
     }
   }
 
+  // The code stays visible on the button, so without the Clipboard API
+  // (old browser or non-HTTPS) the shopper can still read and type it.
   function copyText(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       return navigator.clipboard.writeText(text);
     }
-    var input = document.createElement("textarea");
-    input.value = text;
-    input.setAttribute("readonly", "");
-    input.style.position = "fixed";
-    input.style.opacity = "0";
-    document.body.appendChild(input);
-    input.select();
-    try {
-      document.execCommand("copy");
-    } finally {
-      document.body.removeChild(input);
-    }
-    return Promise.resolve();
+    return Promise.reject(new Error("Clipboard API not available"));
   }
 
   function render() {
-    if (document.getElementById(BAR_ID)) return;
-    if (!isOn(setting("coupon_bar_enabled"))) return;
+    if (done || document.getElementById(BAR_ID)) return;
+    if (!document.body) return;
+
+    var enabled = setting("coupon_bar_enabled");
+    if (!isOn(enabled)) {
+      log(
+        "not shown: app.coupon_bar_enabled is off or missing (is the field public?)",
+        enabled,
+      );
+      return;
+    }
 
     var code = String(setting("coupon_bar_code") || "").trim();
     var text = String(setting("coupon_bar_text") || "").trim();
-    if (!code || !text) return;
+    if (!code || !text) {
+      log("not shown: app.coupon_bar_code or app.coupon_bar_text is empty", {
+        code: code,
+        text: text,
+      });
+      return;
+    }
+
+    // Settings are there: decide once (the 3 s fallback may call again).
+    done = true;
 
     // Hide once the coupon has ended (stored with the +03:00 store offset).
-    var endsAt = Date.parse(setting("coupon_bar_ends_at") || "");
-    if (!isNaN(endsAt) && endsAt <= Date.now()) return;
+    var endsRaw = setting("coupon_bar_ends_at") || "";
+    var endsAt = Date.parse(endsRaw);
+    if (!isNaN(endsAt) && endsAt <= Date.now()) {
+      log("not shown: the coupon ended at", endsRaw);
+      return;
+    }
 
     var key = dismissKey(code, text);
-    if (wasDismissed(key)) return;
+    if (wasDismissed(key)) {
+      log("not shown: closed by the shopper earlier in this tab");
+      return;
+    }
 
     var bg = String(setting("coupon_bar_bg_color") || "");
     var fg = String(setting("coupon_bar_text_color") || "");
@@ -102,7 +130,7 @@
     bar.setAttribute("aria-label", ar ? "عرض كوبون" : "Coupon offer");
     bar.dir = ar ? "rtl" : "ltr";
     bar.style.cssText =
-      "position:relative;display:flex;flex-wrap:wrap;align-items:center;" +
+      "position:relative;z-index:10000;display:flex;flex-wrap:wrap;align-items:center;" +
       "justify-content:center;gap:8px 12px;box-sizing:border-box;width:100%;" +
       "padding:10px 44px;font-family:inherit;font-size:14px;font-weight:700;" +
       "line-height:1.4;text-align:center;background:" +
@@ -130,12 +158,17 @@
       "background:transparent;color:inherit;font:inherit;font-family:monospace;" +
       "letter-spacing:0.04em;cursor:pointer;";
     copyBtn.addEventListener("click", function () {
-      copyText(code).then(function () {
-        copyBtn.textContent = ar ? "تم النسخ ✓" : "Copied ✓";
-        setTimeout(function () {
-          copyBtn.textContent = code;
-        }, 1800);
-      });
+      copyText(code).then(
+        function () {
+          copyBtn.textContent = ar ? "تم النسخ ✓" : "Copied ✓";
+          setTimeout(function () {
+            copyBtn.textContent = code;
+          }, 1800);
+        },
+        function () {
+          /* copy blocked: the code is still shown on the button */
+        },
+      );
     });
     bar.appendChild(copyBtn);
 
@@ -159,13 +192,40 @@
     bar.appendChild(closeBtn);
 
     document.body.insertBefore(bar, document.body.firstChild);
+    log("shown for coupon", code);
+
+    // A fixed theme header can sit on top of the bar. Say so if it does.
+    var box = bar.getBoundingClientRect();
+    var hit = document.elementFromPoint(
+      box.left + box.width / 2,
+      box.top + box.height / 2,
+    );
+    if (hit && hit !== bar && !bar.contains(hit)) {
+      log("the bar is covered by another element", hit);
+    }
   }
 
-  if (window.salla && typeof window.salla.onReady === "function") {
-    window.salla.onReady(render);
-  } else if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", render);
-  } else {
-    render();
+  function start() {
+    // Some themes load the SDK late: wait up to 10 s for window.salla.
+    var tries = 0;
+    (function waitForSalla() {
+      if (window.salla && window.salla.config) {
+        if (typeof window.salla.onReady === "function") {
+          window.salla.onReady(render);
+        }
+        // Fallback in case onReady already fired before we subscribed.
+        setTimeout(render, 3000);
+        return;
+      }
+      tries += 1;
+      if (tries > 50) {
+        log("not shown: window.salla never loaded on this page");
+        return;
+      }
+      setTimeout(waitForSalla, 200);
+    })();
   }
+
+  log("snippet loaded");
+  start();
 })();

@@ -39,10 +39,22 @@ export default function CouponsTab({ embedded, showToast }) {
   const { create, update, remove } = useCouponMutations(getToken);
   const barQuery = useCouponBarQuery(getToken);
   const barMutations = useCouponBarMutations(getToken);
-  const bar = barQuery.data ?? null;
-  const barUnavailable = barQuery.isError
-    ? describeCouponError(barQuery.error.result, "barLoad").reason
-    : null;
+  const bar = barQuery.data?.bar ?? null;
+  const barStoreId = barQuery.data?.storeId ?? null;
+  const signedInStoreId = barQuery.data?.merchantId ?? null;
+  let barUnavailable = null;
+  if (barQuery.isError) {
+    barUnavailable = describeCouponError(
+      barQuery.error.result,
+      "barLoad",
+    ).reason;
+  } else if (
+    barStoreId &&
+    signedInStoreId &&
+    String(barStoreId) !== String(signedInStoreId)
+  ) {
+    barUnavailable = `SALLA_ACCESS_TOKEN belongs to store ${barStoreId}, but you're signed in to store ${signedInStoreId}. The bar would be saved in store ${barStoreId}, not this one. Put this store's access token in SALLA_ACCESS_TOKEN.`;
+  }
 
   const formDialog = useDisclosure();
   const detailsDialog = useDisclosure();
@@ -204,6 +216,7 @@ export default function CouponsTab({ embedded, showToast }) {
         coupon={editing}
         bar={bar}
         barUnavailable={barUnavailable}
+        barStoreId={barStoreId}
         currency={currency}
         saving={activeMutation.isPending}
         serverError={formError}
