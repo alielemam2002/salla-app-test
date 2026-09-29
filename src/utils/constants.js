@@ -10,6 +10,9 @@ export const PRODUCT_MEDIA_FUNCTION_URL = "/api/product-media";
 // Storewide coupons CRUD (api/coupons.js)
 export const COUPONS_FUNCTION_URL = "/api/coupons";
 
+// Abandoned carts, read-only (api/carts.js)
+export const CARTS_FUNCTION_URL = "/api/carts";
+
 // App ID - can be overridden via URL parameter ?appId=XXX
 export function getAppId() {
   const urlParams = new URLSearchParams(window.location.search);

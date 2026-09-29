@@ -1,0 +1,133 @@
+import { memo } from "react";
+import { Copy, Eye } from "lucide-react";
+import { Badge, Button, IconButton } from "../ui/index.js";
+import {
+  formatMoney,
+  isEligible,
+  itemCount,
+  money,
+  sallaDateMs,
+  timeAgo,
+} from "../../utils/cartRecovery/cartModel.js";
+import WhatsAppButton from "./WhatsAppButton.jsx";
+
+const CartRow = memo(function CartRow({
+  cart,
+  abandonedAfter,
+  contactedAt,
+  message,
+  now,
+  onView,
+  onCopyLink,
+  onContacted,
+}) {
+  const eligible = isEligible(cart, abandonedAfter);
+  const items = itemCount(cart);
+  return (
+    <tr>
+      <td>
+        <div className="cart-customer">
+          <span className="cart-customer-name">
+            {cart.customer?.name || "Guest"}
+          </span>
+          {cart.customer?.mobile && (
+            <span className="cart-customer-phone" dir="ltr">
+              {cart.customer.mobile}
+            </span>
+          )}
+        </div>
+      </td>
+      <td className="cart-num">{formatMoney(money(cart.total))}</td>
+      <td className="cart-num">
+        {items} {items === 1 ? "item" : "items"}
+      </td>
+      <td>{timeAgo(sallaDateMs(cart.created_at), now)}</td>
+      <td>{timeAgo(sallaDateMs(cart.updated_at), now)}</td>
+      <td>
+        <div className="cart-status">
+          <Badge tone={eligible ? "warning" : "neutral"} dot>
+            {eligible ? "Abandoned" : "Recent"}
+          </Badge>
+          {contactedAt && (
+            <Badge
+              tone="success"
+              title={new Date(contactedAt).toLocaleString()}
+            >
+              WhatsApp {timeAgo(Date.parse(contactedAt), now)}
+            </Badge>
+          )}
+        </div>
+      </td>
+      <td>
+        <div className="cart-actions">
+          <WhatsAppButton
+            cart={cart}
+            message={message}
+            onOpened={onContacted}
+          />
+          <Button
+            size="small"
+            variant="secondary"
+            icon={Eye}
+            onClick={() => onView(cart)}
+            aria-label={`View cart of ${cart.customer?.name || "guest"}`}
+          >
+            Details
+          </Button>
+          <IconButton
+            icon={Copy}
+            label="Copy recovery link"
+            size={14}
+            onClick={() => onCopyLink(cart)}
+            disabled={!cart.checkout_url}
+          />
+        </div>
+      </td>
+    </tr>
+  );
+});
+
+/** Abandoned carts with the WhatsApp / details / copy-link actions. */
+export default function AbandonedCartsTable({
+  carts,
+  abandonedAfter,
+  contacts,
+  messageFor,
+  onView,
+  onCopyLink,
+  onContacted,
+}) {
+  const now = Date.now();
+  return (
+    <div className="cart-table-wrap">
+      <table className="cart-table">
+        <thead>
+          <tr>
+            <th scope="col">Customer</th>
+            <th scope="col">Cart value</th>
+            <th scope="col">Items</th>
+            <th scope="col">Created</th>
+            <th scope="col">Last activity</th>
+            <th scope="col">Status</th>
+            <th scope="col">Recovery</th>
+          </tr>
+        </thead>
+        <tbody>
+          {carts.map((cart) => (
+            <CartRow
+              key={cart.id}
+              cart={cart}
+              abandonedAfter={abandonedAfter}
+              contactedAt={contacts[cart.id]}
+              message={messageFor(cart)}
+              now={now}
+              onView={onView}
+              onCopyLink={onCopyLink}
+              onContacted={onContacted}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

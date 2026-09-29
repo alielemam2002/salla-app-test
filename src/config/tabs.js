@@ -2,6 +2,7 @@ import {
   Code2,
   Package,
   Puzzle,
+  ShoppingCart,
   Terminal,
   TicketPercent,
 } from "lucide-react";
@@ -16,6 +17,7 @@ export const APP_TABS = [
   { id: "addons", label: "Addons", icon: Puzzle },
   { id: "products", label: "Products", icon: Package },
   { id: "coupons", label: "Coupons", icon: TicketPercent },
+  { id: "cart-recovery", label: "Cart Recovery", icon: ShoppingCart },
 ];
 
 export const DEFAULT_TAB = APP_TABS[0].id;

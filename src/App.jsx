@@ -10,6 +10,7 @@ import PlaygroundTab from "./components/Playground/PlaygroundTab.jsx";
 import AddonsTab from "./components/Addons/AddonsTab.jsx";
 import ProductsTab from "./components/Products/ProductsTab.jsx";
 import CouponsTab from "./components/Coupons/CouponsTab.jsx";
+import CartRecoveryTab from "./components/CartRecovery/CartRecoveryTab.jsx";
 
 function AppContent() {
   const {
@@ -63,6 +64,9 @@ function AppContent() {
       )}
       {activeTab === "coupons" && (
         <CouponsTab embedded={embedded} showToast={showToast} />
+      )}
+      {activeTab === "cart-recovery" && (
+        <CartRecoveryTab embedded={embedded} showToast={showToast} />
       )}
     </AppLayout>
   );
