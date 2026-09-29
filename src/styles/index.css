@@ -16,6 +16,7 @@
 @import "./ui/modal-forms.css";
 @import "./features/products-modal.css";
 @import "./features/discounts.css";
+@import "./features/bulk-actions.css";
 @import "./features/product-editor.css";
 @import "./features/coupons.css";
 @import "./ui/kit.css";

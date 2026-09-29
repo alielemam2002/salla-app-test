@@ -2,15 +2,17 @@ import { Filter, Search, X } from "lucide-react";
 import { Button, IconButton, Select } from "../ui/index.js";
 import { STATUS_FILTER_OPTIONS } from "../../utils/productConstants.js";
 
-/** Keyword search and status filter. */
-export default function ProductsToolbar({ search, disabled }) {
+/** Keyword search, status filter and category filter. */
+export default function ProductsToolbar({ search, disabled, categories = [] }) {
   const {
     keywordInput,
     setKeywordInput,
     statusFilter,
+    categoryFilter,
     submitSearch,
     clearSearch,
     changeStatusFilter,
+    changeCategoryFilter,
   } = search;
 
   return (
@@ -62,6 +64,22 @@ export default function ProductsToolbar({ search, disabled }) {
           disabled={disabled}
           options={STATUS_FILTER_OPTIONS}
         />
+        {categories.length > 0 && changeCategoryFilter && (
+          <Select
+            className="products-filter-select"
+            aria-label="Filter by category"
+            value={categoryFilter || ""}
+            onChange={(e) => changeCategoryFilter(e.target.value)}
+            disabled={disabled}
+            options={[
+              { value: "", label: "All Categories" },
+              ...categories.map((c) => ({
+                value: String(c.id),
+                label: c.name,
+              })),
+            ]}
+          />
+        )}
       </div>
     </div>
   );

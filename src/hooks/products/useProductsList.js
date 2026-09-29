@@ -7,7 +7,9 @@ import { PRODUCTS_PER_PAGE } from "../../utils/productConstants.js";
 import logger from "../../utils/logger.js";
 
 /**
- * Paged product list with keyword search, status filter and "fetch all".
+ * Paged product list with keyword search, status and category filters and
+ * "fetch all". Status and category are the filters Salla's bulk actions can
+ * also target; the keyword search isn't.
  * Stale responses are dropped via a request counter.
  */
 export function useProductsList({ getToken, showToast }) {
@@ -22,6 +24,7 @@ export function useProductsList({ getToken, showToast }) {
   const [keywordInput, setKeywordInput] = useState("");
   const [appliedKeyword, setAppliedKeyword] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
 
   const requestIdRef = useRef(0);
 
@@ -35,6 +38,7 @@ export function useProductsList({ getToken, showToast }) {
       targetPage,
       searchKeyword = appliedKeyword,
       filterStatus = statusFilter,
+      filterCategory = categoryFilter,
     ) => {
       const token = getToken();
       if (!token) {
@@ -57,6 +61,7 @@ export function useProductsList({ getToken, showToast }) {
         perPage: PRODUCTS_PER_PAGE,
         keyword: searchKeyword || undefined,
         status: filterStatus || undefined,
+        category: filterCategory || undefined,
       });
 
       if (requestId !== requestIdRef.current) return; // stale response
@@ -71,7 +76,7 @@ export function useProductsList({ getToken, showToast }) {
       }
       setIsLoading(false);
     },
-    [getToken, appliedKeyword, statusFilter, handleFailure],
+    [getToken, appliedKeyword, statusFilter, categoryFilter, handleFailure],
   );
 
   const loadAll = useCallback(async () => {
@@ -87,6 +92,7 @@ export function useProductsList({ getToken, showToast }) {
       perPage: PRODUCTS_PER_PAGE,
       keyword: appliedKeyword || undefined,
       status: statusFilter || undefined,
+      category: categoryFilter || undefined,
       onProgress: (p) => {
         if (requestId === requestIdRef.current) setProgress(p);
       },
@@ -108,6 +114,7 @@ export function useProductsList({ getToken, showToast }) {
     pagination,
     appliedKeyword,
     statusFilter,
+    categoryFilter,
     showToast,
     handleFailure,
   ]);
@@ -119,21 +126,29 @@ export function useProductsList({ getToken, showToast }) {
   const submitSearch = useCallback(() => {
     const trimmed = keywordInput.trim();
     setAppliedKeyword(trimmed);
-    loadPage(1, trimmed, statusFilter);
-  }, [keywordInput, loadPage, statusFilter]);
+    loadPage(1, trimmed, statusFilter, categoryFilter);
+  }, [keywordInput, loadPage, statusFilter, categoryFilter]);
 
   const clearSearch = useCallback(() => {
     setKeywordInput("");
     setAppliedKeyword("");
-    loadPage(1, "", statusFilter);
-  }, [loadPage, statusFilter]);
+    loadPage(1, "", statusFilter, categoryFilter);
+  }, [loadPage, statusFilter, categoryFilter]);
 
   const changeStatusFilter = useCallback(
     (newStatus) => {
       setStatusFilter(newStatus);
-      loadPage(1, appliedKeyword, newStatus);
+      loadPage(1, appliedKeyword, newStatus, categoryFilter);
     },
-    [loadPage, appliedKeyword],
+    [loadPage, appliedKeyword, categoryFilter],
+  );
+
+  const changeCategoryFilter = useCallback(
+    (newCategory) => {
+      setCategoryFilter(newCategory);
+      loadPage(1, appliedKeyword, statusFilter, newCategory);
+    },
+    [loadPage, appliedKeyword, statusFilter],
   );
 
   const refresh = useCallback(
@@ -161,10 +176,12 @@ export function useProductsList({ getToken, showToast }) {
       setKeywordInput,
       appliedKeyword,
       statusFilter,
-      hasFilters: Boolean(appliedKeyword || statusFilter),
+      categoryFilter,
+      hasFilters: Boolean(appliedKeyword || statusFilter || categoryFilter),
       submitSearch,
       clearSearch,
       changeStatusFilter,
+      changeCategoryFilter,
     },
   };
 }

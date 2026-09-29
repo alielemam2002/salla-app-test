@@ -11,6 +11,7 @@
  * - images_list: images + YouTube videos from GET /products/{id}
  * - image_delete: DELETE /products/images/{image}
  * - video_attach: POST /products/{id}/video (YouTube links only)
+ * - bulk_actions: POST /products/actions (validated by bulkActionSpec.js)
  * Image files are uploaded by api/product-media.js (multipart).
  *
  * Authentication:
@@ -19,6 +20,10 @@
  */
 
 import { introspectEmbeddedToken, merchantApi } from "./_lib/salla.js";
+import {
+  sanitizeFilters,
+  sanitizeOperation,
+} from "../src/utils/bulkActions/bulkActionSpec.js";
 
 const MAX_PER_PAGE = 60; // Salla's per_page limit
 
@@ -974,6 +979,43 @@ export async function POST(request) {
         });
       }
 
+      case "bulk_actions": {
+        // POST /products/actions. One product is applied at once; several are
+        // queued by Salla, which answers with operation ids (status
+        // "in_progress"). docs: https://docs.salla.dev/product/bulk-product-options.md
+        const rawOperations = Array.isArray(body.operations)
+          ? body.operations
+          : [];
+        if (!rawOperations.length) {
+          return fail(400, "bad_request", "At least one operation is required");
+        }
+        const operations = [];
+        for (const op of rawOperations) {
+          const { operation, error } = sanitizeOperation(op);
+          if (error) return fail(422, "validation_failed", error);
+          operations.push(operation);
+        }
+        const { filters, error: filterError } = sanitizeFilters(body.filters);
+        if (filterError) return fail(422, "validation_failed", filterError);
+
+        const { status, body: result } = await merchantApi(
+          "/products/actions",
+          { method: "POST", body: { operations, filters } },
+        );
+        if (!result?.success) {
+          return fail(
+            status >= 400 ? status : 502,
+            "salla_api_error",
+            result?.error?.message || "Salla rejected the bulk action",
+            result?.error?.fields || null,
+          );
+        }
+        return Response.json({
+          success: true,
+          operations: Array.isArray(result.data) ? result.data : [],
+        });
+      }
+
       case "video_attach": {
         // Salla only takes product videos as YouTube links, one per request.
         // docs: https://docs.salla.dev/product-images/attach-youtube-video.md
@@ -1098,10 +1140,22 @@ export async function POST(request) {
           console.warn("Could not load brands:", brandErr.message);
         }
 
+        // GET /products/tags → [{ id, name }] (bulk "features" takes tag ids)
+        let tags = [];
+        try {
+          const tagRes = await merchantApi("/products/tags");
+          if (tagRes.body?.success && Array.isArray(tagRes.body?.data)) {
+            tags = tagRes.body.data;
+          }
+        } catch (tagErr) {
+          console.warn("Could not load tags:", tagErr.message);
+        }
+
         return Response.json({
           success: true,
           categories,
           brands,
+          tags,
         });
       }
 

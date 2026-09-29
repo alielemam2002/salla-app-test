@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Download, Package, Plus, RefreshCw, Tag } from "lucide-react";
 import { Button, Card } from "../ui/index.js";
 import { useDisclosure } from "../../hooks/ui/useDisclosure.js";
@@ -8,6 +8,9 @@ import { useProductTaxonomies } from "../../hooks/products/useProductTaxonomies.
 import { useProductMutations } from "../../hooks/products/useProductMutations.js";
 import ProductEditor from "../ProductEditor/ProductEditor.jsx";
 import BulkDiscountModal from "../Discounts/BulkDiscountModal.jsx";
+import BulkActionModal from "../BulkActions/BulkActionModal.jsx";
+import BulkOperationsPanel from "../BulkActions/BulkOperationsPanel.jsx";
+import { STATUS_FILTER_OPTIONS } from "../../utils/productConstants.js";
 import ProductModal from "./ProductModal.jsx";
 import DeleteConfirmModal from "./DeleteConfirmModal.jsx";
 import ProductsToolbar from "./ProductsToolbar.jsx";
@@ -29,7 +32,11 @@ export default function ProductsTab({ embedded, showToast }) {
   );
 
   const list = useProductsList({ getToken, showToast });
-  const selection = useProductSelection(list.products);
+  const { appliedKeyword, statusFilter, categoryFilter } = list.search;
+  const selection = useProductSelection(list.products, {
+    total: list.total,
+    scopeKey: `${appliedKeyword}|${statusFilter}|${categoryFilter}`,
+  });
   const taxonomies = useProductTaxonomies(getToken);
   const { saveProduct, removeProduct, handleBulkSuccess } = useProductMutations(
     {
@@ -44,8 +51,50 @@ export default function ProductsTab({ embedded, showToast }) {
   const deleteDialog = useDisclosure();
   const bulkDiscount = useDisclosure();
   const [editorProduct, setEditorProduct] = useState(null);
+  // { uiAction, selection } while a bulk action dialog is open. The
+  // selection is a snapshot so clearing it after submit doesn't change the
+  // dialog's numbers.
+  const [bulkAction, setBulkAction] = useState(null);
 
   const { products, isLoading, error, page, search } = list;
+
+  // Human-readable list filters; they are also the Salla bulk filters used
+  // by "select all matching".
+  const filterLabels = useMemo(() => {
+    const labels = [];
+    if (statusFilter) {
+      const opt = STATUS_FILTER_OPTIONS.find((o) => o.value === statusFilter);
+      labels.push(`Status: ${opt?.label || statusFilter}`);
+    }
+    if (categoryFilter) {
+      const cat = taxonomies.categories.find(
+        (c) => String(c.id) === String(categoryFilter),
+      );
+      labels.push(`Category: ${cat?.name || categoryFilter}`);
+    }
+    return labels;
+  }, [statusFilter, categoryFilter, taxonomies.categories]);
+
+  const openBulkAction = (uiAction) =>
+    setBulkAction({
+      uiAction,
+      selection: {
+        count: selection.count,
+        sampleProducts: selection.selectedProducts,
+        filterLabels: selection.allMatching ? filterLabels : [],
+        bulkSelection: selection.allMatching
+          ? {
+              mode: "all",
+              excludedIds: selection.excludedIds,
+              status: statusFilter,
+              categoryId: categoryFilter,
+            }
+          : { mode: "ids", ids: selection.selectedIds },
+      },
+    });
+
+  const pageFullySelected =
+    selection.isAllSelected && list.total > products.length;
 
   if (editorProduct) {
     return (
@@ -87,6 +136,15 @@ export default function ProductsTab({ embedded, showToast }) {
           count={selection.count}
           onBulkDiscount={() => bulkDiscount.open()}
           onClear={selection.clear}
+          allMatching={selection.allMatching}
+          canSelectAllMatching={
+            !selection.allMatching && pageFullySelected && !appliedKeyword
+          }
+          matchingTotal={list.total}
+          onSelectAllMatching={selection.selectAllMatching}
+          searchBlocksSelectAll={pageFullySelected && Boolean(appliedKeyword)}
+          filterLabels={filterLabels}
+          onBulkAction={openBulkAction}
         />
         <ProductsSummary
           count={products.length}
@@ -162,8 +220,13 @@ export default function ProductsTab({ embedded, showToast }) {
             </>
           }
         />
-        <ProductsToolbar search={search} disabled={isLoading} />
+        <ProductsToolbar
+          search={search}
+          disabled={isLoading}
+          categories={taxonomies.categories}
+        />
         {content}
+        <BulkOperationsPanel onRefreshProducts={list.refresh} />
       </Card>
 
       <ProductModal
@@ -184,6 +247,21 @@ export default function ProductsTab({ embedded, showToast }) {
         onClose={deleteDialog.close}
         onConfirm={removeProduct}
       />
+
+      {bulkAction && (
+        <BulkActionModal
+          key={bulkAction.uiAction.key}
+          uiAction={bulkAction.uiAction}
+          selection={bulkAction.selection}
+          lookups={taxonomies}
+          currency={products[0]?.price?.currency || "SAR"}
+          getToken={getToken}
+          onClose={() => setBulkAction(null)}
+          onSubmitted={selection.clear}
+          onRefreshProducts={list.refresh}
+          showToast={showToast}
+        />
+      )}
 
       <BulkDiscountModal
         isOpen={bulkDiscount.isOpen}
