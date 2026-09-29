@@ -124,8 +124,8 @@ export default function WhatsAppSettingsModal({
     body = (
       <Alert tone="warning" title="Settings storage isn't set up yet.">
         The app owner needs to add Upstash Redis to the Vercel project and set
-        <code> WA_SETTINGS_KEY</code>. Until then only the server&apos;s default
-        WhatsApp account can be used.
+        <code> WA_SETTINGS_KEY</code>. Until then, reminders can only be sent
+        manually.
       </Alert>
     );
   } else {

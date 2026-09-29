@@ -18,6 +18,7 @@ import {
   useCartContacts,
   useRecoverySettings,
   useWhatsAppSender,
+  useWhatsAppSettingsMutations,
   useWhatsAppStatus,
 } from "../../hooks/cartRecovery/useCartRecovery.js";
 import { useCouponsQuery } from "../../hooks/coupons/useCoupons.js";
@@ -67,6 +68,8 @@ export default function CartRecoveryTab({ embedded, showToast }) {
   const waStatus = useWhatsAppStatus(getToken);
   const apiSends = useApiSends();
   const sender = useWhatsAppSender(getToken);
+  const { toggle: toggleApi } = useWhatsAppSettingsMutations(getToken);
+  // Connected to the merchant's own account AND switched on.
   const apiEnabled = Boolean(waStatus.data?.configured);
   const [confirmBulk, setConfirmBulk] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -243,6 +246,23 @@ export default function CartRecoveryTab({ embedded, showToast }) {
           <WhatsAppApiStatus
             status={waStatus}
             onOpenSettings={() => setSettingsOpen(true)}
+            toggling={toggleApi.isPending}
+            onToggle={(enabled) =>
+              toggleApi.mutate(enabled, {
+                onSuccess: () =>
+                  showToast?.(
+                    enabled
+                      ? "Sending from the app is on"
+                      : "Sending from the app is off: manual only",
+                    "success",
+                  ),
+                onError: (error) =>
+                  showToast?.(
+                    error.result?.error || "Couldn't change the setting",
+                    "error",
+                  ),
+              })
+            }
           />
 
           {!query.isPending && !query.isError && (

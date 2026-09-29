@@ -64,3 +64,8 @@ export function deleteWhatsAppSettings(token) {
 export function sendWhatsAppTest(token, to) {
   return callWhatsAppApi({ action: "send_test", token, to });
 }
+
+/** Turn sending from the app on or off (the settings stay saved). */
+export function setWhatsAppEnabled(token, enabled) {
+  return callWhatsAppApi({ action: "settings_enable", token, enabled });
+}

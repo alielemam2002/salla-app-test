@@ -18,6 +18,7 @@ import {
   fetchWhatsAppStatus,
   saveWhatsAppSettings,
   sendCartWhatsApp,
+  setWhatsAppEnabled,
 } from "../../../utils/whatsappApi.js";
 import {
   apiSendsStore,
@@ -39,19 +40,24 @@ vi.mock("../../../utils/whatsappApi.js", () => ({
   saveWhatsAppSettings: vi.fn(),
   deleteWhatsAppSettings: vi.fn(),
   sendWhatsAppTest: vi.fn(),
+  setWhatsAppEnabled: vi.fn(),
 }));
 
 const NOT_CONFIGURED = {
   success: true,
+  connected: false,
+  enabled: false,
   configured: false,
-  source: null,
   storageReady: true,
 };
+// The merchant's own account, connected and switched on.
 const CONFIGURED = {
   success: true,
+  connected: true,
+  enabled: true,
   configured: true,
-  source: "server",
   storageReady: true,
+  profile: { displayPhone: "15551890829", verifiedName: "My Store" },
   template: "hello_world",
   language: "en_US",
   params: [],
@@ -259,12 +265,55 @@ describe("CartRecoveryTab", () => {
     );
   });
 
-  it("hides API sending until WhatsApp is configured on the server", async () => {
+  it("is manual-only until the merchant connects WhatsApp", async () => {
     renderTab();
-    expect(
-      await screen.findByText("WhatsApp API not connected"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Manual sending only")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Send via API/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /shown carts/ })).toBeNull();
+    // The manual WhatsApp link is still there.
+    expect(
+      await screen.findByRole("link", { name: "Send WhatsApp to Ahmed Ali" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("switch")).toBeNull();
+  });
+
+  it("switches sending from the app off and on", async () => {
+    fetchWhatsAppStatus.mockResolvedValue(CONFIGURED);
+    setWhatsAppEnabled.mockResolvedValue({ success: true, settings: {} });
+    const { showToast } = renderTab();
+    const toggle = await screen.findByRole("switch", {
+      name: /Send from the app/,
+    });
+    expect(toggle).toBeChecked();
+    expect(
+      await screen.findByRole("button", { name: "Send via API to Ahmed Ali" }),
+    ).toBeInTheDocument();
+
+    fetchWhatsAppStatus.mockResolvedValue({
+      ...CONFIGURED,
+      enabled: false,
+      configured: false,
+    });
+    fireEvent.click(toggle);
+    await waitFor(() =>
+      expect(setWhatsAppEnabled).toHaveBeenCalledWith("tok", false),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Send via API to Ahmed Ali" }),
+      ).toBeNull(),
+    );
+    expect(
+      screen.getByRole("switch", { name: /Send from the app/ }),
+    ).not.toBeChecked();
+    expect(showToast).toHaveBeenCalledWith(
+      "Sending from the app is off: manual only",
+      "success",
+    );
+    // Manual sending still works.
+    expect(
+      screen.getByRole("link", { name: "Send WhatsApp to Ahmed Ali" }),
+    ).toBeInTheDocument();
   });
 
   it("sends one cart through the API and marks it as sent", async () => {
@@ -276,7 +325,7 @@ describe("CartRecoveryTab", () => {
     });
     const { showToast } = renderTab();
     expect(
-      await screen.findByText("WhatsApp connected (server default account)"),
+      await screen.findByText("WhatsApp connected: My Store"),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/doesn't include the cart link/),
@@ -420,7 +469,6 @@ describe("CartRecoveryTab", () => {
   it("shows the saved token only as its last 4 characters", async () => {
     fetchWhatsAppStatus.mockResolvedValue({
       ...CONFIGURED,
-      source: "merchant",
       template: "cart_reminder_ar",
       language: "ar",
       params: ["customer_name"],
@@ -456,7 +504,7 @@ describe("CartRecoveryTab", () => {
 
   it("offers WhatsApp settings even before storage is set up, and explains it", async () => {
     fetchWhatsAppStatus.mockResolvedValue({
-      ...CONFIGURED,
+      ...NOT_CONFIGURED,
       storageReady: false,
     });
     fetchWhatsAppSettings.mockResolvedValue({
@@ -466,7 +514,7 @@ describe("CartRecoveryTab", () => {
     });
     renderTab();
     expect(
-      await screen.findByText(/first the app owner adds Upstash Redis/),
+      await screen.findByText(/needs settings storage on the server first/),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Connect WhatsApp" }));
     const dialog = await screen.findByRole("dialog");

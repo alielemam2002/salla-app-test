@@ -3,8 +3,9 @@
  * from the verified embedded session. Stored in Upstash Redis; the access
  * token is encrypted (secretBox) and never returned to the browser.
  *
- * Until a merchant saves settings, the META_WA_* env vars act as a server
- * default (the proof-of-concept setup). Merchant settings always win.
+ * There is no shared fallback account: a merchant sends from the app only
+ * after connecting their own account, and only while `enabled` is on.
+ * Otherwise they can still send manually (wa.me).
  */
 
 import { kvDel, kvGetJson, kvSetJson } from "./kv.js";
@@ -18,22 +19,9 @@ const LANGUAGE_RE = /^[a-z]{2,3}(_[A-Z]{2})?$/;
 const ID_RE = /^\d{5,25}$/;
 const MAX_PARAMS = 10;
 
-/** Server default from env (the original single-account setup). */
-export function envConfig(env = process.env) {
-  const params = String(env.META_WA_TEMPLATE_PARAMS || "")
-    .split(",")
-    .map((p) => p.trim())
-    .filter(Boolean);
-  if (!env.META_WA_TOKEN || !env.META_WA_PHONE_NUMBER_ID) return null;
-  return {
-    token: String(env.META_WA_TOKEN).trim(),
-    phoneNumberId: String(env.META_WA_PHONE_NUMBER_ID).trim(),
-    template: String(env.META_WA_TEMPLATE_NAME || "hello_world").trim(),
-    language: String(env.META_WA_TEMPLATE_LANG || "en_US").trim(),
-    params,
-    invalidParams: params.filter((p) => !ALLOWED_PARAMS.has(p)),
-    version: String(env.META_GRAPH_VERSION || DEFAULT_GRAPH_VERSION).trim(),
-  };
+/** Graph API version (META_GRAPH_VERSION, else the docs' current one). */
+export function graphVersion(env = process.env) {
+  return String(env.META_GRAPH_VERSION || DEFAULT_GRAPH_VERSION).trim();
 }
 
 /**
@@ -102,6 +90,20 @@ export async function saveSettings(merchantId, values, { stored, profile }) {
       ? values.accessToken.slice(-4)
       : stored.tokenLast4,
     profile: profile || null,
+    // Sending from the app is on right after connecting; the merchant can
+    // switch it off without losing the settings.
+    enabled: stored.enabled ?? true,
+    updatedAt: new Date().toISOString(),
+  };
+  await kvSetJson(keyFor(merchantId), record);
+  return record;
+}
+
+/** Turn sending from the app on or off, keeping everything else. */
+export async function setEnabled(merchantId, stored, enabled) {
+  const record = {
+    ...stored,
+    enabled: Boolean(enabled),
     updatedAt: new Date().toISOString(),
   };
   await kvSetJson(keyFor(merchantId), record);
@@ -123,6 +125,7 @@ export function publicSettings(record) {
     params: record.params || [],
     tokenLast4: record.tokenLast4 || null,
     profile: record.profile || null,
+    enabled: record.enabled !== false,
     updatedAt: record.updatedAt,
   };
 }
@@ -136,6 +139,6 @@ export function recordToConfig(record, env = process.env) {
     language: record.language,
     params: record.params || [],
     invalidParams: (record.params || []).filter((p) => !ALLOWED_PARAMS.has(p)),
-    version: String(env.META_GRAPH_VERSION || DEFAULT_GRAPH_VERSION).trim(),
+    version: graphVersion(env),
   };
 }

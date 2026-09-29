@@ -19,6 +19,7 @@ import {
   saveWhatsAppSettings,
   sendCartWhatsApp,
   sendWhatsAppTest,
+  setWhatsAppEnabled,
 } from "../../utils/whatsappApi.js";
 import { whatsappNumber } from "../../utils/cartRecovery/whatsappMessage.js";
 
@@ -255,7 +256,7 @@ export function useWhatsAppSettings(getToken, { enabled = true } = {}) {
   });
 }
 
-/** Save / delete settings and send a test; each refreshes the status. */
+/** Save / delete / switch settings and send a test; changes refresh the status. */
 export function useWhatsAppSettingsMutations(getToken) {
   const queryClient = useQueryClient();
   const refresh = () => {
@@ -283,5 +284,11 @@ export function useWhatsAppSettingsMutations(getToken) {
   const sendTest = useMutation({
     mutationFn: withToken((token, to) => sendWhatsAppTest(token, to)),
   });
-  return { save, remove, sendTest };
+  const toggle = useMutation({
+    mutationFn: withToken((token, enabled) =>
+      setWhatsAppEnabled(token, enabled),
+    ),
+    onSuccess: refresh,
+  });
+  return { save, remove, sendTest, toggle };
 }

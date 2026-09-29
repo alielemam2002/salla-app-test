@@ -4,22 +4,21 @@
  * Every merchant connects their own WhatsApp Business account in the app
  * (WhatsApp settings). Settings are stored per Salla merchant (from the
  * verified embedded session) in Upstash Redis, with the access token
- * encrypted. Until a merchant saves settings, the META_WA_* env vars are
- * used as a server default.
+ * encrypted. There is no shared account: until a merchant connects (and
+ * while their "send from the app" switch is off), reminders are manual only.
  *
  * Actions (all need a valid embedded session token):
- * - status           which setup is active (merchant / server / none)
+ * - status           connected? switched on? which template?
  * - settings_get     the merchant's settings, token masked
  * - settings_save    validate, check with Meta (phone number profile), save
+ * - settings_enable  turn sending from the app on/off ({ enabled })
  * - settings_delete  forget the merchant's settings
  * - send_test        send the template with sample values to a number
  * - send             send the template for one abandoned cart; the cart is
  *                    read from Salla (GET /admin/v2/carts/abandoned/{id})
  *
- * Env: WA_SETTINGS_KEY (32 bytes, base64) + Upstash (KV_REST_API_URL /
- * KV_REST_API_TOKEN) for per-merchant settings; optional META_WA_TOKEN,
- * META_WA_PHONE_NUMBER_ID, META_WA_TEMPLATE_NAME, META_WA_TEMPLATE_LANG,
- * META_WA_TEMPLATE_PARAMS, META_GRAPH_VERSION as the server default.
+ * Env: WA_SETTINGS_KEY (32 bytes, base64), Upstash (KV_REST_API_URL /
+ * KV_REST_API_TOKEN), optional META_GRAPH_VERSION.
  */
 
 import { introspectEmbeddedToken, merchantApi } from "./_lib/salla.js";
@@ -33,11 +32,12 @@ import {
 } from "./_lib/whatsappGraph.js";
 import {
   deleteSettings,
-  envConfig,
+  graphVersion,
   loadStored,
   publicSettings,
   recordToConfig,
   saveSettings,
+  setEnabled,
   validateSettingsInput,
 } from "./_lib/whatsappSettings.js";
 import {
@@ -57,24 +57,28 @@ const fail = (status, code, error, extra = {}) =>
 
 const storageReady = () => kvConfigured() && encryptionConfigured();
 
-/** The config to send with: the merchant's own, else the server default. */
+/** The merchant's own WhatsApp setup; there is no shared fallback. */
 async function resolveConfig(merchantId) {
-  if (storageReady()) {
-    const stored = await loadStored(merchantId);
-    if (stored) {
-      try {
-        return { source: "merchant", stored, config: recordToConfig(stored) };
-      } catch {
-        // Saved with a different WA_SETTINGS_KEY: the token must be re-entered.
-        return { source: "merchant", stored, config: null, unreadable: true };
-      }
-    }
+  if (!storageReady()) return { stored: null, config: null, enabled: false };
+  const stored = await loadStored(merchantId);
+  if (!stored) return { stored: null, config: null, enabled: false };
+  const enabled = stored.enabled !== false;
+  try {
+    return { stored, enabled, config: recordToConfig(stored) };
+  } catch {
+    // Saved with a different WA_SETTINGS_KEY: the token must be re-entered.
+    return { stored, enabled, config: null, unreadable: true };
   }
-  const fallback = envConfig();
-  return fallback
-    ? { source: "server", stored: null, config: fallback }
-    : { source: null, stored: null, config: null };
 }
+
+const notConnected = (unreadable) =>
+  fail(
+    503,
+    "whatsapp_not_configured",
+    unreadable
+      ? "Your saved WhatsApp token can't be read anymore. Enter it again in WhatsApp settings."
+      : "Connect your WhatsApp Business account in WhatsApp settings first. Until then, send reminders manually.",
+  );
 
 const localeOf = (config) => (config.language.startsWith("ar") ? "ar" : "en");
 
@@ -131,13 +135,15 @@ export async function POST(request) {
 
     switch (action) {
       case "status": {
-        const { source, stored, config, unreadable } =
+        const { stored, config, enabled, unreadable } =
           await resolveConfig(merchantId);
         // Never return the token.
         return Response.json({
           success: true,
-          configured: Boolean(config),
-          source,
+          connected: Boolean(config),
+          enabled,
+          // Sending from the app is possible right now.
+          configured: Boolean(config) && enabled,
           storageReady: storageReady(),
           template: config?.template || null,
           language: config?.language || null,
@@ -198,7 +204,7 @@ export async function POST(request) {
         const probe = {
           token: values.accessToken || savedToken,
           phoneNumberId: values.phoneNumberId,
-          version: envConfig()?.version,
+          version: graphVersion(),
         };
         const check = await fetchPhoneProfile(probe);
         if (!check.ok) {
@@ -217,22 +223,29 @@ export async function POST(request) {
         });
       }
 
+      case "settings_enable": {
+        const { stored } = await resolveConfig(merchantId);
+        if (!stored) return notConnected(false);
+        const record = await setEnabled(
+          merchantId,
+          stored,
+          body.enabled === true,
+        );
+        return Response.json({
+          success: true,
+          settings: publicSettings(record),
+        });
+      }
+
       case "settings_delete": {
         if (storageReady()) await deleteSettings(merchantId);
         return Response.json({ success: true });
       }
 
       case "send_test": {
+        // Works while switched off too, so the merchant can check the setup.
         const { config, unreadable } = await resolveConfig(merchantId);
-        if (!config) {
-          return fail(
-            503,
-            "whatsapp_not_configured",
-            unreadable
-              ? "Your saved WhatsApp token can't be read anymore. Enter it again in WhatsApp settings."
-              : "Connect WhatsApp in WhatsApp settings first.",
-          );
-        }
+        if (!config) return notConnected(unreadable);
         const to = whatsappNumber(body.to);
         if (!to) {
           return fail(
@@ -249,14 +262,13 @@ export async function POST(request) {
       }
 
       case "send": {
-        const { config, unreadable } = await resolveConfig(merchantId);
-        if (!config) {
+        const { config, enabled, unreadable } = await resolveConfig(merchantId);
+        if (!config) return notConnected(unreadable);
+        if (!enabled) {
           return fail(
-            503,
-            "whatsapp_not_configured",
-            unreadable
-              ? "Your saved WhatsApp token can't be read anymore. Enter it again in WhatsApp settings."
-              : "Connect WhatsApp in WhatsApp settings first.",
+            403,
+            "whatsapp_disabled",
+            "Sending from the app is switched off. Turn it on in Cart Recovery, or send the reminder manually.",
           );
         }
         const cartId = String(body.cartId || "");

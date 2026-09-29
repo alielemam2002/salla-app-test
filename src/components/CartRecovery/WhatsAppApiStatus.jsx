@@ -1,16 +1,22 @@
 import { Settings2 } from "lucide-react";
-import { Alert, Button } from "../ui/index.js";
+import { Alert, Button, Switch } from "../ui/index.js";
 
 /**
- * Which WhatsApp account the "Send" buttons use: the merchant's own
- * (WhatsApp settings), the server default (META_WA_* env, for testing), or
- * none. Never shows anything secret (the server doesn't return it).
+ * How reminders can be sent: manually (always), or from the app once the
+ * merchant has connected their own WhatsApp Business account and the
+ * "Send from the app" switch is on. Nothing secret is shown (the server
+ * never returns the token).
  */
-export default function WhatsAppApiStatus({ status, onOpenSettings }) {
+export default function WhatsAppApiStatus({
+  status,
+  onOpenSettings,
+  onToggle,
+  toggling,
+}) {
   if (status.isPending || status.isError) return null;
   const {
-    configured,
-    source,
+    connected,
+    enabled,
     template,
     language,
     params = [],
@@ -20,11 +26,9 @@ export default function WhatsAppApiStatus({ status, onOpenSettings }) {
     tokenUnreadable,
   } = status.data;
 
-  // Always offered: when storage isn't set up, the dialog explains what the
-  // app owner has to add in Vercel.
   const settingsButton = (
     <Button size="small" icon={Settings2} onClick={onOpenSettings}>
-      {source === "merchant" ? "WhatsApp settings" : "Connect WhatsApp"}
+      {connected || tokenUnreadable ? "WhatsApp settings" : "Connect WhatsApp"}
     </Button>
   );
 
@@ -35,37 +39,39 @@ export default function WhatsAppApiStatus({ status, onOpenSettings }) {
         title="Enter your WhatsApp token again"
         action={settingsButton}
       >
-        The saved token can&apos;t be read anymore. Open WhatsApp settings and
-        paste it again.
+        The saved token can&apos;t be read anymore. Until you paste it again in
+        WhatsApp settings, reminders can only be sent manually.
       </Alert>
     );
   }
 
-  if (!configured) {
+  if (!connected) {
     return (
-      <Alert
-        tone="info"
-        title="WhatsApp API not connected"
-        action={settingsButton}
-      >
+      <Alert tone="info" title="Manual sending only" action={settingsButton}>
         {storageReady
-          ? "Connect your WhatsApp Business account to send reminders from the app instead of opening WhatsApp."
-          : "Settings storage isn't set up on the server yet (Upstash Redis + WA_SETTINGS_KEY)."}
+          ? "Use the WhatsApp button to send each reminder yourself. Connect your WhatsApp Business account to send them from the app."
+          : "Use the WhatsApp button to send each reminder yourself. Sending from the app needs settings storage on the server first (Upstash Redis + WA_SETTINGS_KEY)."}
       </Alert>
     );
   }
-
-  const title =
-    source === "merchant"
-      ? `WhatsApp connected${profile?.verifiedName ? `: ${profile.verifiedName}` : ""}`
-      : "WhatsApp connected (server default account)";
 
   return (
     <Alert
-      tone={invalidParams.length ? "warning" : "success"}
-      title={title}
+      tone={enabled && !invalidParams.length ? "success" : "info"}
+      title={`WhatsApp connected${profile?.verifiedName ? `: ${profile.verifiedName}` : ""}`}
       action={settingsButton}
     >
+      <Switch
+        label="Send from the app"
+        description={
+          enabled
+            ? "The Send buttons use your WhatsApp Business account."
+            : "Off: only manual sending (the WhatsApp button)."
+        }
+        checked={enabled}
+        disabled={toggling}
+        onChange={onToggle}
+      />
       <p>
         {profile?.displayPhone && (
           <>
@@ -77,15 +83,6 @@ export default function WhatsAppApiStatus({ status, onOpenSettings }) {
           ? ` with variables: ${params.join(", ")}.`
           : " with no variables."}
       </p>
-      {source === "server" && (
-        <p>
-          This is the app&apos;s shared test account. Connect your own WhatsApp
-          Business account to send from your number
-          {storageReady
-            ? "."
-            : " (first the app owner adds Upstash Redis and WA_SETTINGS_KEY in Vercel)."}
-        </p>
-      )}
       {!params.length && (
         <p>
           This template doesn&apos;t include the cart link. Use an approved
@@ -95,10 +92,12 @@ export default function WhatsAppApiStatus({ status, onOpenSettings }) {
       {invalidParams.length > 0 && (
         <p>Unknown template variables: {invalidParams.join(", ")}</p>
       )}
-      <p>
-        &quot;Sent&quot; means Meta accepted the message; delivery and read
-        status need Meta&apos;s webhook (stage 2).
-      </p>
+      {enabled && (
+        <p>
+          &quot;Sent&quot; means Meta accepted the message; delivery and read
+          status need Meta&apos;s webhook (stage 2).
+        </p>
+      )}
     </Alert>
   );
 }

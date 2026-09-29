@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 import { POST } from "../../../../api/whatsapp.js";
 import { buildTemplateMessage } from "../../../../api/_lib/whatsappGraph.js";
 import {
-  envConfig,
+  graphVersion,
   validateSettingsInput,
 } from "../../../../api/_lib/whatsappSettings.js";
 import { open, seal } from "../../../../api/_lib/secretBox.js";
@@ -27,11 +27,16 @@ const PROFILE = {
 };
 
 /**
- * Fake network: Salla introspect + cart, an in-memory Upstash, and Meta.
- * `meta` decides Meta's answer per call. Every request is recorded.
+ * Fake network: Salla introspect + carts (by id), an in-memory Upstash
+ * (pass `kv` to share it between merchants), and Meta (`meta` can
+ * override its answer). Every request is recorded in `calls`.
  */
-function mockNetwork({ merchantId = 1, meta, cart = CART } = {}) {
-  const kv = new Map();
+function mockNetwork({
+  merchantId = 1,
+  meta,
+  carts = { 77: CART },
+  kv = new Map(),
+} = {}) {
   const calls = [];
   globalThis.fetch = vi.fn(async (url, init = {}) => {
     const u = String(url);
@@ -59,16 +64,15 @@ function mockNetwork({ merchantId = 1, meta, cart = CART } = {}) {
         result: cmd === "GET" ? (kv.get(key) ?? null) : "OK",
       });
     }
-    if (u.includes("/carts/abandoned/")) {
-      return json(200, { success: true, data: cart });
+    const cartMatch = u.match(/\/carts\/abandoned\/(\d+)/);
+    if (cartMatch) {
+      const cart = carts[cartMatch[1]];
+      return cart
+        ? json(200, { success: true, data: cart })
+        : json(404, { success: false, error: { message: "not found" } });
     }
     if (u.includes("graph.facebook.com")) {
-      const res = meta?.({
-        url: u,
-        method: init.method || "GET",
-        body,
-        headers: init.headers,
-      }) || {
+      const res = meta?.({ url: u, body }) || {
         status: 200,
         body: u.includes("/messages")
           ? { messages: [{ id: "wamid.X", message_status: "accepted" }] }
@@ -98,6 +102,8 @@ const SETTINGS = {
   params: ["customer_name", "cart_total", "checkout_url"],
 };
 
+const connect = () => call({ action: "settings_save", settings: SETTINGS });
+
 const saved = { ...process.env };
 
 describe("api/whatsapp", () => {
@@ -106,53 +112,57 @@ describe("api/whatsapp", () => {
     process.env.KV_REST_API_URL = KV_URL;
     process.env.KV_REST_API_TOKEN = "kv-token";
     process.env.WA_SETTINGS_KEY = randomBytes(32).toString("base64");
-    process.env.META_WA_TOKEN = "server-default-token";
+    // A leftover shared account in env must never be used.
+    process.env.META_WA_TOKEN = "old-shared-token";
     process.env.META_WA_PHONE_NUMBER_ID = "999999999";
-    delete process.env.META_WA_TEMPLATE_NAME;
-    delete process.env.META_WA_TEMPLATE_LANG;
-    delete process.env.META_WA_TEMPLATE_PARAMS;
     delete process.env.META_GRAPH_VERSION;
   });
   afterEach(() => {
     process.env = { ...saved };
   });
 
-  it("uses the server default until the merchant connects their own account", async () => {
-    mockNetwork();
-    const json = await (await call({ action: "status" })).json();
-    expect(json).toMatchObject({
-      configured: true,
-      source: "server",
+  it("is manual-only until the merchant connects their own account", async () => {
+    const { calls } = mockNetwork();
+    const status = await (await call({ action: "status" })).json();
+    expect(status).toMatchObject({
+      connected: false,
+      enabled: false,
+      configured: false,
       storageReady: true,
-      template: "hello_world",
-      language: "en_US",
     });
-    expect(JSON.stringify(json)).not.toContain("server-default-token");
+    const send = await call({ action: "send", cartId: 77 });
+    expect(send.status).toBe(503);
+    expect((await send.json()).code).toBe("whatsapp_not_configured");
+    expect(calls.some((c) => c.url.includes("graph.facebook.com"))).toBe(false);
   });
 
   it("checks settings with Meta, stores the token encrypted and never returns it", async () => {
     const { calls, kv } = mockNetwork();
-    const res = await call({ action: "settings_save", settings: SETTINGS });
-    const json = await res.json();
+    const json = await (await connect()).json();
     expect(json.success).toBe(true);
     expect(json.settings).toMatchObject({
       phoneNumberId: SETTINGS.phoneNumberId,
       template: "cart_reminder_ar",
       tokenLast4: "abcd",
+      enabled: true,
       profile: { displayPhone: "15551890829", verifiedName: "Test Store" },
     });
     expect(JSON.stringify(json)).not.toContain(SETTINGS.accessToken);
 
-    // Meta was asked about this phone number with the merchant's token.
     const probe = calls.find((c) => c.url.includes("graph.facebook.com"));
     expect(probe.url).toContain(`/${SETTINGS.phoneNumberId}?fields=`);
     expect(probe.headers.Authorization).toBe(`Bearer ${SETTINGS.accessToken}`);
 
-    // Stored per merchant, token sealed.
     const record = JSON.parse(kv.get("wa:settings:1"));
     expect(JSON.stringify(record)).not.toContain(SETTINGS.accessToken);
     expect(open(record.token)).toBe(SETTINGS.accessToken);
 
+    const status = await (await call({ action: "status" })).json();
+    expect(status).toMatchObject({
+      connected: true,
+      enabled: true,
+      configured: true,
+    });
     const get = await (await call({ action: "settings_get" })).json();
     expect(get.settings.tokenLast4).toBe("abcd");
     expect(JSON.stringify(get)).not.toContain(SETTINGS.accessToken);
@@ -165,7 +175,7 @@ describe("api/whatsapp", () => {
         body: { error: { code: 190, message: "expired" } },
       }),
     });
-    const res = await call({ action: "settings_save", settings: SETTINGS });
+    const res = await connect();
     expect(res.status).toBe(422);
     expect(await res.json()).toMatchObject({
       code: "meta_error",
@@ -177,7 +187,7 @@ describe("api/whatsapp", () => {
 
   it("keeps the saved token when the field is left empty", async () => {
     const { kv, calls } = mockNetwork();
-    await call({ action: "settings_save", settings: SETTINGS });
+    await connect();
     await call({
       action: "settings_save",
       settings: { ...SETTINGS, accessToken: "", template: "cart_reminder_v2" },
@@ -192,8 +202,8 @@ describe("api/whatsapp", () => {
   });
 
   it("sends each merchant's reminders with their own account", async () => {
-    const { calls } = mockNetwork({ merchantId: 1 });
-    await call({ action: "settings_save", settings: SETTINGS });
+    const { calls } = mockNetwork();
+    await connect();
     const res = await call({ action: "send", cartId: 77 });
     expect(await res.json()).toEqual({
       success: true,
@@ -222,15 +232,45 @@ describe("api/whatsapp", () => {
   });
 
   it("keeps merchants apart", async () => {
-    const first = mockNetwork({ merchantId: 1 });
-    await call({ action: "settings_save", settings: SETTINGS });
-    // Same storage, different merchant: they get the server default.
-    const { kv } = first;
-    globalThis.fetch.mockClear();
-    const other = mockNetwork({ merchantId: 2 });
-    other.kv.set("wa:settings:1", kv.get("wa:settings:1"));
+    const kv = new Map();
+    mockNetwork({ merchantId: 1, kv });
+    await connect();
+    mockNetwork({ merchantId: 2, kv });
     const status = await (await call({ action: "status" })).json();
-    expect(status.source).toBe("server");
+    expect(status.connected).toBe(false);
+    expect((await call({ action: "send", cartId: 77 })).status).toBe(503);
+  });
+
+  it("refuses to send while the switch is off, but still sends a test", async () => {
+    const { calls } = mockNetwork();
+    await connect();
+    const off = await (
+      await call({ action: "settings_enable", enabled: false })
+    ).json();
+    expect(off.settings.enabled).toBe(false);
+
+    const status = await (await call({ action: "status" })).json();
+    expect(status).toMatchObject({
+      connected: true,
+      enabled: false,
+      configured: false,
+    });
+    const send = await call({ action: "send", cartId: 77 });
+    expect(send.status).toBe(403);
+    expect((await send.json()).code).toBe("whatsapp_disabled");
+    expect(calls.some((c) => c.url.endsWith("/messages"))).toBe(false);
+
+    const test = await call({ action: "send_test", to: "+201060820691" });
+    expect((await test.json()).success).toBe(true);
+
+    await call({ action: "settings_enable", enabled: true });
+    expect((await call({ action: "send", cartId: 77 })).status).toBe(200);
+  });
+
+  it("can't switch on before connecting", async () => {
+    mockNetwork();
+    const res = await call({ action: "settings_enable", enabled: true });
+    expect(res.status).toBe(503);
   });
 
   it("asks for the token again when it can't be decrypted", async () => {
@@ -246,7 +286,7 @@ describe("api/whatsapp", () => {
     );
     process.env.WA_SETTINGS_KEY = randomBytes(32).toString("base64");
     const status = await (await call({ action: "status" })).json();
-    expect(status).toMatchObject({ configured: false, tokenUnreadable: true });
+    expect(status).toMatchObject({ connected: false, tokenUnreadable: true });
     const send = await call({ action: "send", cartId: 77 });
     expect(send.status).toBe(503);
     expect((await send.json()).error).toMatch(/Enter it again/);
@@ -255,16 +295,21 @@ describe("api/whatsapp", () => {
   it("refuses to save settings without storage", async () => {
     delete process.env.KV_REST_API_URL;
     mockNetwork();
-    const res = await call({ action: "settings_save", settings: SETTINGS });
+    const res = await connect();
     expect(res.status).toBe(503);
     expect((await res.json()).code).toBe("storage_not_configured");
   });
 
   it("won't message a purchased cart or a customer without a number", async () => {
-    mockNetwork({ cart: { ...CART, status: "purchased" } });
+    mockNetwork({
+      carts: {
+        77: { ...CART, status: "purchased" },
+        78: { ...CART, id: 78, customer: { name: "X" } },
+      },
+    });
+    await connect();
     expect((await call({ action: "send", cartId: 77 })).status).toBe(409);
-    mockNetwork({ cart: { ...CART, customer: { name: "X" } } });
-    expect((await call({ action: "send", cartId: 77 })).status).toBe(422);
+    expect((await call({ action: "send", cartId: 78 })).status).toBe(422);
   });
 
   it("explains Meta errors instead of passing them raw", async () => {
@@ -277,12 +322,15 @@ describe("api/whatsapp", () => {
                 error: {
                   code: 132001,
                   message: "(#132001) Template name does not exist",
-                  error_data: { details: "template name does not exist in ar" },
+                  error_data: {
+                    details: "template name does not exist in ar",
+                  },
                 },
               },
             }
           : null,
     });
+    await connect();
     const res = await call({ action: "send", cartId: 77 });
     expect(res.status).toBe(422);
     expect(await res.json()).toMatchObject({
@@ -296,6 +344,7 @@ describe("api/whatsapp", () => {
 
   it("sends a test with sample data to a given number", async () => {
     const { calls } = mockNetwork();
+    await connect();
     const res = await call({ action: "send_test", to: "+20 106 082 0691" });
     expect((await res.json()).success).toBe(true);
     const send = calls.find((c) => c.url.endsWith("/messages"));
@@ -326,21 +375,18 @@ describe("whatsapp settings helpers", () => {
     ).toBeTruthy();
   });
 
-  it("reads the server default and builds template bodies", () => {
-    expect(envConfig({})).toBeNull();
-    const config = envConfig({
-      META_WA_TOKEN: "t",
-      META_WA_PHONE_NUMBER_ID: "1",
-      META_WA_TEMPLATE_PARAMS: "customer_name, store_name",
-    });
-    expect(config).toMatchObject({
+  it("builds template bodies and picks the Graph version", () => {
+    expect(graphVersion({})).toBe("v23.0");
+    expect(graphVersion({ META_GRAPH_VERSION: "v24.0" })).toBe("v24.0");
+    const config = {
       template: "hello_world",
       language: "en_US",
-      invalidParams: ["store_name"],
+      params: [],
+    };
+    expect(buildTemplateMessage(config, "966", {}).body.template).toEqual({
+      name: "hello_world",
+      language: { code: "en_US" },
     });
-    expect(
-      buildTemplateMessage({ ...config, params: [] }, "966", {}).body.template,
-    ).toEqual({ name: "hello_world", language: { code: "en_US" } });
     expect(
       buildTemplateMessage({ ...config, params: ["coupon_code"] }, "966", {
         coupon_code: "",
