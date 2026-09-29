@@ -7,8 +7,6 @@
 @import "./base.css";
 @import "./layout.css";
 @import "./ui/surfaces.css";
-@import "./features/console.css";
-@import "./features/playground.css";
 @import "./ui/buttons.css";
 @import "./ui/toast.css";
 @import "./features/addons.css";

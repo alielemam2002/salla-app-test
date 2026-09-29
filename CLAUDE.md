@@ -1,6 +1,8 @@
 # CLAUDE.md
 
-Guidance for working in this repo: the **Salla Embedded SDK Playground**, a React + Vite app that runs inside the Salla Merchant Dashboard iframe to test `@salla.sa/embedded-sdk` (currently `0.2.6`).
+Guidance for working in this repo: a React + Vite merchant app ("مدير المتجر") that runs inside the Salla Merchant Dashboard iframe using `@salla.sa/embedded-sdk` (currently `0.2.6`). Tabs: Products, Coupons, Cart Recovery, WhatsApp Campaigns, Addons (the old Test Console and Playground tabs were removed).
+
+**The UI is Arabic and RTL.** `index.html` sets `lang="ar" dir="rtl"`. There is no i18n library: write Arabic user-facing text directly in components (or in the feature's label modules). Keep identifiers, API/env names, scope names, codes, currency codes and Western digits as they are; put `dir="ltr"` on LTR values (URLs, phones, SKUs, codes, tokens). Use logical CSS properties only (no `left`/`right`/`margin-left`).
 
 Source docs: https://docs.salla.dev/embedded-sdk/overview.md (index of all pages: https://docs.salla.dev/llms.txt, "Embedded SDK" section). The type declarations in [public/types/salla-embedded-sdk.d.ts](public/types/salla-embedded-sdk.d.ts) (synced by `scripts/sync-types.js`) are the source of truth when docs and code disagree.
 
@@ -40,14 +42,13 @@ Source docs: https://docs.salla.dev/embedded-sdk/overview.md (index of all pages
 - **Token verification:** frontend [src/utils/tokenVerification.js](src/utils/tokenVerification.js) → `POST /api/verify-token` → [api/verify-token.js](api/verify-token.js) → Salla exchange-authority. `ENV` env var picks the upstream (`prod` default = `api.salla.dev`; `dev` = Salla's internal dev worker, not reachable for partners).
 - **App ID** is read from the `app_id` URL query param ([src/utils/constants.js](src/utils/constants.js)).
 - **Bootstrap flow** lives in [src/hooks/useAppBootstrap.js](src/hooks/useAppBootstrap.js): `init()` → `getToken()` → verify → `ready()` (or `destroy()` on failure).
-- The SDK is exposed globally as `window.salla.embedded` for the in-app code playground ([src/hooks/useExposeEmbeddedGlobally.js](src/hooks/useExposeEmbeddedGlobally.js)).
 - Tests sit next to code in `__tests__/` folders; `src/test/setup.js` is the Vitest setup.
 
 ### Code structure (logic vs. UI)
 
 - **`src/components/ui/`**: shared presentational kit (`Button`, `IconButton`, `Modal`, `ConfirmDialog`, `Card`, `Field`/`TextInput`/`Select`/`Textarea`/`FormRow`, `Badge`, `Alert`, `EmptyState`, `Skeleton`, `Spinner`, `SegmentedTabs`, `Switch`, `KeyValueList`, `CodeBlock`, `StatCard`, `ToastViewport`). Import from `src/components/ui/index.js`. It makes no SDK or API calls. `Modal` renders through a portal into `document.body`, so tests should query it with `screen`, not `container`.
 - **`src/hooks/ui/`**: generic UI hooks (`useDisclosure`, `useAsyncAction`, `useClipboard`).
-- **`src/hooks/app/usePlaygroundApp.js`**: app-level orchestration (bootstrap, theme sync, iframe detection, nav sync, message log). `App.jsx` only renders.
+- **`src/hooks/app/usePlaygroundApp.js`**: app-level orchestration (bootstrap, theme sync, iframe detection, nav sync, message log). `App.jsx` only renders. Inside the Salla iframe the header and connection strip are hidden (No-Chrome rule); no developer toasts are shown to merchants.
 - **Feature pattern**: `*Tab.jsx` is a thin container that calls the feature hooks in `src/hooks/<feature>/` and passes data and callbacks to presentational components in the same component folder. Pure helpers go in `src/utils/`.
 - **Tabs** are defined once in [src/config/tabs.js](src/config/tabs.js), which is used by both the tab strip and `useNavSync`.
 - **Styles**: [src/styles/index.css](src/styles/index.css) imports everything in cascade order: `tokens.css` (Salla palette, PingARLT, light/dark), `base.css`, `layout.css` (shell), `features/*.css`, and `ui/*.css` (`kit.css` last). Use tokens instead of hardcoded colors, and logical properties (`margin-inline-start`, `inset-inline-end`) for RTL.

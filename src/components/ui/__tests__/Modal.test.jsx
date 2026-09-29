@@ -40,7 +40,7 @@ describe("Modal", () => {
       </Modal>,
     );
     fireEvent.keyDown(document, { key: "Escape" });
-    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await userEvent.click(screen.getByRole("button", { name: "إغلاق" }));
     await userEvent.click(document.querySelector(".modal-backdrop"));
     expect(onClose).toHaveBeenCalledTimes(3);
   });
@@ -54,7 +54,7 @@ describe("Modal", () => {
     );
     fireEvent.keyDown(document, { key: "Escape" });
     await userEvent.click(document.querySelector(".modal-backdrop"));
-    expect(screen.getByRole("button", { name: "Close" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "إغلاق" })).toBeDisabled();
     expect(onClose).not.toHaveBeenCalled();
   });
 
@@ -98,6 +98,6 @@ describe("ConfirmDialog", () => {
       />,
     );
     expect(screen.getByRole("button", { name: /Deleting/ })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "إلغاء" })).toBeDisabled();
   });
 });

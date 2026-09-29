@@ -20,8 +20,8 @@ export default function CodeBlock({
           type="button"
           className="ui-code-copy"
           onClick={() => copy(text)}
-          aria-label={copied ? "Copied" : "Copy to clipboard"}
-          title={copied ? "Copied" : "Copy"}
+          aria-label={copied ? "تم النسخ" : "نسخ"}
+          title={copied ? "تم النسخ" : "نسخ"}
         >
           {copied ? <Check size={14} /> : <Copy size={14} />}
         </button>

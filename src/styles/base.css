@@ -20,7 +20,8 @@ body {
   font-family: var(--font-sans);
   background: var(--bg-primary);
   color: var(--text-primary);
-  line-height: 1.5;
+  /* Arabic script reads better with a little more line height. */
+  line-height: 1.6;
 }
 
 code,

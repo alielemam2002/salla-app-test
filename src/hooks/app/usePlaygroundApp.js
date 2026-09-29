@@ -3,7 +3,6 @@ import { useTheme } from "../../contexts/ThemeContext.jsx";
 import { useToast } from "../../contexts/ToastContext.jsx";
 import { DEFAULT_TAB } from "../../config/tabs.js";
 import { useAppBootstrap } from "../useAppBootstrap.js";
-import { useExposeEmbeddedGlobally } from "../useExposeEmbeddedGlobally.js";
 import { useCheckoutResultSubscription } from "../useCheckoutResultSubscription.js";
 import { useIframeAutoBootstrap } from "../useIframeAutoBootstrap.js";
 import { useMessageLog } from "../useMessageLog.js";
@@ -20,20 +19,13 @@ export function usePlaygroundApp() {
   const { showToast } = useToast();
 
   // Memoized so the SDK subscriptions don't churn.
+  // The host owns the theme; follow it silently.
   const handleSdkThemeChange = useCallback(
-    (newTheme) => {
-      setTheme(newTheme);
-      showToast(`Theme changed by host: ${newTheme}`, "info");
-    },
-    [setTheme, showToast],
+    (newTheme) => setTheme(newTheme),
+    [setTheme],
   );
 
-  const handleSdkActionClick = useCallback(
-    (value) => {
-      showToast(`Action clicked! Value: ${value}`, "info");
-    },
-    [showToast],
-  );
+  const handleSdkActionClick = useCallback(() => {}, []);
 
   // Recommended flow: init() → getToken() → verify → ready()
   const sdk = useAppBootstrap({
@@ -43,9 +35,6 @@ export function usePlaygroundApp() {
     onActionClick: handleSdkActionClick,
   });
   const { embedded, isReady, layout, bootstrap } = sdk;
-
-  // Expose embedded globally for the Playground tab.
-  useExposeEmbeddedGlobally();
 
   // Checkout results (also delivered after 3DS redirects).
   useCheckoutResultSubscription();
@@ -72,16 +61,15 @@ export function usePlaygroundApp() {
     syncActiveTab(activeTab);
   }, [activeTab, syncActiveTab]);
 
-  // Announce the first connection and adopt the host's initial theme.
-  // Later theme changes arrive through onThemeChange.
-  const hasShownConnectedToast = useRef(false);
+  // Adopt the host's initial theme once connected. Later theme changes
+  // arrive through onThemeChange.
+  const adoptedHostTheme = useRef(false);
   useEffect(() => {
-    if (isReady && layout && !hasShownConnectedToast.current) {
-      hasShownConnectedToast.current = true;
-      showToast("Connected! Received layout context.", "success");
+    if (isReady && layout && !adoptedHostTheme.current) {
+      adoptedHostTheme.current = true;
       if (layout.theme) setTheme(layout.theme);
     }
-  }, [isReady, layout, showToast, setTheme]);
+  }, [isReady, layout, setTheme]);
 
   return {
     sdk,

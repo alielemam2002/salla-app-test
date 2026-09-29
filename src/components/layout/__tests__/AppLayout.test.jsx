@@ -21,19 +21,19 @@ function renderLayout(iframeMode) {
 }
 
 describe("AppLayout", () => {
-  it("shows the app header when standalone", () => {
+  it("shows the app header and connection strip when standalone", () => {
     renderLayout("standalone");
-    expect(screen.getByText("Embedded SDK Playground")).toBeInTheDocument();
+    expect(screen.getByText("مدير المتجر")).toBeInTheDocument();
+    expect(screen.getByText("بانتظار لوحة سلة")).toBeInTheDocument();
     expect(screen.getByRole("tabpanel", { name: "Alpha" })).toHaveTextContent(
       "Content",
     );
   });
 
-  it("drops the app header inside the dashboard iframe (No-Chrome rule)", () => {
+  it("drops the header and connection strip inside the dashboard iframe (No-Chrome rule)", () => {
     renderLayout("iframe");
-    expect(
-      screen.queryByText("Embedded SDK Playground"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("مدير المتجر")).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Alpha" })).toBeInTheDocument();
   });
 });

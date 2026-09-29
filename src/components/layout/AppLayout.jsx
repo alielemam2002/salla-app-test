@@ -4,8 +4,9 @@ import Tabs from "./Tabs.jsx";
 
 /**
  * Page chrome: header, connection strip, tab strip and the content area.
- * Inside the Salla dashboard the app header is dropped (No-Chrome rule):
- * the host already shows the app title and owns the theme.
+ * Inside the Salla dashboard the header and connection strip are dropped
+ * (No-Chrome rule): the host already shows the app title and owns the
+ * theme, and connection details are only useful while developing.
  */
 export default function AppLayout({
   connection,
@@ -17,8 +18,12 @@ export default function AppLayout({
   return (
     <div className="app">
       <div className="app-top">
-        {connection.iframeMode !== "iframe" && <Header />}
-        <StatusBar {...connection} />
+        {connection.iframeMode !== "iframe" && (
+          <>
+            <Header />
+            <StatusBar {...connection} />
+          </>
+        )}
         <Tabs tabs={tabs} activeTab={activeTab} onTabChange={onTabChange} />
       </div>
       <main

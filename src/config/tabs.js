@@ -1,10 +1,8 @@
 import {
-  Code2,
   Megaphone,
   Package,
   Puzzle,
   ShoppingCart,
-  Terminal,
   TicketPercent,
 } from "lucide-react";
 
@@ -13,13 +11,11 @@ import {
  * host sub-nav items registered by useNavSync.
  */
 export const APP_TABS = [
-  { id: "test-console", label: "Test Console", icon: Terminal },
-  { id: "playground", label: "Playground", icon: Code2 },
-  { id: "addons", label: "Addons", icon: Puzzle },
-  { id: "products", label: "Products", icon: Package },
-  { id: "coupons", label: "Coupons", icon: TicketPercent },
-  { id: "cart-recovery", label: "Cart Recovery", icon: ShoppingCart },
-  { id: "campaigns", label: "WhatsApp Campaigns", icon: Megaphone },
+  { id: "products", label: "المنتجات", icon: Package },
+  { id: "coupons", label: "الكوبونات", icon: TicketPercent },
+  { id: "cart-recovery", label: "السلات المتروكة", icon: ShoppingCart },
+  { id: "campaigns", label: "حملات واتساب", icon: Megaphone },
+  { id: "addons", label: "الإضافات", icon: Puzzle },
 ];
 
 export const DEFAULT_TAB = APP_TABS[0].id;

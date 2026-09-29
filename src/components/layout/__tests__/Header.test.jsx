@@ -5,14 +5,13 @@ import Header from "../Header.jsx";
 import { ThemeProvider } from "../../../contexts/ThemeContext.jsx";
 
 describe("Header", () => {
-  it("renders title and version", () => {
+  it("renders the Arabic title", () => {
     render(
       <ThemeProvider>
         <Header />
       </ThemeProvider>,
     );
-    expect(screen.getByText("Embedded SDK Playground")).toBeInTheDocument();
-    expect(screen.getByText(/v0\.2\.6/)).toBeInTheDocument();
+    expect(screen.getByText("مدير المتجر")).toBeInTheDocument();
   });
 
   it("renders theme toggle button", () => {
@@ -22,7 +21,7 @@ describe("Header", () => {
       </ThemeProvider>,
     );
     expect(
-      screen.getByRole("button", { name: "Toggle Theme" }),
+      screen.getByRole("button", { name: "تبديل المظهر" }),
     ).toBeInTheDocument();
   });
 
@@ -32,7 +31,7 @@ describe("Header", () => {
         <Header />
       </ThemeProvider>,
     );
-    const toggle = screen.getByRole("button", { name: "Toggle Theme" });
+    const toggle = screen.getByRole("button", { name: "تبديل المظهر" });
     await userEvent.click(toggle);
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
   });

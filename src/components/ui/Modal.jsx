@@ -30,7 +30,7 @@ export default function Modal({
   bodyClassName,
   ariaLabel,
   dir,
-  closeLabel = "Close",
+  closeLabel = "إغلاق",
 }) {
   const titleId = useId();
   const dialogRef = useRef(null);

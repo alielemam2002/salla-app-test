@@ -19,12 +19,12 @@ export default function StatusBar({ isConnected, parentOrigin, iframeMode }) {
         dot
         className={isConnected ? "status-connected" : "status-disconnected"}
       >
-        {isConnected ? "Connected" : "Waiting for Parent"}
+        {isConnected ? "متصل بسلة" : "بانتظار لوحة سلة"}
       </Badge>
-      <StatusItem icon={Globe} label="Parent origin">
+      <StatusItem icon={Globe} label="مصدر الصفحة">
         <code className="status-value">{parentOrigin || "—"}</code>
       </StatusItem>
-      <StatusItem icon={MonitorSmartphone} label="Mode">
+      <StatusItem icon={MonitorSmartphone} label="الوضع">
         <code className="status-value">{iframeMode}</code>
       </StatusItem>
     </div>

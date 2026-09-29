@@ -11,7 +11,7 @@ describe("StatusBar", () => {
         iframeMode="embedded"
       />,
     );
-    expect(screen.getByText("Connected")).toBeInTheDocument();
+    expect(screen.getByText("متصل بسلة")).toBeInTheDocument();
     expect(screen.getByText("https://example.com")).toBeInTheDocument();
     expect(screen.getByText("embedded")).toBeInTheDocument();
   });
@@ -24,7 +24,7 @@ describe("StatusBar", () => {
         iframeMode="standalone"
       />,
     );
-    expect(screen.getByText("Waiting for Parent")).toBeInTheDocument();
+    expect(screen.getByText("بانتظار لوحة سلة")).toBeInTheDocument();
     expect(screen.getByText("—")).toBeInTheDocument();
     expect(screen.getByText("standalone")).toBeInTheDocument();
   });

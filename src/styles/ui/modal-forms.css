@@ -202,7 +202,7 @@
 
 .form-required {
   color: var(--accent-danger);
-  margin-left: 2px;
+  margin-inline-start: 2px;
 }
 
 .form-input,

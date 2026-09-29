@@ -1,8 +1,5 @@
-import { Sun, Moon, Code2 } from "lucide-react";
+import { Sun, Moon, Store } from "lucide-react";
 import { useTheme } from "../../contexts/ThemeContext.jsx";
-import { Badge } from "../ui/index.js";
-
-const SDK_VERSION = "v0.2.6";
 
 /** `showThemeToggle` is off inside Salla, where the host owns the theme. */
 export default function Header({ showThemeToggle = true, children }) {
@@ -12,18 +9,14 @@ export default function Header({ showThemeToggle = true, children }) {
     <header className="header">
       <div className="header-left">
         <div className="logo" aria-hidden="true">
-          <Code2 size={20} />
+          <Store size={20} />
         </div>
         <div className="header-titles">
-          <h1 className="header-title">Embedded SDK Playground</h1>
+          <h1 className="header-title">مدير المتجر</h1>
           <span className="header-caption">
-            Test <code>@salla.sa/embedded-sdk</code> inside the Merchant
-            Dashboard
+            منتجاتك وكوبوناتك وحملاتك في مكان واحد
           </span>
         </div>
-        <Badge tone="primary" className="header-version">
-          {SDK_VERSION}
-        </Badge>
       </div>
       <div className="header-right">
         {children}
@@ -32,8 +25,8 @@ export default function Header({ showThemeToggle = true, children }) {
             id="theme-toggle"
             type="button"
             className="ui-icon-btn"
-            title="Toggle Theme"
-            aria-label="Toggle Theme"
+            title="تبديل المظهر"
+            aria-label="تبديل المظهر"
             onClick={toggleTheme}
           >
             {isDarkMode ? <Moon size={18} /> : <Sun size={18} />}

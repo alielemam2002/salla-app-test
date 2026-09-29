@@ -30,40 +30,32 @@ vi.mock("../hooks/useAppBootstrap.js", () => ({
   }),
 }));
 
-vi.mock("../hooks/useExposeEmbeddedGlobally.js", () => ({
-  useExposeEmbeddedGlobally: () => {},
-}));
-
 describe("App", () => {
-  it("renders header and tabs", () => {
+  it("shows the merchant tabs in Arabic, without the developer tools", () => {
     render(<App />);
-    expect(screen.getByText("Embedded SDK Playground")).toBeInTheDocument();
-    expect(
-      screen.getByRole("tab", { name: "Test Console" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("tab", { name: "Playground" }),
-    ).toBeInTheDocument();
+    for (const name of [
+      "المنتجات",
+      "الكوبونات",
+      "السلات المتروكة",
+      "حملات واتساب",
+      "الإضافات",
+    ]) {
+      expect(screen.getByRole("tab", { name })).toBeInTheDocument();
+    }
+    expect(screen.queryByRole("tab", { name: /Test Console/ })).toBeNull();
+    expect(screen.queryByRole("tab", { name: /Playground/ })).toBeNull();
   });
 
-  it("shows Test Console content by default", () => {
+  it("opens on Products and switches tabs", async () => {
     render(<App />);
-    expect(screen.getByText("Payload Editor")).toBeInTheDocument();
-  });
-
-  it("switches to Playground when Playground tab is clicked", async () => {
-    render(<App />);
-    await userEvent.click(screen.getByRole("tab", { name: "Playground" }));
-    expect(screen.getByText("Code Editor")).toBeInTheDocument();
-  });
-
-  it("shows toast when Send is clicked with no parent window", async () => {
-    render(<App />);
-    await userEvent.click(screen.getByRole("button", { name: /send/i }));
-    expect(
-      screen.getByText(
-        /No parent window detected\. Open this page in an iframe/,
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "المنتجات" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await userEvent.click(screen.getByRole("tab", { name: "الكوبونات" }));
+    expect(screen.getByRole("tab", { name: "الكوبونات" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 });
