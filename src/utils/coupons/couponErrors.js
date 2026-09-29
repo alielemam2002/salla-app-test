@@ -8,7 +8,11 @@ const ACTION_TITLES = {
   create: "Could not create coupon.",
   update: "Could not update coupon.",
   delete: "Could not delete coupon.",
+  bar: "Could not update the storefront announcement bar.",
+  barLoad: "Could not load the storefront announcement bar.",
 };
+
+const isBarAction = (action) => action === "bar" || action === "barLoad";
 
 export const FIELD_LABELS = {
   code: "Coupon code",
@@ -28,8 +32,14 @@ export const FIELD_LABELS = {
 // Salla sometimes returns translation keys instead of sentences.
 const isTranslationKey = (msg) => /^[a-z_]+(\.[a-z_]+)+$/i.test(msg || "");
 
-function reasonFor(result) {
+function reasonFor(result, action) {
   const { status, code } = result;
+  if (isBarAction(action) && (code === "missing_scope" || status === 403)) {
+    return "The app can't read or write its own settings in this store. Check that the app is installed and active.";
+  }
+  if (isBarAction(action) && status === 404) {
+    return "Salla didn't find this app's settings. Check SALLA_APP_ID and that the app is installed on the store.";
+  }
   if (code === "network_error" || status === 0) {
     return "Network problem. Check your connection and try again.";
   }
@@ -69,7 +79,7 @@ function reasonFor(result) {
 
 /**
  * @param {object} result - `{ status, code, error, fields }` from couponsApi
- * @param {"load"|"create"|"update"|"delete"} action
+ * @param {"load"|"create"|"update"|"delete"|"bar"|"barLoad"} action
  * @returns {{ title: string, reason: string, fieldErrors: Record<string,string>, canRefreshSession: boolean }}
  */
 export function describeCouponError(result = {}, action = "load") {
@@ -83,7 +93,7 @@ export function describeCouponError(result = {}, action = "load") {
     }
   }
 
-  const known = reasonFor(result);
+  const known = reasonFor(result, action);
   const sallaMessage =
     result.code === "salla_api_error" && !isTranslationKey(result.error)
       ? result.error

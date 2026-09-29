@@ -7,6 +7,9 @@ export const PRODUCTS_FUNCTION_URL = "/api/products";
 // Storewide coupons CRUD (api/coupons.js)
 export const COUPONS_FUNCTION_URL = "/api/coupons";
 
+// Storefront coupon announcement bar, kept in the app's settings (api/coupon-bar.js)
+export const COUPON_BAR_FUNCTION_URL = "/api/coupon-bar";
+
 // App ID - can be overridden via URL parameter ?appId=XXX
 export function getAppId() {
   const urlParams = new URLSearchParams(window.location.search);

@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Eye, Megaphone, Pencil, Trash2 } from "lucide-react";
 import { Badge, Button } from "../ui/index.js";
 import {
   COUPON_STATUS,
@@ -24,7 +24,7 @@ function UsageLine({ coupon }) {
 }
 
 /** One coupon. Memoized: the list re-renders without touching every card. */
-function CouponCard({ coupon, status, onView, onEdit, onDelete }) {
+function CouponCard({ coupon, status, hasBar, onView, onEdit, onDelete }) {
   const meta = STATUS_META[status];
   const target = getCountdownTarget(coupon, status);
   const unmanaged = getUnmanagedSettings(coupon);
@@ -46,6 +46,17 @@ function CouponCard({ coupon, status, onView, onEdit, onDelete }) {
 
       <p className="coupon-card-discount">{formatDiscount(coupon)}</p>
       <CouponScope storewide={isStorewide(coupon)} />
+
+      {hasBar && (
+        <Badge
+          tone="info"
+          icon={Megaphone}
+          className="coupon-card-bar"
+          title="Advertised in the storefront announcement bar"
+        >
+          On storefront bar
+        </Badge>
+      )}
 
       {target !== null && (
         <CouponCountdown

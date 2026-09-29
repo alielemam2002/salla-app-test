@@ -250,6 +250,60 @@
   gap: var(--space-sm);
 }
 
+/* ---------- Storefront announcement bar ---------- */
+
+.coupon-bar-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding-block-start: var(--space-md);
+  border-block-start: 1px solid var(--border-color);
+}
+
+.coupon-bar-fields-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.coupon-bar-color {
+  block-size: 40px;
+  padding: var(--space-2xs);
+  cursor: pointer;
+}
+
+.coupon-bar-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+/* Mirrors the storefront snippet's bar (snippets/coupon-announcement-bar.js). */
+.coupon-bar-preview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: 10px var(--space-md);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.coupon-bar-preview-code {
+  padding: var(--space-2xs) var(--space-sm);
+  border: 1.5px dashed;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+.coupon-card-bar {
+  align-self: flex-start;
+}
+
 .coupon-form-server-fields {
   margin: var(--space-xs) 0 0;
   padding-inline-start: var(--space-lg);

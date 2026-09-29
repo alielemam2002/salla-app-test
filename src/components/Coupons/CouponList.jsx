@@ -4,7 +4,13 @@ import CouponCard from "./CouponCard.jsx";
 const SECTION_ORDER = ["active", "scheduled", "expired", "disabled"];
 
 /** Coupons grouped by status: ACTIVE, SCHEDULED, EXPIRED, DISABLED. */
-export default function CouponList({ items, onView, onEdit, onDelete }) {
+export default function CouponList({
+  items,
+  barCode,
+  onView,
+  onEdit,
+  onDelete,
+}) {
   return (
     <div className="coupon-sections">
       {SECTION_ORDER.map((status) => {
@@ -27,6 +33,7 @@ export default function CouponList({ items, onView, onEdit, onDelete }) {
                   key={coupon.id}
                   coupon={coupon}
                   status={status}
+                  hasBar={Boolean(barCode) && barCode === coupon.code}
                   onView={onView}
                   onEdit={onEdit}
                   onDelete={onDelete}
