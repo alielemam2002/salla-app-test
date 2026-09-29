@@ -1,4 +1,4 @@
-import { Camera, Image as ImageIcon, Sparkles } from "lucide-react";
+import { Image as ImageIcon, Sparkles } from "lucide-react";
 import { FormRow, TextInput } from "../ui/index.js";
 import EditorSection from "./EditorSection.jsx";
 import EditorField from "./EditorField.jsx";
@@ -20,7 +20,6 @@ export default function AppearanceSection({
   altText,
   media,
   onOpenAi,
-  onOpenPhotoStudio,
 }) {
   return (
     <EditorSection
@@ -34,28 +33,6 @@ export default function AppearanceSection({
       onSave={onSaveSection}
       isSaving={isSaving}
     >
-      {onOpenPhotoStudio && (
-        <div className="studio-trigger-banner">
-          <div className="studio-trigger-banner-text">
-            <strong>
-              <Camera size={16} aria-hidden="true" />
-              استوديو تصوير المنتجات بالذكاء الاصطناعي (مجاني)
-            </strong>
-            <span>
-              توليد 4 لقطات فوتوغرافية تجارية فائقة الواقعية ورفعها مباشرة لمعرض صور المنتج في سلة بضغطة زر.
-            </span>
-          </div>
-          <button
-            type="button"
-            className="studio-trigger-btn"
-            onClick={onOpenPhotoStudio}
-          >
-            <Sparkles size={15} aria-hidden="true" />
-            <span>جلسة تصوير جديدة 📸</span>
-          </button>
-        </div>
-      )}
-
       <div id="field-images" className="editor-field">
         <div className="form-group">
           <label className="form-label" htmlFor="editor-new-image-url">
