@@ -4,6 +4,9 @@ export const VERIFY_FUNCTION_URL = "/api/verify-token";
 // Lists store products using the merchant's stored OAuth token (api/products.js)
 export const PRODUCTS_FUNCTION_URL = "/api/products";
 
+// Uploads one product image file as multipart/form-data (api/product-media.js)
+export const PRODUCT_MEDIA_FUNCTION_URL = "/api/product-media";
+
 // Storewide coupons CRUD (api/coupons.js)
 export const COUPONS_FUNCTION_URL = "/api/coupons";
 

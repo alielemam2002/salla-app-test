@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useProduct,
   useTaxonomies,
@@ -8,6 +9,8 @@ import {
   useProductImages,
   useUpdateProduct,
   useDeleteProductImage,
+  useAttachProductVideo,
+  productKeys,
   useCreateOption,
   useDeleteOption,
   useUpdateVariant,
@@ -57,6 +60,7 @@ export function useProductEditor({
   // Mutations
   const updateProduct = useUpdateProduct(productId, token);
   const deleteImage = useDeleteProductImage(productId, token);
+  const attachVideo = useAttachProductVideo(productId, token);
   const createOption = useCreateOption(productId, token);
   const deleteOption = useDeleteOption(productId, token);
   const updateVariant = useUpdateVariant(productId, token);
@@ -72,7 +76,9 @@ export function useProductEditor({
   });
   const { setImages } = gallery;
 
-  // Populate form + gallery whenever the product (or its images) arrive
+  // Populate the form when the product arrives. Kept apart from the images
+  // effect so refetching images (after an upload or delete) never wipes
+  // unsaved form edits.
   useEffect(() => {
     if (!product) return;
     const formVals = productToFormValues(product);
@@ -84,9 +90,38 @@ export function useProductEditor({
       formVals.promotion_title = current.promotion_title;
     }
     reset(formVals);
+  }, [product, reset, getValues]);
+
+  // Gallery = Salla's images, plus image links added here but not saved yet.
+  useEffect(() => {
+    if (!product) return;
     const nextImages = normalizeProductImages(product, queryImages);
-    if (nextImages) setImages(nextImages);
-  }, [product, queryImages, reset, setImages, getValues]);
+    if (!nextImages) return;
+    setImages((prev) => [...nextImages, ...prev.filter((img) => img.isLocal)]);
+  }, [product, queryImages, setImages]);
+
+  const queryClient = useQueryClient();
+  const refreshMedia = useCallback(
+    () =>
+      queryClient.invalidateQueries({
+        queryKey: productKeys.images(productId),
+      }),
+    [queryClient, productId],
+  );
+
+  const addVideo = useCallback(
+    async (videoUrl) => {
+      try {
+        await attachVideo.mutateAsync(videoUrl);
+        notify("تمت إضافة الفيديو إلى المنتج في سلة.", "success");
+        return true;
+      } catch (err) {
+        notify(err.message || "تعذر إضافة الفيديو", "error");
+        return false;
+      }
+    },
+    [attachVideo, notify],
+  );
 
   const values = watch();
   const scoreData = useCompletionScore({
@@ -119,6 +154,15 @@ export function useProductEditor({
         }
       }
       reset(formData);
+      // Saved links are Salla's now: stop treating them as local and reload.
+      setImages((prev) =>
+        prev.map((img) => {
+          if (!img.isLocal) return img;
+          const { isLocal: _isLocal, ...saved } = img;
+          return saved;
+        }),
+      );
+      refreshMedia();
       notify("تم حفظ بيانات المنتج بنجاح في سلة!", "success");
     } catch (err) {
       notify(err.message || "حدث خطأ أثناء حفظ المنتج في سلة", "error");
@@ -173,6 +217,11 @@ export function useProductEditor({
     values,
     scoreData,
     gallery,
+    media: {
+      refresh: refreshMedia,
+      addVideo,
+      isAddingVideo: Boolean(attachVideo?.isPending),
+    },
     save,
     isSaving: updateProduct.isPending,
     currency:

@@ -153,6 +153,9 @@ export function normalizeProductImages(product, queryImages) {
       default: Boolean(img.default || img.is_main || img.main || idx === 0),
       sort: img.sort !== undefined ? Number(img.sort) : idx + 1,
       alt: typeof img === "object" ? img.alt || "" : "",
+      // Salla lists YouTube videos with the images (type "video").
+      type: img?.type === "video" ? "video" : "image",
+      video_url: (typeof img === "object" && img.video_url) || "",
     }));
   }
   if (product.thumbnail || product.main_image) {

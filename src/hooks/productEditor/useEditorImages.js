@@ -14,6 +14,8 @@ export function useEditorImages({ deleteImage, notify, getAltText }) {
       setImages((prev) => [
         ...prev,
         {
+          // Not in Salla yet: kept when Salla's images are refetched.
+          isLocal: true,
           original: url,
           default: prev.length === 0,
           sort: prev.length + 1,

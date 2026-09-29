@@ -3,6 +3,7 @@ import { FormRow, TextInput } from "../ui/index.js";
 import EditorSection from "./EditorSection.jsx";
 import EditorField from "./EditorField.jsx";
 import ImageGallery from "./ImageGallery.jsx";
+import MediaManager from "./MediaManager.jsx";
 
 export default function AppearanceSection({
   register,
@@ -14,13 +15,17 @@ export default function AppearanceSection({
   onSaveSection,
   isSaving,
   isImageActionBusy,
+  productId,
+  token,
+  altText,
+  media,
 }) {
   return (
     <EditorSection
       id="section-appearance"
       icon={ImageIcon}
       title="المظهر والصور"
-      description="الصورة الرئيسية، صور المعرض، العنوان الترويجي، والعنوان الفرعي."
+      description="الصورة الرئيسية، صور المعرض، إدارة الوسائط، العنوان الترويجي، والعنوان الفرعي."
       score={sectionScore}
       fallbackWeight={15}
       saveLabel="حفظ المظهر"
@@ -43,6 +48,16 @@ export default function AppearanceSection({
           />
         </div>
       </div>
+
+      <MediaManager
+        productId={productId}
+        token={token}
+        images={images}
+        altText={altText}
+        onMediaChanged={media?.refresh}
+        onAddVideo={media?.addVideo}
+        isAddingVideo={media?.isAddingVideo}
+      />
 
       <FormRow>
         <EditorField

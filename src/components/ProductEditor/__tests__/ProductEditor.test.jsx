@@ -152,6 +152,11 @@ describe("ProductEditor", () => {
       isPending: false,
     });
 
+    productQueries.useAttachProductVideo.mockReturnValue({
+      mutateAsync: vi.fn().mockResolvedValue({}),
+      isPending: false,
+    });
+
     productQueries.useCreateOption.mockReturnValue({
       mutateAsync: mockMutateCreateOption,
       isPending: false,
@@ -470,6 +475,76 @@ describe("ProductEditor", () => {
     );
     await waitFor(() => expect(dialog).not.toBeInTheDocument());
     expect(mockMutateUpdateProduct).not.toHaveBeenCalled();
+  });
+
+  it("shows media management inside the Appearance section", () => {
+    renderWithClient(
+      <ProductEditor
+        productId={101}
+        token="tok_test"
+        initialProduct={mockProduct}
+      />,
+    );
+    const appearance = document.getElementById("section-appearance");
+    expect(appearance).toContainElement(document.getElementById("field-media"));
+    expect(screen.getByText("إدارة الوسائط")).toBeInTheDocument();
+    expect(screen.getByText("اسحب الصور هنا")).toBeInTheDocument();
+  });
+
+  it("asks for confirmation before deleting a saved image", async () => {
+    renderWithClient(
+      <ProductEditor
+        productId={101}
+        token="tok_test"
+        initialProduct={mockProduct}
+        showToast={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getAllByRole("button", { name: "حذف الصورة" })[1]);
+    expect(
+      screen.getByText(/هل أنت متأكد من حذف هذه الصورة؟/),
+    ).toBeInTheDocument();
+    expect(mockMutateDeleteImage).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "إلغاء" }));
+    expect(mockMutateDeleteImage).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getAllByRole("button", { name: "حذف الصورة" })[1]);
+    fireEvent.click(screen.getByRole("button", { name: "تأكيد" }));
+    await waitFor(() => expect(mockMutateDeleteImage).toHaveBeenCalledWith(2));
+  });
+
+  it("keeps unsaved edits when the product's images are refetched", async () => {
+    const { rerender } = renderWithClient(
+      <ProductEditor
+        productId={101}
+        token="tok_test"
+        initialProduct={mockProduct}
+      />,
+    );
+    const name = screen.getByDisplayValue("Classic Silk Shirt");
+    fireEvent.change(name, { target: { value: "Edited name" } });
+
+    // A new images array, as after an upload refetch.
+    productQueries.useProductImages.mockReturnValue({
+      data: [...mockProduct.images, { id: 3, url: "u3", sort: 3 }],
+      isLoading: false,
+    });
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <ProductEditor
+          productId={101}
+          token="tok_test"
+          initialProduct={mockProduct}
+        />
+      </QueryClientProvider>,
+    );
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole("button", { name: "حذف الصورة" }),
+      ).toHaveLength(3),
+    );
+    expect(screen.getByDisplayValue("Edited name")).toBeInTheDocument();
   });
 
   it("calls onBack when back button is clicked", () => {

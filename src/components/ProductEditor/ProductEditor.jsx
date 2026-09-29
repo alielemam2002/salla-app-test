@@ -80,6 +80,10 @@ export default function ProductEditor({
           onRemoveImage={gallery.removeImage}
           onSetMainImage={gallery.setMainImage}
           isImageActionBusy={gallery.isBusy}
+          productId={productId}
+          token={token}
+          altText={values.name}
+          media={editor.media}
           {...sectionProps}
         />
 

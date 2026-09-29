@@ -74,8 +74,11 @@ export async function merchantApi(path, options = {}) {
 
   const method = (options.method || "GET").toUpperCase();
   const hasBody = options.body !== undefined && options.body !== null;
+  // FormData goes out as multipart/form-data; fetch sets the boundary header.
+  const isFormData =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
   const body = hasBody
-    ? typeof options.body === "string"
+    ? typeof options.body === "string" || isFormData
       ? options.body
       : JSON.stringify(options.body)
     : undefined;
@@ -83,7 +86,7 @@ export async function merchantApi(path, options = {}) {
   const headers = {
     Authorization: `Bearer ${accessToken}`,
     Accept: "application/json",
-    ...(hasBody ? { "Content-Type": "application/json" } : {}),
+    ...(hasBody && !isFormData ? { "Content-Type": "application/json" } : {}),
     ...options.headers,
   };
 

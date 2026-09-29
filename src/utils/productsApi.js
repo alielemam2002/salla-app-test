@@ -267,6 +267,19 @@ export async function uploadProductImage(token, productId, imageData) {
 }
 
 /**
+ * Add a YouTube video to a product (Salla takes videos as YouTube links only).
+ */
+export async function attachProductVideo(token, productId, videoUrl) {
+  return callProductsApi({
+    action: "video_attach",
+    token,
+    appId: getAppId(),
+    productId,
+    videoUrl,
+  });
+}
+
+/**
  * Delete an image from a product.
  */
 export async function deleteProductImage(token, productId, imageId) {

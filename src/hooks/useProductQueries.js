@@ -6,6 +6,7 @@ import {
   fetchProductImages,
   uploadProductImage,
   deleteProductImage,
+  attachProductVideo,
   fetchProductOptions,
   createProductOption,
   deleteProductOption,
@@ -212,9 +213,30 @@ export function useDeleteProductImage(productId, token) {
       }
       return imageId;
     },
+    // Only the images: refetching the product would reset unsaved form edits.
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: productKeys.images(productId) });
-      queryClient.invalidateQueries({ queryKey: productKeys.detail(productId) });
+    },
+  });
+}
+
+/**
+ * Mutation: Add a YouTube video to a product (the only video type Salla
+ * accepts). Salla returns it with the product's images.
+ */
+export function useAttachProductVideo(productId, token) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (videoUrl) => {
+      const res = await attachProductVideo(token, productId, videoUrl);
+      if (!res.success) {
+        throw formatApiError(res, "Failed to add the video");
+      }
+      return res.video;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: productKeys.images(productId) });
     },
   });
 }

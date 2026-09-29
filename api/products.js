@@ -8,6 +8,10 @@
  * - update: PUT /admin/v2/products/{id}
  * - delete: DELETE /admin/v2/products/{id}
  * - taxonomies: GET /categories & GET /brands (graceful fallback if scopes absent)
+ * - images_list: images + YouTube videos from GET /products/{id}
+ * - image_delete: DELETE /products/images/{image}
+ * - video_attach: POST /products/{id}/video (YouTube links only)
+ * Image files are uploaded by api/product-media.js (multipart).
  *
  * Authentication:
  * 1. Verifies the embedded session token via Salla introspect
@@ -17,6 +21,10 @@
 import { introspectEmbeddedToken, merchantApi } from "./_lib/salla.js";
 
 const MAX_PER_PAGE = 60; // Salla's per_page limit
+
+const YOUTUBE_RE =
+  /^https:\/\/(www\.|m\.)?(youtube\.com\/(watch\?v=|shorts\/|embed\/)|youtu\.be\/)[\w-]{6,}/i;
+export const isYoutubeUrl = (url) => YOUTUBE_RE.test(String(url || ""));
 
 // In-memory cache for product metadata like subtitle that might not be echoed in standard Salla GET
 const productMetaOverrides = new Map();
@@ -855,24 +863,22 @@ export async function POST(request) {
           return fail(400, "bad_request", "Product ID is required");
         }
 
-        let images = [];
-        try {
-          const res = await merchantApi(
-            `/products/${encodeURIComponent(productId)}/images`,
+        // Salla has no "list images" endpoint: images (and YouTube videos)
+        // come with Product Details, each { id, url, main, alt, video_url,
+        // type, sort }. docs: https://docs.salla.dev/product/product-details.md
+        const { status, body: result } = await merchantApi(
+          `/products/${encodeURIComponent(productId)}`,
+        );
+        if (!result?.success) {
+          return fail(
+            status >= 400 ? status : 502,
+            "salla_api_error",
+            result?.error?.message || "Failed to load product images",
           );
-          if (res.body?.success && Array.isArray(res.body?.data)) {
-            images = res.body.data;
-          }
-        } catch {
-          try {
-            const pRes = await merchantApi(
-              `/products/${encodeURIComponent(productId)}`,
-            );
-            images = pRes.body?.data?.images || [];
-          } catch {
-            images = [];
-          }
         }
+        const images = Array.isArray(result.data?.images)
+          ? result.data.images
+          : [];
 
         return Response.json({ success: true, images });
       }
@@ -946,34 +952,12 @@ export async function POST(request) {
           return fail(400, "bad_request", "Product ID and Image ID are required");
         }
 
-        let result;
-        let status;
-        try {
-          const res = await merchantApi(
-            `/products/${encodeURIComponent(productId)}/images/${encodeURIComponent(imageId)}`,
-            { method: "DELETE" },
-          );
-          status = res.status;
-          result = res.body;
-        } catch {
-          // Fallback: filter out image by id via product update
-          const pRes = await merchantApi(
-            `/products/${encodeURIComponent(productId)}`,
-          );
-          const currentImages = pRes.body?.data?.images || [];
-          const updatedImages = currentImages.filter(
-            (img) => String(img.id) !== String(imageId),
-          );
-          const updateRes = await merchantApi(
-            `/products/${encodeURIComponent(productId)}`,
-            {
-              method: "PUT",
-              body: { images: updatedImages },
-            },
-          );
-          status = updateRes.status;
-          result = updateRes.body;
-        }
+        // DELETE /products/images/{image} (the image id alone identifies it).
+        // docs: https://docs.salla.dev/product-images/delete-image.md
+        const { status, body: result } = await merchantApi(
+          `/products/images/${encodeURIComponent(imageId)}`,
+          { method: "DELETE" },
+        );
 
         if (!result?.success) {
           return fail(
@@ -988,6 +972,37 @@ export async function POST(request) {
           imageId,
           message: "Image deleted successfully",
         });
+      }
+
+      case "video_attach": {
+        // Salla only takes product videos as YouTube links, one per request.
+        // docs: https://docs.salla.dev/product-images/attach-youtube-video.md
+        const productId = body.productId;
+        const videoUrl = String(body.videoUrl || "").trim();
+        if (!productId) {
+          return fail(400, "bad_request", "Product ID is required");
+        }
+        if (!isYoutubeUrl(videoUrl)) {
+          return fail(422, "validation_failed", "A YouTube link is required", {
+            video_url: ["Use a YouTube video link"],
+          });
+        }
+        const payload = { video_url: videoUrl };
+        if (body.alt) payload.alt = String(body.alt).slice(0, 255);
+
+        const { status, body: result } = await merchantApi(
+          `/products/${encodeURIComponent(productId)}/video`,
+          { method: "POST", body: payload },
+        );
+        if (!result?.success) {
+          return fail(
+            status >= 400 ? status : 422,
+            "salla_api_error",
+            result?.error?.message || "Failed to add the video",
+            result?.error?.fields || null,
+          );
+        }
+        return Response.json({ success: true, video: result.data });
       }
 
       // -----------------------------------------------------------------------
