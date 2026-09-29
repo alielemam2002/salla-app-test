@@ -17,23 +17,11 @@ import {
   updateCoupon,
 } from "../../../utils/couponsApi.js";
 
-import {
-  clearCouponBar,
-  fetchCouponBar,
-  saveCouponBar,
-} from "../../../utils/couponBarApi.js";
-
 vi.mock("../../../utils/couponsApi.js", () => ({
   fetchAllCoupons: vi.fn(),
   createCoupon: vi.fn(),
   updateCoupon: vi.fn(),
   deleteCoupon: vi.fn(),
-}));
-
-vi.mock("../../../utils/couponBarApi.js", () => ({
-  fetchCouponBar: vi.fn(),
-  saveCouponBar: vi.fn(),
-  clearCouponBar: vi.fn(),
 }));
 
 // Salla wall-clock string for "now + offset" in store time (+03:00).
@@ -108,7 +96,6 @@ describe("CouponsTab", () => {
       success: true,
       coupons: [ACTIVE, SCHEDULED, EXPIRED],
     });
-    fetchCouponBar.mockResolvedValue({ success: true, bar: null });
   });
 
   it("groups coupons by status with storewide scope, countdown and usage", async () => {
@@ -307,141 +294,6 @@ describe("CouponsTab", () => {
       expect(showToast).toHaveBeenCalledWith("Coupon OLD5 deleted", "success"),
     );
     expect(fetchAllCoupons).toHaveBeenCalledTimes(2);
-  });
-
-  it("turns on the storefront bar with the suggested Arabic text", async () => {
-    updateCoupon.mockResolvedValue({ success: true, coupon: ACTIVE });
-    saveCouponBar.mockImplementation(async (_token, bar) => ({
-      success: true,
-      bar,
-    }));
-    renderTab();
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Edit SUMMER20" }),
-    );
-    const dialog = screen.getByRole("dialog");
-    fireEvent.click(
-      within(dialog).getByRole("switch", {
-        name: /Storefront announcement bar/,
-      }),
-    );
-    expect(within(dialog).getByText("Preview")).toBeInTheDocument();
-    fireEvent.click(
-      within(dialog).getByRole("button", { name: "Save changes" }),
-    );
-
-    await waitFor(() =>
-      expect(saveCouponBar).toHaveBeenCalledWith("tok", {
-        code: "SUMMER20",
-        text: "استخدم كود SUMMER20 واحصل على خصم 20%",
-        bg_color: "#004d5b",
-        text_color: "#ffffff",
-        ends_at: `${ACTIVE.expiry_date.slice(0, 16)}:00`,
-      }),
-    );
-    const card = await screen.findByRole("article", { name: "SUMMER20" });
-    expect(
-      await within(card).findByText("On storefront bar"),
-    ).toBeInTheDocument();
-  });
-
-  it("hides the bar when its coupon turns the option off or is deleted", async () => {
-    fetchCouponBar.mockResolvedValue({
-      success: true,
-      bar: {
-        code: "OLD5",
-        text: "x",
-        bg_color: "#000000",
-        text_color: "#ffffff",
-      },
-    });
-    clearCouponBar.mockResolvedValue({ success: true, bar: null });
-    deleteCoupon.mockResolvedValue({ success: true, couponId: 3 });
-    renderTab();
-    const card = await screen.findByRole("article", { name: "OLD5" });
-    expect(
-      await within(card).findByText("On storefront bar"),
-    ).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Delete OLD5" }));
-    fireEvent.click(screen.getByRole("button", { name: "Delete coupon" }));
-    await waitFor(() =>
-      expect(clearCouponBar).toHaveBeenCalledWith("tok", "OLD5"),
-    );
-  });
-
-  it("leaves another coupon's bar alone", async () => {
-    fetchCouponBar.mockResolvedValue({
-      success: true,
-      bar: {
-        code: "OLD5",
-        text: "x",
-        bg_color: "#000000",
-        text_color: "#ffffff",
-      },
-    });
-    updateCoupon.mockResolvedValue({ success: true, coupon: ACTIVE });
-    const { showToast } = renderTab();
-    await screen.findByText("On storefront bar");
-    fireEvent.click(screen.getByRole("button", { name: "Edit SUMMER20" }));
-    const dialog = screen.getByRole("dialog");
-    fireEvent.click(
-      within(dialog).getByRole("button", { name: "Save changes" }),
-    );
-    await waitFor(() =>
-      expect(showToast).toHaveBeenCalledWith(
-        "Coupon SUMMER20 updated",
-        "success",
-      ),
-    );
-    expect(clearCouponBar).not.toHaveBeenCalled();
-    expect(saveCouponBar).not.toHaveBeenCalled();
-  });
-
-  it("disables the bar option when app settings can't be read", async () => {
-    fetchCouponBar.mockResolvedValue({
-      success: false,
-      status: 404,
-      code: "salla_api_error",
-      error: "not found",
-    });
-    renderTab();
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Edit SUMMER20" }),
-    );
-    const dialog = screen.getByRole("dialog");
-    await waitFor(() =>
-      expect(
-        within(dialog).getByRole("switch", {
-          name: /Storefront announcement bar/,
-        }),
-      ).toBeDisabled(),
-    );
-    expect(
-      within(dialog).getByText("The announcement bar isn't available."),
-    ).toBeInTheDocument();
-  });
-
-  it("blocks the bar when the access token is for another store", async () => {
-    fetchCouponBar.mockResolvedValue({
-      success: true,
-      bar: null,
-      storeId: 111,
-      merchantId: 222,
-    });
-    renderTab();
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Edit SUMMER20" }),
-    );
-    const dialog = screen.getByRole("dialog");
-    expect(
-      await within(dialog).findByText(/belongs to store 111/),
-    ).toBeInTheDocument();
-    expect(
-      within(dialog).getByRole("switch", {
-        name: /Storefront announcement bar/,
-      }),
-    ).toBeDisabled();
   });
 
   it("offers a session refresh when there is no embedded token", async () => {

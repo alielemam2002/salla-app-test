@@ -13,7 +13,6 @@ import {
 import { useCouponForm } from "../../hooks/coupons/useCouponForm.js";
 import { FIELD_LABELS } from "../../utils/coupons/couponErrors.js";
 import CouponScope from "./CouponScope.jsx";
-import CouponBarFields from "./CouponBarFields.jsx";
 
 const TYPE_OPTIONS = [
   { value: "percentage", label: "Percentage (%)" },
@@ -23,17 +22,10 @@ const TYPE_OPTIONS = [
 /**
  * Create / edit a storewide coupon.
  * `serverError` is the described Salla error ({ title, reason, fieldErrors }).
- * `bar` is the storefront announcement bar currently shown (any coupon);
- * `barUnavailable` explains why it can't be managed, if so; `barStoreId`
- * is the store the bar is saved in.
- * `onSubmit(input, barInput)` gets `barInput = null` when the bar is off.
  */
 export default function CouponFormModal({
   isOpen,
   coupon,
-  bar = null,
-  barUnavailable = null,
-  barStoreId = null,
   currency = "SAR",
   saving,
   serverError,
@@ -42,12 +34,7 @@ export default function CouponFormModal({
 }) {
   const formId = useId();
   const isEdit = Boolean(coupon);
-  const { form, errors, setField, submit } = useCouponForm({
-    coupon,
-    bar,
-    isOpen,
-    currency,
-  });
+  const { form, errors, setField, submit } = useCouponForm({ coupon, isOpen });
 
   const fieldError = (name) => errors[name] || serverError?.fieldErrors?.[name];
   // Salla field errors for inputs this form doesn't show still need a place.
@@ -247,17 +234,6 @@ export default function CouponFormModal({
             onChange={(v) => setField("active", v)}
           />
         </div>
-
-        <CouponBarFields
-          form={form}
-          errors={errors}
-          setField={setField}
-          currency={currency}
-          liveBar={bar}
-          originalCode={coupon?.code}
-          unavailable={barUnavailable}
-          storeId={barStoreId}
-        />
       </form>
     </Modal>
   );

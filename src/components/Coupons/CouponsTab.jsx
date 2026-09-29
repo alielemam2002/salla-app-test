@@ -7,12 +7,7 @@ import {
   useCouponsQuery,
 } from "../../hooks/coupons/useCoupons.js";
 import { useCouponFilters } from "../../hooks/coupons/useCouponFilters.js";
-import {
-  useCouponBarMutations,
-  useCouponBarQuery,
-} from "../../hooks/coupons/useCouponBar.js";
 import { describeCouponError } from "../../utils/coupons/couponErrors.js";
-import { isBarFor } from "../../utils/coupons/couponBar.js";
 import { moneyCurrency } from "../../utils/coupons/couponModel.js";
 import CouponsToolbar from "./CouponsToolbar.jsx";
 import CouponList from "./CouponList.jsx";
@@ -37,24 +32,6 @@ export default function CouponsTab({ embedded, showToast }) {
   const coupons = query.data || EMPTY;
   const filters = useCouponFilters(coupons);
   const { create, update, remove } = useCouponMutations(getToken);
-  const barQuery = useCouponBarQuery(getToken);
-  const barMutations = useCouponBarMutations(getToken);
-  const bar = barQuery.data?.bar ?? null;
-  const barStoreId = barQuery.data?.storeId ?? null;
-  const signedInStoreId = barQuery.data?.merchantId ?? null;
-  let barUnavailable = null;
-  if (barQuery.isError) {
-    barUnavailable = describeCouponError(
-      barQuery.error.result,
-      "barLoad",
-    ).reason;
-  } else if (
-    barStoreId &&
-    signedInStoreId &&
-    String(barStoreId) !== String(signedInStoreId)
-  ) {
-    barUnavailable = `SALLA_ACCESS_TOKEN belongs to store ${barStoreId}, but you're signed in to store ${signedInStoreId}. The bar would be saved in store ${barStoreId}, not this one. Put this store's access token in SALLA_ACCESS_TOKEN.`;
-  }
 
   const formDialog = useDisclosure();
   const detailsDialog = useDisclosure();
@@ -90,25 +67,7 @@ export default function CouponsTab({ embedded, showToast }) {
     [resetRemove, openDeleteDialog],
   );
 
-  const barError = (error) => {
-    const { title, reason } = describeCouponError(error.result, "bar");
-    showToast?.(`${title} ${reason}`, "error");
-  };
-
-  // Runs after the coupon itself saved: show, update or hide its bar.
-  const syncBar = (input, barInput, previousCode) => {
-    if (barUnavailable) return;
-    if (barInput) {
-      barMutations.save.mutate(barInput, { onError: barError });
-    } else if (isBarFor(bar, previousCode || input.code)) {
-      barMutations.clear.mutate(previousCode || input.code, {
-        onError: barError,
-      });
-    }
-  };
-
-  const handleSubmit = (input, barInput = null) => {
-    const previousCode = editing?.code;
+  const handleSubmit = (input) => {
     const onSuccess = () => {
       formDialog.close();
       showToast?.(
@@ -117,7 +76,6 @@ export default function CouponsTab({ embedded, showToast }) {
           : `Coupon ${input.code} created`,
         "success",
       );
-      syncBar(input, barInput, previousCode);
     };
     if (editing) update.mutate({ id: editing.id, input }, { onSuccess });
     else create.mutate(input, { onSuccess });
@@ -129,9 +87,6 @@ export default function CouponsTab({ embedded, showToast }) {
       onSuccess: () => {
         deleteDialog.close();
         showToast?.(`Coupon ${coupon.code} deleted`, "success");
-        if (isBarFor(bar, coupon.code)) {
-          barMutations.clear.mutate(coupon.code, { onError: barError });
-        }
       },
     });
   };
@@ -169,7 +124,6 @@ export default function CouponsTab({ embedded, showToast }) {
     content = (
       <CouponList
         items={filters.visible}
-        barCode={bar?.code}
         onView={detailsDialog.open}
         onEdit={openForm}
         onDelete={openDelete}
@@ -214,9 +168,6 @@ export default function CouponsTab({ embedded, showToast }) {
       <CouponFormModal
         isOpen={formDialog.isOpen}
         coupon={editing}
-        bar={bar}
-        barUnavailable={barUnavailable}
-        barStoreId={barStoreId}
         currency={currency}
         saving={activeMutation.isPending}
         serverError={formError}
