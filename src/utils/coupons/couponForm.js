@@ -1,8 +1,4 @@
 import { moneyValue, parseSallaDate } from "./couponModel.js";
-import {
-  DEFAULT_DISPLAY_SETTINGS,
-  getCouponDisplaySettings,
-} from "./displaySettingsStorage.js";
 
 const STORE_OFFSET_MS = 3 * 60 * 60 * 1000; // Asia/Riyadh, see couponModel.js
 
@@ -19,7 +15,6 @@ export const EMPTY_COUPON_FORM = {
   free_shipping: false,
   exclude_sale_products: false,
   active: true,
-  ...DEFAULT_DISPLAY_SETTINGS,
 };
 
 /** "2026-03-17 08:30:00" → "2026-03-17T08:30" (datetime-local value). */
@@ -50,7 +45,6 @@ const numberText = (value) => {
 
 export function couponToForm(coupon) {
   if (!coupon) return { ...EMPTY_COUPON_FORM };
-  const display = getCouponDisplaySettings(coupon.code, coupon);
   return {
     code: coupon.code || "",
     type: String(coupon.type || "")
@@ -70,7 +64,6 @@ export function couponToForm(coupon) {
     free_shipping: Boolean(coupon.free_shipping),
     exclude_sale_products: Boolean(coupon.is_sale_products_exclude),
     active: (coupon.status || "active") === "active",
-    ...display,
   };
 }
 
@@ -158,21 +151,5 @@ export function formToCouponInput(form) {
     free_shipping: form.free_shipping,
     exclude_sale_products: form.exclude_sale_products,
     status: form.active ? "active" : "inactive",
-  };
-}
-
-export function formToDisplaySettings(form) {
-  return {
-    show_announcement_bar: Boolean(form.show_announcement_bar),
-    announcement_text: form.announcement_text,
-    announcement_bg_color: form.announcement_bg_color,
-    announcement_text_color: form.announcement_text_color,
-    display_product_page: Boolean(form.display_product_page),
-    display_category_page: Boolean(form.display_category_page),
-    display_cart_page: Boolean(form.display_cart_page),
-    card_badge_title: form.card_badge_title,
-    card_headline_text: form.card_headline_text,
-    card_bg_color: form.card_bg_color,
-    card_text_color: form.card_text_color,
   };
 }

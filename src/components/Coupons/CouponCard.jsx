@@ -12,7 +12,6 @@ import {
 } from "../../utils/coupons/couponModel.js";
 import CouponCountdown from "./CouponCountdown.jsx";
 import CouponScope from "./CouponScope.jsx";
-import { getCouponDisplaySettings } from "../../utils/coupons/displaySettingsStorage.js";
 
 function UsageLine({ coupon }) {
   const { used, limit } = getUsage(coupon);
@@ -29,7 +28,6 @@ function CouponCard({ coupon, status, onView, onEdit, onDelete }) {
   const meta = STATUS_META[status];
   const target = getCountdownTarget(coupon, status);
   const unmanaged = getUnmanagedSettings(coupon);
-  const display = getCouponDisplaySettings(coupon.code, coupon);
   const titleId = `coupon-${coupon.id}-title`;
 
   return (
@@ -57,21 +55,6 @@ function CouponCard({ coupon, status, onView, onEdit, onDelete }) {
       )}
 
       <UsageLine coupon={coupon} />
-
-      <div className="coupon-placements-list" title="أماكن ظهور الكوبون في المتجر">
-        {display.show_announcement_bar && (
-          <span className="placement-pill placement-pill--announcement">📢 شريط إعلاني</span>
-        )}
-        {display.display_product_page && (
-          <span className="placement-pill">🛍️ صفحة المنتج</span>
-        )}
-        {display.display_cart_page && (
-          <span className="placement-pill">🛒 السلة</span>
-        )}
-        {display.display_category_page && (
-          <span className="placement-pill">🗂️ قائمة المنتجات</span>
-        )}
-      </div>
 
       <div className="coupon-card-actions">
         <Button
