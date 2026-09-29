@@ -1,5 +1,5 @@
 import { Controller } from "react-hook-form";
-import { Search } from "lucide-react";
+import { Search, Sparkles } from "lucide-react";
 import { Textarea, TextInput } from "../ui/index.js";
 import EditorSection from "./EditorSection.jsx";
 import EditorField from "./EditorField.jsx";
@@ -29,6 +29,7 @@ export default function SeoSection({
   onSaveSection,
   isSaving,
   productUrl,
+  onOpenAi,
 }) {
   const name = watch("name") || "";
   const seoTitle = watch("metadata_title") || "";
@@ -47,6 +48,23 @@ export default function SeoSection({
       onSave={onSaveSection}
       isSaving={isSaving}
     >
+      {onOpenAi && (
+        <div className="seo-ai-banner">
+          <div className="seo-ai-banner-text">
+            <strong>تحسين محركات البحث بالذكاء الاصطناعي</strong>
+            <span>توليد عنوان، وصف SEO مقنع، رابط مخصص (Slug) ووسوم ذكية بضغطة زر.</span>
+          </div>
+          <button
+            type="button"
+            className="ai-inline-trigger-btn"
+            onClick={onOpenAi}
+          >
+            <Sparkles size={13} aria-hidden="true" />
+            <span>توليد بيانات الـ SEO ✨</span>
+          </button>
+        </div>
+      )}
+
       <SerpPreview
         url={buildPreviewUrl(productUrl, slugify(seoUrl))}
         title={seoTitle || name || "عنوان المنتج في جوجل"}

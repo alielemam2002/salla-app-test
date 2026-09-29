@@ -1,4 +1,4 @@
-import { ArrowRight, ExternalLink, RotateCw, Save, Tag } from "lucide-react";
+import { ArrowRight, ExternalLink, RotateCw, Save, Sparkles, Tag } from "lucide-react";
 import { Badge, Button, Skeleton } from "../ui/index.js";
 
 /** Top bar: back, product name/ID/SKU, store link, refresh and save. */
@@ -13,6 +13,7 @@ export default function EditorHeader({
   onBack,
   onRefresh,
   onSave,
+  onOpenAi,
 }) {
   return (
     <header className="editor-header">
@@ -60,6 +61,17 @@ export default function EditorHeader({
       </div>
 
       <div className="editor-header-actions">
+        {onOpenAi && (
+          <Button
+            variant="ghost"
+            size="small"
+            icon={Sparkles}
+            onClick={onOpenAi}
+            className="editor-ai-btn"
+          >
+            توليد بالذكاء الاصطناعي ✨
+          </Button>
+        )}
         <Button
           variant="secondary"
           size="small"

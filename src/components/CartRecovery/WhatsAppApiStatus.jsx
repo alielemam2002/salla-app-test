@@ -20,7 +20,9 @@ export default function WhatsAppApiStatus({ status, onOpenSettings }) {
     tokenUnreadable,
   } = status.data;
 
-  const settingsButton = storageReady && (
+  // Always offered: when storage isn't set up, the dialog explains what the
+  // app owner has to add in Vercel.
+  const settingsButton = (
     <Button size="small" icon={Settings2} onClick={onOpenSettings}>
       {source === "merchant" ? "WhatsApp settings" : "Connect WhatsApp"}
     </Button>
@@ -78,7 +80,10 @@ export default function WhatsAppApiStatus({ status, onOpenSettings }) {
       {source === "server" && (
         <p>
           This is the app&apos;s shared test account. Connect your own WhatsApp
-          Business account to send from your number.
+          Business account to send from your number
+          {storageReady
+            ? "."
+            : " (first the app owner adds Upstash Redis and WA_SETTINGS_KEY in Vercel)."}
         </p>
       )}
       {!params.length && (

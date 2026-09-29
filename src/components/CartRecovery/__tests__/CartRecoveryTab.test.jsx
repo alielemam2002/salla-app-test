@@ -453,4 +453,26 @@ describe("CartRecoveryTab", () => {
     ).toBeInTheDocument();
     expect(within(dialog).getByText("Send a test message")).toBeInTheDocument();
   });
+
+  it("offers WhatsApp settings even before storage is set up, and explains it", async () => {
+    fetchWhatsAppStatus.mockResolvedValue({
+      ...CONFIGURED,
+      storageReady: false,
+    });
+    fetchWhatsAppSettings.mockResolvedValue({
+      success: true,
+      storageReady: false,
+      settings: null,
+    });
+    renderTab();
+    expect(
+      await screen.findByText(/first the app owner adds Upstash Redis/),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Connect WhatsApp" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText("Settings storage isn't set up yet."),
+    ).toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Save" })).toBeNull();
+  });
 });

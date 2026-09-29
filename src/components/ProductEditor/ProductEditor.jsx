@@ -1,3 +1,4 @@
+import { useState, useCallback } from "react";
 import EditorHeader from "./EditorHeader.jsx";
 import ProductCompletionCard from "./ProductCompletionCard.jsx";
 import BasicInfoSection from "./BasicInfoSection.jsx";
@@ -6,6 +7,7 @@ import SeoSection from "./SeoSection.jsx";
 import PricingInventorySection from "./PricingInventorySection.jsx";
 import OptionsVariantsSection from "./OptionsVariantsSection.jsx";
 import SaveBar from "./SaveBar.jsx";
+import AiCopilotModal from "./AiCopilotModal.jsx";
 import { useProductEditor } from "../../hooks/productEditor/useProductEditor.js";
 import { useFieldNavigator } from "../../hooks/productEditor/useFieldNavigator.js";
 
@@ -20,6 +22,7 @@ export default function ProductEditor({
   onBack,
   showToast,
 }) {
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const editor = useProductEditor({
     productId,
     token,
@@ -30,16 +33,73 @@ export default function ProductEditor({
 
   const {
     product,
-    form: { register, control, watch, formState },
+    form,
     values,
     scoreData,
     gallery,
     save,
     isSaving,
   } = editor;
+  const { register, control, watch, formState, setValue, getValues } = form;
   const { errors } = formState;
   const sections = scoreData?.sections;
   const sectionProps = { onSaveSection: save, isSaving };
+
+  const handleApplyAiContent = useCallback(
+    (aiData) => {
+      if (!aiData) return;
+
+      if (aiData.marketing_description) {
+        setValue("description", aiData.marketing_description, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      }
+
+      if (aiData.short_description) {
+        setValue("subtitle", aiData.short_description, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      }
+
+      if (aiData.meta_title) {
+        setValue("metadata_title", aiData.meta_title, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      }
+
+      if (aiData.meta_description) {
+        setValue("metadata_description", aiData.meta_description, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      }
+
+      if (aiData.seo_slug) {
+        setValue("metadata_url", aiData.seo_slug, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      }
+
+      if (Array.isArray(aiData.tags) && aiData.tags.length > 0) {
+        const currentTags = getValues("tags") || [];
+        const merged = Array.from(new Set([...currentTags, ...aiData.tags]));
+        setValue("tags", merged, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      }
+
+      showToast?.(
+        "تم تطبيق تحسينات الذكاء الاصطناعي بنجاح! راجع التغييرات ثم اضغط حفظ التغييرات.",
+        "success",
+      );
+    },
+    [setValue, getValues, showToast],
+  );
 
   return (
     <div className="product-editor-container" dir="rtl" lang="ar">
@@ -54,6 +114,7 @@ export default function ProductEditor({
         onBack={onBack}
         onRefresh={() => editor.refetch()}
         onSave={save}
+        onOpenAi={() => setIsAiModalOpen(true)}
       />
 
       <ProductCompletionCard
@@ -69,6 +130,7 @@ export default function ProductEditor({
           sectionScore={sections?.basicInfo}
           categories={editor.taxonomies.categories}
           brands={editor.taxonomies.brands}
+          onOpenAi={() => setIsAiModalOpen(true)}
           {...sectionProps}
         />
 
@@ -93,6 +155,7 @@ export default function ProductEditor({
           watch={watch}
           sectionScore={sections?.seo}
           productUrl={product?.urls?.customer || product?.url}
+          onOpenAi={() => setIsAiModalOpen(true)}
           {...sectionProps}
         />
 
@@ -124,6 +187,25 @@ export default function ProductEditor({
           onCancel={onBack}
         />
       </form>
+
+      <AiCopilotModal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        product={{
+          name: values.name,
+          description: values.description,
+          categoryName: editor.taxonomies?.categories?.find((c) =>
+            values.categories?.includes?.(c.id),
+          )?.name,
+          price: values.price,
+          currency: editor.currency,
+          brandName: editor.taxonomies?.brands?.find((b) =>
+            b.id === values.brand_id,
+          )?.name,
+        }}
+        onApply={handleApplyAiContent}
+        showToast={showToast}
+      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { Controller } from "react-hook-form";
-import { Info } from "lucide-react";
+import { Info, Sparkles } from "lucide-react";
 import { Select, Textarea, TextInput } from "../ui/index.js";
 import EditorSection from "./EditorSection.jsx";
 import EditorField from "./EditorField.jsx";
@@ -14,6 +14,7 @@ export default function BasicInfoSection({
   brands = [],
   onSaveSection,
   isSaving,
+  onOpenAi,
 }) {
   return (
     <EditorSection
@@ -45,6 +46,19 @@ export default function BasicInfoSection({
         anchor="description"
         label="وصف المنتج"
         required
+        labelExtra={
+          onOpenAi ? (
+            <button
+              type="button"
+              className="ai-inline-trigger-btn"
+              onClick={onOpenAi}
+              title="كتابة وتنسيق الوصف بالذكاء الاصطناعي"
+            >
+              <Sparkles size={13} aria-hidden="true" />
+              <span>توليد بالذكاء الاصطناعي ✨</span>
+            </button>
+          ) : null
+        }
         hint="الوصف الغني بالمعلومات يرفع معدل المبيعات ويحسن ظهور المنتج في محركات البحث."
       >
         <Textarea
