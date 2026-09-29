@@ -4,7 +4,7 @@ import { PRODUCT_MEDIA_FUNCTION_URL, getAppId } from "./constants.js";
 // limited by Vercel, so give the whole request up to 2 minutes.
 const UPLOAD_TIMEOUT_MS = 120_000;
 
-/**
+/** 
  * Upload one image file to a product (api/product-media.js → Salla).
  *
  * Uses XMLHttpRequest because fetch() can't report upload progress.
