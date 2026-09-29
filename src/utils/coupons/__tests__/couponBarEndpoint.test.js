@@ -97,6 +97,36 @@ describe("api/coupon-bar", () => {
     expect(await res.json()).toEqual({ success: true, bar: null });
   });
 
+  it("treats Salla's 'no settings yet' 404 as empty settings", async () => {
+    const NO_SETTINGS = {
+      status: 404,
+      body: { success: false, error: { message: "لايوجد اعدادت للتطبيق" } },
+    };
+    mockFetch([INTROSPECT_OK, NO_SETTINGS]);
+    expect(await (await call({ action: "get" })).json()).toEqual({
+      success: true,
+      bar: null,
+    });
+
+    const calls = mockFetch([INTROSPECT_OK, NO_SETTINGS, OK]);
+    const res = await call({ action: "set", bar: BAR });
+    expect((await res.json()).bar.code).toBe("SUMMER20");
+    expect(calls[2].method).toBe("POST");
+  });
+
+  it("explains a rejected save", async () => {
+    mockFetch([
+      INTROSPECT_OK,
+      settingsResponse([]),
+      { status: 422, body: { success: false, error: { message: "nope" } } },
+    ]);
+    const res = await call({ action: "set", bar: BAR });
+    const json = await res.json();
+    expect(res.status).toBe(422);
+    expect(json.code).toBe("settings_not_saved");
+    expect(json.error).toMatch(/nope.*coupon_bar_\* fields/);
+  });
+
   it("merges the bar into the existing settings and sends every key", async () => {
     const calls = mockFetch([
       INTROSPECT_OK,

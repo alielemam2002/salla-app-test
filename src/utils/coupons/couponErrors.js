@@ -34,6 +34,7 @@ const isTranslationKey = (msg) => /^[a-z_]+(\.[a-z_]+)+$/i.test(msg || "");
 
 function reasonFor(result, action) {
   const { status, code } = result;
+  if (code === "settings_not_saved" && result.error) return result.error;
   if (isBarAction(action) && (code === "missing_scope" || status === 403)) {
     return "The app can't read or write its own settings in this store. Check that the app is installed and active.";
   }

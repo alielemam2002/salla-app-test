@@ -124,6 +124,9 @@ async function loadSettings(appId) {
   const { status, body } = await merchantApi(
     `/apps/${encodeURIComponent(String(appId))}/settings`,
   );
+  // Salla answers 404 ("لايوجد اعدادت للتطبيق") while the store has never
+  // saved any settings for the app. That just means "empty".
+  if (status === 404) return { status, body: { success: true }, settings: {} };
   if (!body.success) return { status, body };
   const settings = body.data?.settings;
   // An app with no saved settings can come back as [] instead of {}.
@@ -211,10 +214,14 @@ export async function POST(request) {
 
     const { status, body: result } = await saveSettings(appId, next);
     if (!result.success) {
-      return sallaFail(
-        status,
-        result,
-        `Failed to save app settings (status ${status})`,
+      // The usual cause: the coupon_bar_* fields aren't in the app's
+      // settings form yet, so Salla has nowhere to store them.
+      const reason = result?.error?.message || `status ${status}`;
+      return fail(
+        status >= 400 ? status : 502,
+        "settings_not_saved",
+        `Salla didn't save the app settings (${reason}). Check that the app's settings form has the public coupon_bar_* fields.`,
+        result?.error?.fields || null,
       );
     }
     return Response.json({ success: true, bar: readBar(next) });
