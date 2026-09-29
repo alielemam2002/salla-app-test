@@ -8,6 +8,7 @@ import PricingInventorySection from "./PricingInventorySection.jsx";
 import OptionsVariantsSection from "./OptionsVariantsSection.jsx";
 import SaveBar from "./SaveBar.jsx";
 import AiCopilotModal from "./AiCopilotModal.jsx";
+import AiPhotoStudioModal from "./AiPhotoStudioModal.jsx";
 import { useProductEditor } from "../../hooks/productEditor/useProductEditor.js";
 import { useFieldNavigator } from "../../hooks/productEditor/useFieldNavigator.js";
 
@@ -23,6 +24,7 @@ export default function ProductEditor({
   showToast,
 }) {
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [isPhotoStudioOpen, setIsPhotoStudioOpen] = useState(false);
   const editor = useProductEditor({
     productId,
     token,
@@ -154,6 +156,7 @@ export default function ProductEditor({
           altText={values.name}
           media={editor.media}
           onOpenAi={() => setIsAiModalOpen(true)}
+          onOpenPhotoStudio={() => setIsPhotoStudioOpen(true)}
           {...sectionProps}
         />
 
@@ -212,6 +215,28 @@ export default function ProductEditor({
           )?.name,
         }}
         onApply={handleApplyAiContent}
+        showToast={showToast}
+      />
+
+      <AiPhotoStudioModal
+        isOpen={isPhotoStudioOpen}
+        onClose={() => setIsPhotoStudioOpen(false)}
+        product={{
+          name: values.name,
+          description: values.description,
+          categoryName: editor.taxonomies?.categories?.find((c) =>
+            values.categories?.includes?.(c.id),
+          )?.name,
+          brandName: editor.taxonomies?.brands?.find((b) =>
+            b.id === values.brand_id,
+          )?.name,
+        }}
+        productId={productId}
+        token={token}
+        onImagesUploaded={() => {
+          editor.media.refresh();
+          editor.refetch();
+        }}
         showToast={showToast}
       />
     </div>
