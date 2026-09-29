@@ -69,3 +69,19 @@ export function sendWhatsAppTest(token, to) {
 export function setWhatsAppEnabled(token, enabled) {
   return callWhatsAppApi({ action: "settings_enable", token, enabled });
 }
+
+/**
+ * Send a campaign template to one customer.
+ * `campaign` = { template, language, params: [{ source, value }] }.
+ */
+export function sendCampaignMessage(token, { to, customerName, campaign }) {
+  return callWhatsAppApi({
+    action: "send_campaign",
+    token,
+    to,
+    customerName,
+    template: campaign.template,
+    language: campaign.language,
+    params: campaign.params,
+  });
+}

@@ -1,5 +1,6 @@
 import {
   Code2,
+  Megaphone,
   Package,
   Puzzle,
   ShoppingCart,
@@ -18,6 +19,7 @@ export const APP_TABS = [
   { id: "products", label: "Products", icon: Package },
   { id: "coupons", label: "Coupons", icon: TicketPercent },
   { id: "cart-recovery", label: "Cart Recovery", icon: ShoppingCart },
+  { id: "campaigns", label: "WhatsApp Campaigns", icon: Megaphone },
 ];
 
 export const DEFAULT_TAB = APP_TABS[0].id;

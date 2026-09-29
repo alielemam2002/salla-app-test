@@ -16,6 +16,8 @@
  * - send_test        send the template with sample values to a number
  * - send             send the template for one abandoned cart; the cart is
  *                    read from Salla (GET /admin/v2/carts/abandoned/{id})
+ * - send_campaign    send a campaign template to one customer (the browser
+ *                    sends a campaign one customer at a time)
  *
  * Env: WA_SETTINGS_KEY (32 bytes, base64), Upstash (KV_REST_API_URL /
  * KV_REST_API_TOKEN), optional META_GRAPH_VERSION.
@@ -26,6 +28,7 @@ import { kvConfigured } from "./_lib/kv.js";
 import { encryptionConfigured, open } from "./_lib/secretBox.js";
 import {
   buildTemplateMessage,
+  cleanParam,
   fetchPhoneProfile,
   metaFailure,
   sendTemplate,
@@ -38,6 +41,8 @@ import {
   recordToConfig,
   saveSettings,
   setEnabled,
+  LANGUAGE_RE,
+  TEMPLATE_NAME_RE,
   validateSettingsInput,
 } from "./_lib/whatsappSettings.js";
 import {
@@ -81,6 +86,50 @@ const notConnected = (unreadable) =>
   );
 
 const localeOf = (config) => (config.language.startsWith("ar") ? "ar" : "en");
+
+const CAMPAIGN_SOURCES = new Set(["customer_name", "coupon_code", "custom"]);
+const FALLBACK_NAME = { ar: "عميلنا العزيز", en: "there" };
+
+/**
+ * A campaign's template + variables on top of the merchant's account.
+ * `params` is [{ source: customer_name | coupon_code | custom, value }] in
+ * {{1}}, {{2}}… order. Returns { config, values(name) } or { error }.
+ */
+export function campaignConfig(base, body) {
+  const template = String(body.template || "").trim();
+  const language = String(body.language || "").trim();
+  if (!TEMPLATE_NAME_RE.test(template))
+    return { error: "Invalid template name" };
+  if (!LANGUAGE_RE.test(language))
+    return { error: "Invalid template language" };
+  const params = Array.isArray(body.params) ? body.params : [];
+  if (params.length > 10) return { error: "At most 10 template variables" };
+  for (const p of params) {
+    if (!CAMPAIGN_SOURCES.has(p?.source))
+      return { error: "Unknown variable type" };
+    if (p.source !== "customer_name" && !cleanParam(p.value)) {
+      return { error: "Every variable needs a value" };
+    }
+  }
+  const keys = params.map((_, i) => `v${i + 1}`);
+  const locale = language.startsWith("ar") ? "ar" : "en";
+  return {
+    config: { ...base, template, language, params: keys, invalidParams: [] },
+    values: (customerName) => {
+      const first = String(customerName || "")
+        .trim()
+        .split(/\s+/)[0];
+      const out = {};
+      params.forEach((p, i) => {
+        out[keys[i]] =
+          p.source === "customer_name"
+            ? cleanParam(first || FALLBACK_NAME[locale], 60)
+            : cleanParam(p.value);
+      });
+      return out;
+    },
+  };
+}
 
 /** Send one template message; returns a Response. */
 async function deliver(config, to, values) {
@@ -309,6 +358,31 @@ export async function POST(request) {
           to,
           cartMessageValues(cart, { locale: localeOf(config), couponCode }),
         );
+      }
+
+      case "send_campaign": {
+        const { config, enabled, unreadable } = await resolveConfig(merchantId);
+        if (!config) return notConnected(unreadable);
+        if (!enabled) {
+          return fail(
+            403,
+            "whatsapp_disabled",
+            "Sending from the app is switched off. Turn it on in Cart Recovery.",
+          );
+        }
+        const campaign = campaignConfig(config, body);
+        if (campaign.error) {
+          return fail(422, "validation_failed", campaign.error);
+        }
+        const to = whatsappNumber(body.to);
+        if (!to) {
+          return fail(
+            422,
+            "bad_number",
+            "This customer has no international mobile number.",
+          );
+        }
+        return deliver(campaign.config, to, campaign.values(body.customerName));
       }
 
       default:

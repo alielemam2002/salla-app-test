@@ -15,6 +15,7 @@ export default function ConfirmDialog({
   cancelText = "Cancel",
   loading = false,
   loadingText,
+  confirmDisabled = false,
   children,
 }) {
   return (
@@ -36,6 +37,7 @@ export default function ConfirmDialog({
             variant={tone === "danger" ? "danger" : "primary"}
             onClick={onConfirm}
             loading={loading}
+            disabled={confirmDisabled}
           >
             {loading && loadingText ? loadingText : confirmText}
           </Button>

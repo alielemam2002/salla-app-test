@@ -1,5 +1,6 @@
 import { DEFAULT_ABANDONED_AFTER } from "./cartModel.js";
 import { DEFAULT_TEMPLATES } from "./whatsappMessage.js";
+import { createLocalStore } from "../localStore.js";
 
 /**
  * Per-browser storage for Stage 1 (there is no database):
@@ -8,45 +9,6 @@ import { DEFAULT_TEMPLATES } from "./whatsappMessage.js";
  * - contacts: when the merchant opened WhatsApp for a cart. We can't know
  *   whether they pressed send, so this is "WhatsApp opened", not "sent".
  */
-
-function createLocalStore(key, fallback) {
-  const listeners = new Set();
-  let cache;
-
-  const read = () => {
-    if (cache !== undefined) return cache;
-    try {
-      const raw = window.localStorage.getItem(key);
-      cache = raw ? { ...fallback, ...JSON.parse(raw) } : fallback;
-    } catch {
-      cache = fallback;
-    }
-    return cache;
-  };
-
-  const write = (next) => {
-    cache = next;
-    try {
-      window.localStorage.setItem(key, JSON.stringify(next));
-    } catch {
-      // Storage blocked or full: keep it for this session only.
-    }
-    listeners.forEach((listener) => listener());
-  };
-
-  return {
-    get: read,
-    set: (update) =>
-      write(typeof update === "function" ? update(read()) : update),
-    subscribe: (listener) => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-    reset: () => {
-      cache = undefined;
-    },
-  };
-}
 
 export const DEFAULT_SETTINGS = {
   abandonedAfter: DEFAULT_ABANDONED_AFTER,

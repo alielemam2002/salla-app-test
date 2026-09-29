@@ -99,6 +99,18 @@ export async function fetchPhoneProfile(config) {
   };
 }
 
+/**
+ * Meta rejects template parameters with new lines, tabs or more than four
+ * spaces in a row. Keep a value on one line and within a safe length.
+ */
+export function cleanParam(value, max = 1000) {
+  return String(value ?? "")
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/ {4,}/g, "   ")
+    .trim()
+    .slice(0, max);
+}
+
 /** Template request body for Meta, or { error } if a variable is empty. */
 export function buildTemplateMessage(config, to, values) {
   const template = {

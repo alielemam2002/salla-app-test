@@ -11,6 +11,7 @@ import AddonsTab from "./components/Addons/AddonsTab.jsx";
 import ProductsTab from "./components/Products/ProductsTab.jsx";
 import CouponsTab from "./components/Coupons/CouponsTab.jsx";
 import CartRecoveryTab from "./components/CartRecovery/CartRecoveryTab.jsx";
+import CampaignsTab from "./components/Campaigns/CampaignsTab.jsx";
 
 function AppContent() {
   const {
@@ -67,6 +68,9 @@ function AppContent() {
       )}
       {activeTab === "cart-recovery" && (
         <CartRecoveryTab embedded={embedded} showToast={showToast} />
+      )}
+      {activeTab === "campaigns" && (
+        <CampaignsTab embedded={embedded} showToast={showToast} />
       )}
     </AppLayout>
   );

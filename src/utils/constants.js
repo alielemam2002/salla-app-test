@@ -16,6 +16,9 @@ export const CARTS_FUNCTION_URL = "/api/carts";
 // Cart reminders through the WhatsApp Cloud API (api/whatsapp.js)
 export const WHATSAPP_FUNCTION_URL = "/api/whatsapp";
 
+// Store customers + groups for WhatsApp campaigns (api/customers.js)
+export const CUSTOMERS_FUNCTION_URL = "/api/customers";
+
 // App ID - can be overridden via URL parameter ?appId=XXX
 export function getAppId() {
   const urlParams = new URLSearchParams(window.location.search);

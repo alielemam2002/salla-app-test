@@ -14,8 +14,8 @@ import { ALLOWED_PARAMS, DEFAULT_GRAPH_VERSION } from "./whatsappGraph.js";
 
 const keyFor = (merchantId) => `wa:settings:${merchantId}`;
 
-const TEMPLATE_NAME_RE = /^[a-z0-9_]{1,512}$/;
-const LANGUAGE_RE = /^[a-z]{2,3}(_[A-Z]{2})?$/;
+export const TEMPLATE_NAME_RE = /^[a-z0-9_]{1,512}$/;
+export const LANGUAGE_RE = /^[a-z]{2,3}(_[A-Z]{2})?$/;
 const ID_RE = /^\d{5,25}$/;
 const MAX_PARAMS = 10;
 

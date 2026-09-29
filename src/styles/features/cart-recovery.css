@@ -287,3 +287,125 @@
   overflow-wrap: anywhere;
   font-size: 0.75rem;
 }
+
+/* ---------- WhatsApp campaigns ---------- */
+
+.campaigns {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.campaign-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.campaign-vars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.campaign-vars > .btn {
+  align-self: flex-start;
+}
+
+.campaign-var-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.campaign-var-row > select,
+.campaign-var-row > input,
+.campaign-var-row > .ui-input-affix {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.campaign-var-note {
+  flex: 1 1 180px;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.campaign-var-error {
+  flex-basis: 100%;
+  padding-inline-start: 52px;
+}
+
+.campaign-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.campaign-toolbar > :first-child {
+  flex: 1 1 220px;
+}
+
+.campaign-count {
+  margin-inline-start: auto;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.campaign-row--off td {
+  color: var(--text-tertiary);
+}
+
+.campaign-sendbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+}
+
+.campaign-review {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.campaign-review ul {
+  margin: 0;
+  padding-inline-start: var(--space-lg);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.campaign-history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: var(--space-md) var(--space-lg);
+  list-style: none;
+}
+
+.campaign-history li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 720px) {
+  .campaign-count {
+    margin-inline-start: 0;
+    flex-basis: 100%;
+  }
+
+  .campaign-var-error {
+    padding-inline-start: 0;
+  }
+}
