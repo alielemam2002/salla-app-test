@@ -126,10 +126,11 @@ async function callGeminiForPrompts(prompt, apiKey) {
   throw lastError || new Error("Failed to generate studio photo prompts.");
 }
 
-function buildFluxImageUrl(promptText, seed) {
+function buildStudioImageUrl(promptText, seed) {
   const sanitizedPrompt = promptText.replace(/[^\w\s,.-]/gi, " ").trim();
   const encodedPrompt = encodeURIComponent(sanitizedPrompt);
-  return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&model=flux&seed=${seed}&nologo=true`;
+  // SANA 512x512 is 100% free with no x402 paywall
+  return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&model=sana&seed=${seed}&nologo=true`;
 }
 
 export async function handlePhotoStudioRequest(body) {
@@ -164,7 +165,7 @@ export async function handlePhotoStudioRequest(body) {
     const baseSeed = Math.floor(Math.random() * 900000) + 100000;
     const photos = scenes.slice(0, 4).map((scene, idx) => {
       const seed = baseSeed + idx * 7919;
-      const imageUrl = buildFluxImageUrl(scene.prompt, seed);
+      const imageUrl = buildStudioImageUrl(scene.prompt, seed);
       return {
         id: `photo-${Date.now()}-${idx}`,
         title: scene.scene_title_ar || `مشهد استوديو ${idx + 1}`,
