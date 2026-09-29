@@ -10,6 +10,7 @@ import {
   timeAgo,
 } from "../../utils/cartRecovery/cartModel.js";
 import WhatsAppButton from "./WhatsAppButton.jsx";
+import ApiSendButton from "./ApiSendButton.jsx";
 
 const CartRow = memo(function CartRow({
   cart,
@@ -20,7 +21,10 @@ const CartRow = memo(function CartRow({
   onView,
   onCopyLink,
   onContacted,
+  api,
 }) {
+  const apiSent = api?.sends[cart.id];
+  const apiError = api?.sender.errors[cart.id];
   const eligible = isEligible(cart, abandonedAfter);
   const items = itemCount(cart);
   return (
@@ -56,10 +60,27 @@ const CartRow = memo(function CartRow({
               WhatsApp {timeAgo(Date.parse(contactedAt), now)}
             </Badge>
           )}
+          {apiSent && (
+            <Badge
+              tone="info"
+              title={`Accepted by Meta · message ${apiSent.messageId || "—"}`}
+            >
+              Sent via API {timeAgo(Date.parse(apiSent.at), now)}
+            </Badge>
+          )}
         </div>
       </td>
       <td>
         <div className="cart-actions">
+          {api && (
+            <ApiSendButton
+              cart={cart}
+              sender={api.sender}
+              apiSends={api.sends}
+              couponCode={api.couponCode}
+              onResult={api.onResult}
+            />
+          )}
           <WhatsAppButton
             cart={cart}
             message={message}
@@ -82,12 +103,21 @@ const CartRow = memo(function CartRow({
             disabled={!cart.checkout_url}
           />
         </div>
+        {apiError && (
+          <p className="cart-row-error" role="alert">
+            {apiError.error}
+          </p>
+        )}
       </td>
     </tr>
   );
 });
 
-/** Abandoned carts with the WhatsApp / details / copy-link actions. */
+/**
+ * Abandoned carts with the WhatsApp / details / copy-link actions.
+ * `api` (only when the WhatsApp Cloud API is configured) adds the "Send"
+ * button: { sender, sends, couponCode, onResult }.
+ */
 export default function AbandonedCartsTable({
   carts,
   abandonedAfter,
@@ -96,6 +126,7 @@ export default function AbandonedCartsTable({
   onView,
   onCopyLink,
   onContacted,
+  api,
 }) {
   const now = Date.now();
   return (
@@ -124,6 +155,7 @@ export default function AbandonedCartsTable({
               onView={onView}
               onCopyLink={onCopyLink}
               onContacted={onContacted}
+              api={api}
             />
           ))}
         </tbody>

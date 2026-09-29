@@ -208,3 +208,23 @@
     flex-wrap: wrap;
   }
 }
+
+/* WhatsApp Cloud API sending */
+.cart-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+  font-size: 0.85rem;
+}
+
+.cart-bulk-summary {
+  color: var(--text-secondary);
+}
+
+.cart-row-error {
+  margin: var(--space-xs) 0 0;
+  max-inline-size: 320px;
+  color: var(--accent-danger);
+  font-size: 0.75rem;
+}

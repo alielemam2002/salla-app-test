@@ -14,6 +14,11 @@ import {
 } from "../../../utils/cartsApi.js";
 import { fetchAllCoupons } from "../../../utils/couponsApi.js";
 import {
+  fetchWhatsAppStatus,
+  sendCartWhatsApp,
+} from "../../../utils/whatsappApi.js";
+import {
+  apiSendsStore,
   contactsStore,
   settingsStore,
 } from "../../../utils/cartRecovery/recoveryStorage.js";
@@ -25,6 +30,20 @@ vi.mock("../../../utils/cartsApi.js", () => ({
 vi.mock("../../../utils/couponsApi.js", () => ({
   fetchAllCoupons: vi.fn(),
 }));
+vi.mock("../../../utils/whatsappApi.js", () => ({
+  fetchWhatsAppStatus: vi.fn(),
+  sendCartWhatsApp: vi.fn(),
+}));
+
+const NOT_CONFIGURED = { success: true, configured: false };
+const CONFIGURED = {
+  success: true,
+  configured: true,
+  template: "hello_world",
+  language: "en_US",
+  params: [],
+  invalidParams: [],
+};
 
 const riyadh = (minutesAgo) => ({
   date: new Date(Date.now() - minutesAgo * 60000 + 3 * 3600 * 1000)
@@ -100,6 +119,8 @@ describe("CartRecoveryTab", () => {
     window.localStorage.clear();
     settingsStore.reset();
     contactsStore.reset();
+    apiSendsStore.reset();
+    fetchWhatsAppStatus.mockResolvedValue(NOT_CONFIGURED);
     fetchAllAbandonedCarts.mockResolvedValue({
       success: true,
       carts: CARTS,
@@ -223,5 +244,96 @@ describe("CartRecoveryTab", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument(),
     );
+  });
+
+  it("hides API sending until WhatsApp is configured on the server", async () => {
+    renderTab();
+    expect(
+      await screen.findByText("WhatsApp API not connected"),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Send via API/ })).toBeNull();
+  });
+
+  it("sends one cart through the API and marks it as sent", async () => {
+    fetchWhatsAppStatus.mockResolvedValue(CONFIGURED);
+    sendCartWhatsApp.mockResolvedValue({
+      success: true,
+      messageId: "wamid.1",
+      status: "accepted",
+    });
+    const { showToast } = renderTab();
+    expect(
+      await screen.findByText("WhatsApp API connected"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/doesn't include the cart link/),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Send via API to Ahmed Ali" }),
+    );
+    await waitFor(() =>
+      expect(sendCartWhatsApp).toHaveBeenCalledWith("tok", 11, ""),
+    );
+    expect(
+      await screen.findByText(/Sent via API just now/),
+    ).toBeInTheDocument();
+    expect(showToast).toHaveBeenCalledWith(
+      "Meta accepted the message to Ahmed Ali",
+      "success",
+    );
+    // No second message to the same cart within 24 hours.
+    expect(
+      screen.getByRole("button", { name: "Send via API to Ahmed Ali" }),
+    ).toBeDisabled();
+  });
+
+  it("shows why Meta rejected a message on the cart's row", async () => {
+    fetchWhatsAppStatus.mockResolvedValue(CONFIGURED);
+    sendCartWhatsApp.mockResolvedValue({
+      success: false,
+      status: 422,
+      code: "meta_error",
+      metaCode: 131030,
+      error:
+        "Meta's test number can only message recipients you added in API Setup.",
+    });
+    renderTab();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Send via API to Ahmed Ali" }),
+    );
+    const row = screen.getByText("Ahmed Ali").closest("tr");
+    expect(
+      await within(row).findByText(/only message recipients you added/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Sent via API/)).toBeNull();
+  });
+
+  it("bulk-sends one at a time, skipping carts it can't message", async () => {
+    fetchWhatsAppStatus.mockResolvedValue(CONFIGURED);
+    let inFlight = 0;
+    let maxInFlight = 0;
+    sendCartWhatsApp.mockImplementation(async () => {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise((r) => setTimeout(r, 5));
+      inFlight -= 1;
+      return { success: true, messageId: "wamid", status: "accepted" };
+    });
+    renderTab();
+    fireEvent.click(await screen.findByLabelText("Show recent carts"));
+    // Ahmed (eligible, has number); Sara has no number; Fresh Cart is recent.
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Send to 1 shown carts" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Send to 1" }));
+    await waitFor(() =>
+      expect(
+        screen.getByText(/Last run: 1 accepted by Meta/),
+      ).toBeInTheDocument(),
+    );
+    expect(sendCartWhatsApp).toHaveBeenCalledTimes(1);
+    expect(sendCartWhatsApp).toHaveBeenCalledWith("tok", 11, "");
+    expect(maxInFlight).toBe(1);
   });
 });

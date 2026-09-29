@@ -13,6 +13,9 @@ export const COUPONS_FUNCTION_URL = "/api/coupons";
 // Abandoned carts, read-only (api/carts.js)
 export const CARTS_FUNCTION_URL = "/api/carts";
 
+// Cart reminders through the WhatsApp Cloud API (api/whatsapp.js)
+export const WHATSAPP_FUNCTION_URL = "/api/whatsapp";
+
 // App ID - can be overridden via URL parameter ?appId=XXX
 export function getAppId() {
   const urlParams = new URLSearchParams(window.location.search);

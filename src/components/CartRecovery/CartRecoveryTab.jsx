@@ -1,10 +1,11 @@
 import { useCallback, useMemo, useState } from "react";
-import { RefreshCw, Search, ShoppingCart } from "lucide-react";
+import { RefreshCw, Search, Send, ShoppingCart } from "lucide-react";
 import {
   Alert,
   Button,
   Card,
   Checkbox,
+  ConfirmDialog,
   EmptyState,
   Select,
   Skeleton,
@@ -13,8 +14,11 @@ import {
 import { useClipboard } from "../../hooks/ui/useClipboard.js";
 import {
   useAbandonedCarts,
+  useApiSends,
   useCartContacts,
   useRecoverySettings,
+  useWhatsAppSender,
+  useWhatsAppStatus,
 } from "../../hooks/cartRecovery/useCartRecovery.js";
 import { useCouponsQuery } from "../../hooks/coupons/useCoupons.js";
 import {
@@ -27,7 +31,9 @@ import {
   DEFAULT_TEMPLATES,
   cartMessageValues,
   renderTemplate,
+  whatsappNumber,
 } from "../../utils/cartRecovery/whatsappMessage.js";
+import { recentlySent } from "../../utils/cartRecovery/recoveryStorage.js";
 import {
   COUPON_STATUS,
   getCouponStatus,
@@ -36,13 +42,16 @@ import CartRecoveryStats from "./CartRecoveryStats.jsx";
 import AbandonedCartsTable from "./AbandonedCartsTable.jsx";
 import CartDetailsModal from "./CartDetailsModal.jsx";
 import WhatsAppTemplateCard from "./WhatsAppTemplateCard.jsx";
+import WhatsAppApiStatus from "./WhatsAppApiStatus.jsx";
 
 const EMPTY = [];
 
 /**
  * Cart Recovery, stage 1: Salla's abandoned carts, a dashboard, cart
- * details and a manual WhatsApp reminder (wa.me) per cart. Nothing is sent
- * automatically; automatic campaigns need a backend (stage 2).
+ * details and a manual WhatsApp reminder (wa.me) per cart. When the
+ * WhatsApp Cloud API is configured on the server, a "Send" button sends the
+ * approved template instead (pressed by the merchant, one cart at a time).
+ * Nothing is scheduled; automatic campaigns need a backend (stage 2).
  */
 export default function CartRecoveryTab({ embedded, showToast }) {
   const getToken = useCallback(
@@ -54,6 +63,11 @@ export default function CartRecoveryTab({ embedded, showToast }) {
   const [settings, updateSettings] = useRecoverySettings();
   const { contacts, recordContact } = useCartContacts();
   const { copy } = useClipboard();
+  const waStatus = useWhatsAppStatus(getToken);
+  const apiSends = useApiSends();
+  const sender = useWhatsAppSender(getToken);
+  const apiEnabled = Boolean(waStatus.data?.configured);
+  const [confirmBulk, setConfirmBulk] = useState(false);
 
   const [search, setSearch] = useState("");
   const [includeRecent, setIncludeRecent] = useState(false);
@@ -115,6 +129,36 @@ export default function CartRecoveryTab({ embedded, showToast }) {
     [copy, showToast],
   );
 
+  const onApiResult = useCallback(
+    (cart, result) =>
+      showToast?.(
+        result.success
+          ? `Meta accepted the message to ${cart.customer?.name || "the customer"}`
+          : result.error || "Couldn't send the message",
+        result.success ? "success" : "error",
+      ),
+    [showToast],
+  );
+  const api = apiEnabled
+    ? { sender, sends: apiSends, couponCode, onResult: onApiResult }
+    : null;
+
+  // Carts the bulk send would actually message.
+  const bulkTargets = visible.filter(
+    (cart) =>
+      isEligible(cart, abandonedAfter) &&
+      whatsappNumber(cart.customer?.mobile) &&
+      !recentlySent(apiSends, cart.id),
+  );
+  const startBulk = async () => {
+    setConfirmBulk(false);
+    const result = await sender.sendMany(bulkTargets, couponCode);
+    showToast?.(
+      `Meta accepted ${result.sent} of ${result.total} messages${result.failed ? `, ${result.failed} failed` : ""}.`,
+      result.failed ? "warning" : "success",
+    );
+  };
+
   let content;
   if (query.isPending) {
     content = (
@@ -160,6 +204,7 @@ export default function CartRecoveryTab({ embedded, showToast }) {
         onView={(cart) => setOpenCartId(cart.id)}
         onCopyLink={copyLink}
         onContacted={recordContact}
+        api={api}
       />
     );
   }
@@ -186,11 +231,14 @@ export default function CartRecoveryTab({ embedded, showToast }) {
 
         <div className="cart-body">
           <Alert tone="info">
-            You send each reminder yourself: the WhatsApp button opens WhatsApp
-            with the customer&apos;s number and a ready message. Salla may also
+            <strong>WhatsApp</strong> opens WhatsApp with a ready message that
+            you send yourself. <strong>Send</strong> (when the WhatsApp API is
+            connected) sends the approved template from the app. Salla may also
             send its own abandoned-cart reminders if they&apos;re enabled in
             your store.
           </Alert>
+
+          <WhatsAppApiStatus status={waStatus} />
 
           {!query.isPending && !query.isError && (
             <CartRecoveryStats
@@ -236,9 +284,63 @@ export default function CartRecoveryTab({ embedded, showToast }) {
             />
           </div>
 
+          {apiEnabled && !query.isPending && !query.isError && (
+            <div className="cart-bulk">
+              {sender.batch?.running ? (
+                <>
+                  <span aria-live="polite">
+                    Sending {sender.batch.done} / {sender.batch.total}…
+                  </span>
+                  <Button size="small" variant="danger" onClick={sender.stop}>
+                    Stop
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  size="small"
+                  variant="primary"
+                  icon={Send}
+                  onClick={() => setConfirmBulk(true)}
+                  disabled={!bulkTargets.length}
+                  title={
+                    bulkTargets.length
+                      ? undefined
+                      : "No shown cart has a number that wasn't messaged in the last 24 hours"
+                  }
+                >
+                  Send to {bulkTargets.length} shown carts
+                </Button>
+              )}
+              {sender.batch && !sender.batch.running && (
+                <span className="cart-bulk-summary">
+                  Last run: {sender.batch.sent} accepted by Meta,{" "}
+                  {sender.batch.failed} failed
+                  {sender.batch.stopped ? " (stopped)" : ""}.
+                </span>
+              )}
+            </div>
+          )}
+
           {content}
         </div>
       </Card>
+
+      <ConfirmDialog
+        isOpen={confirmBulk}
+        onClose={() => setConfirmBulk(false)}
+        onConfirm={startBulk}
+        tone="default"
+        title="Send WhatsApp reminders"
+        confirmText={`Send to ${bulkTargets.length}`}
+        cancelText="Cancel"
+      >
+        <p>
+          Send the <strong>{waStatus.data?.template}</strong> template to{" "}
+          {bulkTargets.length} customers, one at a time. Carts without an
+          international mobile number, or messaged through the API in the last
+          24 hours, are skipped.
+        </p>
+      </ConfirmDialog>
 
       <WhatsAppTemplateCard
         settings={{ ...settings, couponCode }}
@@ -255,6 +357,7 @@ export default function CartRecoveryTab({ embedded, showToast }) {
           onClose={() => setOpenCartId(null)}
           onCopyLink={copyLink}
           onContacted={recordContact}
+          api={api}
         />
       )}
     </div>

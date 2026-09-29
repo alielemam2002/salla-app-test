@@ -66,6 +66,29 @@ export const contactsStore = createLocalStore(
   {},
 );
 
+// { [cartId]: { at, messageId } } for messages Meta accepted through the
+// Cloud API. "Accepted" isn't "delivered": delivery comes from Meta's
+// webhook, which needs stage 2.
+export const apiSendsStore = createLocalStore(
+  "salla_cart_recovery_api_sends_v1",
+  {},
+);
+
+export function recordApiSend(cartId, messageId) {
+  apiSendsStore.set((prev) => ({
+    ...prev,
+    [cartId]: { at: new Date().toISOString(), messageId },
+  }));
+}
+
+// Don't send another API reminder to the same cart within this window.
+export const API_RESEND_GAP_MS = 24 * 60 * 60 * 1000;
+
+export function recentlySent(sends, cartId, now = Date.now()) {
+  const at = Date.parse(sends[cartId]?.at || "");
+  return Number.isFinite(at) && now - at < API_RESEND_GAP_MS;
+}
+
 export function recordContact(cartId) {
   contactsStore.set((prev) => ({
     ...prev,

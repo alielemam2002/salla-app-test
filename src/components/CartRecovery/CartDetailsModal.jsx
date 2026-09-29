@@ -14,6 +14,7 @@ import {
   money,
 } from "../../utils/cartRecovery/cartModel.js";
 import WhatsAppButton from "./WhatsAppButton.jsx";
+import ApiSendButton from "./ApiSendButton.jsx";
 
 /**
  * Full cart from GET /carts/abandoned/{id}: customer, items (names looked
@@ -27,6 +28,7 @@ export default function CartDetailsModal({
   onClose,
   onCopyLink,
   onContacted,
+  api,
 }) {
   const query = useAbandonedCart(getToken, cartId);
   const cart = query.data?.cart;
@@ -178,6 +180,18 @@ export default function CartDetailsModal({
               >
                 <ExternalLink size={14} aria-hidden="true" /> Open checkout
               </a>
+            )}
+            {api && (
+              <ApiSendButton
+                cart={cart}
+                sender={api.sender}
+                apiSends={api.sends}
+                couponCode={api.couponCode}
+                onResult={api.onResult}
+                disabledReason={
+                  purchased ? "The customer already completed the order" : null
+                }
+              />
             )}
             <WhatsAppButton
               cart={cart}
