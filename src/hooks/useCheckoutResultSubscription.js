@@ -16,16 +16,20 @@ export function useCheckoutResultSubscription() {
 
     const unsubscribe = embedded.checkout.onResult((result) => {
       if (result.success) {
-        const statusText = result.status === "pending" ? "pending" : "success";
+        const isPending = result.status === "pending";
+        const orderId = result.order_id || "غير متوفر";
         showToast(
-          `Checkout ${statusText}! Order: ${result.order_id || "N/A"}`,
-          statusText === "success" ? "success" : "warning",
+          isPending
+            ? `قيد الانتظار: الدفع لم يكتمل بعد. رقم الطلب: ${orderId}`
+            : `تم الدفع بنجاح. رقم الطلب: ${orderId}`,
+          isPending ? "warning" : "success",
         );
       } else if (result.status === "cancelled") {
-        showToast("Checkout cancelled", "info");
+        showToast("أُلغي إتمام الشراء", "info");
       } else {
-        const errorMsg = result.error?.message || result.status || "Failed";
-        showToast(`Checkout failed: ${errorMsg}`, "error");
+        const errorMsg =
+          result.error?.message || result.status || "خطأ غير معروف";
+        showToast(`فشل إتمام الشراء: ${errorMsg}`, "error");
       }
     });
 

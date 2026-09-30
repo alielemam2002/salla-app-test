@@ -23,7 +23,7 @@ async function callCustomersApi(payload) {
         success: false,
         status: response.status,
         code: "bad_response",
-        error: `Server returned non-JSON (status ${response.status})`,
+        error: `ردّ الخادم بشكل غير متوقع (الحالة ${response.status})`,
       };
     }
   } catch (error) {

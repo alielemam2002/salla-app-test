@@ -1,6 +1,6 @@
 import { Store } from "lucide-react";
 
-/** "Applies to: Entire Store" (or the restricted scope for other coupons). */
+/** "ينطبق على: المتجر بالكامل" (or the restricted scope for other coupons). */
 export default function CouponScope({ storewide = true, detailed = false }) {
   return (
     <div
@@ -10,11 +10,11 @@ export default function CouponScope({ storewide = true, detailed = false }) {
     >
       <Store size={14} aria-hidden="true" />
       <span className="coupon-scope-text">
-        <span className="coupon-scope-label">Applies to:</span>{" "}
-        <strong>{storewide ? "Entire Store" : "Selected products only"}</strong>
+        <span className="coupon-scope-label">ينطبق على:</span>{" "}
+        <strong>{storewide ? "المتجر بالكامل" : "منتجات محددة فقط"}</strong>
         {detailed && storewide && (
           <span className="coupon-scope-hint">
-            The discount applies to every product in your store.
+            الخصم يشمل جميع منتجات متجرك، ولا يحتاج العميل لاختيار منتج معيّن.
           </span>
         )}
       </span>

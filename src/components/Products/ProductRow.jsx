@@ -1,13 +1,17 @@
 import {
   ChevronDown,
-  ChevronRight,
+  ChevronLeft,
   Pencil,
   Sparkles,
   Trash2,
 } from "lucide-react";
 import { Badge, CodeBlock, IconButton, cx } from "../ui/index.js";
 import { formatStock, productImage } from "../../utils/productFormat.js";
-import { PRODUCT_STATUS_TONES } from "../../utils/productConstants.js";
+import {
+  PRODUCT_STATUS_TONES,
+  productTypeLabel,
+  statusLabel,
+} from "../../utils/productConstants.js";
 import ProductThumb from "./ProductThumb.jsx";
 import ProductPrice from "./ProductPrice.jsx";
 
@@ -25,7 +29,7 @@ export default function ProductRow({
   onDelete,
   columnCount,
 }) {
-  const ExpandIcon = expanded ? ChevronDown : ChevronRight;
+  const ExpandIcon = expanded ? ChevronDown : ChevronLeft;
 
   return (
     <>
@@ -39,7 +43,7 @@ export default function ProductRow({
             type="checkbox"
             checked={isSelected}
             onChange={() => onToggleSelect(product.id)}
-            aria-label={`Select ${product.name}`}
+            aria-label={`تحديد ${product.name}`}
           />
         </td>
         <td className="products-expand-col" aria-hidden="true">
@@ -56,45 +60,50 @@ export default function ProductRow({
               stop(e);
               onOpenEditor(product);
             }}
-            title="Open Product Details & Completion Score"
+            title="فتح تفاصيل المنتج ونسبة الاكتمال"
           >
             {product.name}
           </button>
           <div className="products-meta">
-            #{product.id}
-            {product.sku ? ` · SKU ${product.sku}` : ""}
-            {product.type ? ` · ${product.type}` : ""}
+            <span dir="ltr">#{product.id}</span>
+            {product.sku ? (
+              <>
+                {" · SKU "}
+                <span dir="ltr">{product.sku}</span>
+              </>
+            ) : null}
+            {product.type ? ` · ${productTypeLabel(product.type)}` : ""}
           </div>
         </td>
-        <td data-label="Price">
+        <td data-label="السعر">
           <ProductPrice product={product} />
         </td>
-        <td data-label="Stock" className="products-stock">
+        <td data-label="المخزون" className="products-stock">
           {formatStock(product)}
         </td>
-        <td data-label="Status">
+        <td data-label="الحالة">
           <Badge tone={PRODUCT_STATUS_TONES[product.status] || "neutral"} dot>
-            {product.status || "—"}
+            {statusLabel(product.status)}
           </Badge>
         </td>
         <td className="products-actions-col" onClick={stop}>
           <div className="products-actions">
             <IconButton
               icon={Sparkles}
-              label="Full Editor & Completion Score"
+              label="المحرر المتكامل ونسبة الاكتمال"
               tone="primary"
               className="products-editor-btn"
               onClick={() => onOpenEditor(product)}
             />
             <IconButton
               icon={Pencil}
-              label="Edit product"
+              label={`تعديل ${product.name}`}
               tone="primary"
               onClick={() => onEdit(product)}
             />
             <IconButton
               icon={Trash2}
-              label="Delete product"
+              label={`حذف ${product.name}`}
               tone="danger"
               onClick={() => onDelete(product)}
             />

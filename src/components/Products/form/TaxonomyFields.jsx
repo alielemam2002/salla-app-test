@@ -19,13 +19,13 @@ export default function TaxonomyFields({
 }) {
   return (
     <>
-      <Field label="Brand" htmlFor="product-brand">
+      <Field label="العلامة التجارية" htmlFor="product-brand">
         {brands.length > 0 ? (
           <Select
             value={values.brand_id}
             onChange={(e) => setField("brand_id", e.target.value)}
             disabled={disabled}
-            placeholder="-- None (No Brand) --"
+            placeholder="— بدون علامة تجارية —"
             options={brands.map((b) => ({
               value: b.id,
               label: `${b.name} (#${b.id})`,
@@ -34,7 +34,7 @@ export default function TaxonomyFields({
         ) : (
           <TextInput
             type="number"
-            placeholder="Enter Brand ID (optional)"
+            placeholder="أدخل معرّف العلامة التجارية (اختياري)"
             value={values.brand_id}
             onChange={(e) => setField("brand_id", e.target.value)}
             disabled={disabled}
@@ -44,7 +44,7 @@ export default function TaxonomyFields({
 
       {categories.length > 0 && (
         <fieldset className="form-group product-categories-fieldset">
-          <legend className="form-label">Categories</legend>
+          <legend className="form-label">التصنيفات</legend>
           <div className="categories-selection-list">
             {categories.map((cat) => {
               const isChecked = values.categories.includes(cat.id);
@@ -63,7 +63,9 @@ export default function TaxonomyFields({
                     disabled={disabled}
                   />
                   <span>{cat.name}</span>
-                  <span className="category-item-id">#{cat.id}</span>
+                  <span className="category-item-id" dir="ltr">
+                    #{cat.id}
+                  </span>
                 </label>
               );
             })}
@@ -72,14 +74,15 @@ export default function TaxonomyFields({
       )}
 
       <Field
-        label="Category IDs (comma-separated)"
+        label="معرّفات التصنيفات (مفصولة بفاصلة)"
         htmlFor="manual-category-ids"
-        hint="Enter Salla Category IDs directly."
+        hint="أدخل معرّفات التصنيفات في سلة مباشرة."
       >
         <TextInput
           type="text"
           className="font-mono"
-          placeholder="e.g. 10293847, 59283741"
+          dir="ltr"
+          placeholder="10293847, 59283741"
           value={values.manualCategoryIds}
           onChange={(e) => setField("manualCategoryIds", e.target.value)}
           disabled={disabled}
@@ -88,8 +91,8 @@ export default function TaxonomyFields({
 
       <Switch
         className="product-form-switch"
-        label="Requires Shipping"
-        description="Physical delivery to the customer"
+        label="يتطلب شحنًا"
+        description="يُوصَّل المنتج فعليًا إلى العميل"
         checked={values.require_shipping}
         onChange={(checked) => setField("require_shipping", checked)}
         disabled={disabled}
@@ -97,7 +100,7 @@ export default function TaxonomyFields({
 
       {values.require_shipping && (
         <FormRow>
-          <Field label="Weight" htmlFor="product-weight">
+          <Field label="الوزن" htmlFor="product-weight">
             <TextInput
               type="number"
               step="any"
@@ -108,7 +111,7 @@ export default function TaxonomyFields({
               disabled={disabled}
             />
           </Field>
-          <Field label="Weight Unit" htmlFor="product-weight-unit">
+          <Field label="وحدة الوزن" htmlFor="product-weight-unit">
             <Select
               value={values.weight_type}
               onChange={(e) => setField("weight_type", e.target.value)}

@@ -107,18 +107,18 @@ export function useBulkDiscount({
   const resolveTargetProducts = async () => {
     if (target === "selected") return selectedProducts;
 
-    setProcessStep("Fetching target products from Salla...");
+    setProcessStep("جارٍ جلب المنتجات المستهدفة من سلة…");
     const res = await fetchAllProducts(token, {
       perPage: 60,
       ...(target === "category" ? { category: selectedCategoryId } : {}),
       onProgress: (p) => {
         setProgressInfo(
-          `Page ${p.page} of ${p.totalPages} (${p.loaded} items)`,
+          `الصفحة ${p.page} من ${p.totalPages} (${p.loaded} منتج)`,
         );
       },
     });
     if (!res.success) {
-      throw new Error(res.error || "Failed to fetch products for bulk update");
+      throw new Error(res.error || "تعذّر جلب المنتجات للتحديث الجماعي");
     }
     return res.products || [];
   };
@@ -132,12 +132,10 @@ export function useBulkDiscount({
     try {
       const targetProducts = await resolveTargetProducts();
       if (targetProducts.length === 0) {
-        throw new Error("No products found for the selected target.");
+        throw new Error("لا توجد منتجات ضمن النطاق المحدد.");
       }
 
-      setProcessStep(
-        `Updating ${targetProducts.length} product prices on Salla...`,
-      );
+      setProcessStep(`جارٍ تحديث أسعار ${targetProducts.length} منتج في سلة…`);
 
       const payload =
         mode === "apply"
@@ -150,15 +148,13 @@ export function useBulkDiscount({
 
       if (payload.length === 0) {
         throw new Error(
-          "None of the target products have a valid regular price to update.",
+          "لا يملك أي من المنتجات المستهدفة سعرًا أساسيًا صالحًا للتحديث.",
         );
       }
 
       const result = await bulkUpdateProductPrices(token, payload);
       if (!result.success) {
-        throw new Error(
-          result.error || "Salla rejected the bulk price update.",
-        );
+        throw new Error(result.error || "رفضت سلة تحديث الأسعار الجماعي.");
       }
 
       setIsProcessing(false);
@@ -169,14 +165,14 @@ export function useBulkDiscount({
         message:
           result.message ||
           (mode === "apply"
-            ? `Successfully applied discount to ${payload.length} products.`
-            : `Successfully removed discounts from ${payload.length} products.`),
+            ? `تم تطبيق الخصم على ${payload.length} منتج بنجاح.`
+            : `تمت إزالة الخصومات من ${payload.length} منتج بنجاح.`),
       });
 
       showToast?.(
         mode === "apply"
-          ? `Bulk discount applied to ${payload.length} products!`
-          : `Discounts removed from ${payload.length} products!`,
+          ? `تم تطبيق الخصم الجماعي على ${payload.length} منتج`
+          : `تمت إزالة الخصومات من ${payload.length} منتج`,
         "success",
       );
 
@@ -184,7 +180,7 @@ export function useBulkDiscount({
     } catch (err) {
       setIsProcessing(false);
       setGeneralError(
-        err.message || "An unexpected error occurred during bulk update.",
+        err.message || "حدث خطأ غير متوقع أثناء التحديث الجماعي.",
       );
     }
   };

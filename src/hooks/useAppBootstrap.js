@@ -133,7 +133,7 @@ export function useAppBootstrap(options = {}) {
           logger.log("✅ Step 3 complete. Verified:", result.data);
         } else {
           setVerifyStatus("failed");
-          setError("Token verification failed");
+          setError("تعذّر التحقق من جلستك. أعد فتح التطبيق من لوحة تحكم سلة.");
           logger.error("❌ Step 3 failed:", result.error);
           // Don't signal ready on verification failure
           setIsInitializing(false);
@@ -156,7 +156,7 @@ export function useAppBootstrap(options = {}) {
       logger.log("✅ Step 4 complete. App is ready!");
     } catch (err) {
       logger.error("Bootstrap error:", err);
-      setError(err.message);
+      setError(err.message || "تعذّر تشغيل التطبيق. حاول مرة أخرى.");
       setIsInitializing(false);
       hasInitialized.current = false; // Allow retry
     }

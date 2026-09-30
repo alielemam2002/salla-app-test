@@ -40,7 +40,7 @@ export default function BulkDiscountModal({
     body = <DiscountResult summary={bulk.resultSummary} onDone={onClose} />;
     footer = (
       <Button variant="primary" onClick={onClose}>
-        Close
+        إغلاق
       </Button>
     );
   } else if (bulk.isConfirming) {
@@ -62,7 +62,7 @@ export default function BulkDiscountModal({
     footer = (
       <>
         <Button onClick={() => bulk.setIsConfirming(false)} disabled={disabled}>
-          Back
+          رجوع
         </Button>
         <Button
           variant={isApply ? "primary" : "danger"}
@@ -70,10 +70,10 @@ export default function BulkDiscountModal({
           loading={bulk.isProcessing}
         >
           {bulk.isProcessing
-            ? "Processing..."
+            ? "جارٍ المعالجة…"
             : isApply
-              ? "Confirm & Apply Discount"
-              : "Confirm & Remove Discount"}
+              ? "تأكيد وتطبيق الخصم"
+              : "تأكيد وإزالة الخصم"}
         </Button>
       </>
     );
@@ -101,9 +101,9 @@ export default function BulkDiscountModal({
             disabled={disabled}
           />
         ) : (
-          <Alert tone="info" title="Resetting Sale Prices:">
-            This will remove the promotional sale price and restore the original
-            regular price for all matching products on Salla.
+          <Alert tone="info" title="إعادة الأسعار إلى أصلها:">
+            سيتم حذف سعر التخفيض وإعادة السعر الأساسي لكل المنتجات المطابقة في
+            سلة.
           </Alert>
         )}
         <div className="form-divider" />
@@ -124,14 +124,14 @@ export default function BulkDiscountModal({
           </span>
         )}
         <Button onClick={onClose} disabled={disabled}>
-          Cancel
+          إلغاء
         </Button>
         <Button
           variant={isApply ? "primary" : "danger"}
           onClick={() => bulk.setIsConfirming(true)}
           disabled={Boolean(bulk.validationError) || disabled}
         >
-          {isApply ? "Review & Apply Discount" : "Review & Remove Discount"}
+          {isApply ? "مراجعة وتطبيق الخصم" : "مراجعة وإزالة الخصم"}
         </Button>
       </>
     );
@@ -144,8 +144,12 @@ export default function BulkDiscountModal({
       size="lg"
       icon={isApply ? Tag : RotateCcw}
       tone={isApply ? "default" : "danger"}
-      title={isApply ? "Bulk Product Discount" : "Remove Product Discounts"}
-      subtitle="Official Salla Bulk Price API (POST /admin/v2/products/prices/bulkPrice)"
+      title={isApply ? "خصم جماعي على المنتجات" : "إزالة خصومات المنتجات"}
+      subtitle={
+        isApply
+          ? "اختر المنتجات وحدّد قيمة الخصم، ثم راجع التغييرات قبل التطبيق"
+          : "أعد الأسعار الأساسية للمنتجات بإزالة سعر التخفيض"
+      }
       dismissible={!bulk.isProcessing}
       headerExtra={
         <DiscountModeToggle
@@ -157,7 +161,7 @@ export default function BulkDiscountModal({
       footer={footer}
     >
       {bulk.generalError && (
-        <Alert tone="error" title="Error">
+        <Alert tone="error" title="تعذّر التنفيذ">
           {bulk.generalError}
         </Alert>
       )}

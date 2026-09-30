@@ -55,7 +55,7 @@ describe("bulkDiscount helpers", () => {
         totalStoreProducts: 0,
         allLoadedCount: 0,
       }),
-    ).toBe("All store items");
+    ).toBe("كل منتجات المتجر");
   });
 
   it("validates settings", () => {
@@ -69,13 +69,13 @@ describe("bulkDiscount helpers", () => {
     };
     expect(validateBulkDiscount(base)).toBeNull();
     expect(validateBulkDiscount({ ...base, discountValue: "150" })).toMatch(
-      /exceed 100%/,
+      /تتجاوز نسبة الخصم 100%/,
     );
     expect(validateBulkDiscount({ ...base, target: "selected" })).toMatch(
-      /No products are selected/,
+      /لم تحدد أي منتجات/,
     );
     expect(validateBulkDiscount({ ...base, target: "category" })).toMatch(
-      /select a category/,
+      /اختر تصنيفًا/,
     );
   });
 
@@ -95,10 +95,10 @@ describe("bulkDiscount helpers", () => {
 
   it("describes the target", () => {
     expect(describeTarget({ target: "selected", selectedCount: 3 })).toBe(
-      "3 Selected Products",
+      "3 منتج محدد",
     );
     expect(describeTarget({ target: "category", selectedCategoryId: 9 })).toBe(
-      "Category #9",
+      "التصنيف #9",
     );
   });
 });

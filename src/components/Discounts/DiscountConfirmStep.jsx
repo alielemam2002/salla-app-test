@@ -19,28 +19,28 @@ export default function DiscountConfirmStep({
 
   const items = [
     {
-      label: "Action",
-      value: isApply ? "Apply Discount" : "Remove Sale Price",
+      label: "الإجراء",
+      value: isApply ? "تطبيق الخصم" : "إزالة سعر التخفيض",
       mono: false,
     },
     isApply && {
-      label: "Discount",
+      label: "الخصم",
       value: formatDiscount(discountType, discountValue),
     },
     {
-      label: "Target",
+      label: "النطاق",
       value: describeTarget({ target, selectedCount, selectedCategoryId }),
       mono: false,
     },
-    isApply && saleEndDate && { label: "Sale End Date", value: saleEndDate },
+    isApply &&
+      saleEndDate && { label: "تاريخ انتهاء التخفيض", value: saleEndDate },
   ].filter(Boolean);
 
   return (
     <div className="bulk-confirm-step">
-      <Alert tone="warning" title="Please confirm bulk update">
-        You are about to{" "}
-        {isApply ? "apply a discount to" : "remove discounts from"}{" "}
-        <strong>{estimatedTargetCount}</strong> products on Salla.
+      <Alert tone="warning" title="يرجى تأكيد التحديث الجماعي">
+        أنت على وشك {isApply ? "تطبيق خصم على" : "إزالة الخصومات من"}{" "}
+        <strong>{estimatedTargetCount}</strong> منتج في سلة.
       </Alert>
 
       <KeyValueList className="confirm-summary-box" items={items} />

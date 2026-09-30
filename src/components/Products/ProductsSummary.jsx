@@ -1,4 +1,5 @@
 import { Badge } from "../ui/index.js";
+import { statusLabel } from "../../utils/productConstants.js";
 
 /** "Showing X of Y" line plus active filter chips. */
 export default function ProductsSummary({
@@ -14,13 +15,15 @@ export default function ProductsSummary({
     <div className="products-summary">
       <span>
         {showingAll
-          ? `Showing all ${count} products`
-          : `Showing ${count} of ${total} products · page ${page} of ${totalPages}`}
+          ? `عرض كل المنتجات (${count})`
+          : `عرض ${count} من ${total} منتج · الصفحة ${page} من ${totalPages}`}
       </span>
       {appliedKeyword && (
-        <Badge tone="primary">Keyword: &quot;{appliedKeyword}&quot;</Badge>
+        <Badge tone="primary">الكلمة: &quot;{appliedKeyword}&quot;</Badge>
       )}
-      {statusFilter && <Badge tone="primary">Status: {statusFilter}</Badge>}
+      {statusFilter && (
+        <Badge tone="primary">الحالة: {statusLabel(statusFilter)}</Badge>
+      )}
     </div>
   );
 }

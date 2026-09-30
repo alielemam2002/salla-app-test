@@ -157,26 +157,30 @@ describe("CartRecoveryTab", () => {
     expect(screen.getByText("Sara")).toBeInTheDocument();
     expect(screen.queryByText("Fresh Cart")).toBeNull(); // 15 min < 1 hour
 
-    const stat = (label) => screen.getByText(label).closest(".ui-stat");
-    expect(within(stat("Abandoned carts")).getByText("2")).toBeInTheDocument();
+    const stat = (label) =>
+      screen
+        .getAllByText(label)
+        .map((el) => el.closest(".ui-stat"))
+        .find(Boolean);
+    expect(within(stat("السلات المتروكة")).getByText("2")).toBeInTheDocument();
     expect(
-      within(stat("Potential revenue")).getByText("SAR 1,270"),
+      within(stat("الإيرادات المحتملة")).getByText("SAR 1,270"),
     ).toBeInTheDocument();
     expect(
-      within(stat("Reachable on WhatsApp")).getByText("1"),
+      within(stat("يمكن مراسلتهم عبر واتساب")).getByText("1"),
     ).toBeInTheDocument();
     // No invented recovery numbers in stage 1.
-    expect(screen.queryByText(/Recovery rate/i)).toBeNull();
+    expect(screen.queryByText(/معدل الاسترجاع/)).toBeNull();
 
-    fireEvent.click(screen.getByLabelText("Show recent carts"));
+    fireEvent.click(screen.getByLabelText("إظهار السلات الحديثة"));
     expect(screen.getByText("Fresh Cart")).toBeInTheDocument();
-    expect(screen.getByText("Recent")).toBeInTheDocument();
+    expect(screen.getByText("حديثة")).toBeInTheDocument();
   });
 
   it("opens WhatsApp with the filled message and records it", async () => {
     renderTab();
     const link = await screen.findByRole("link", {
-      name: "Send WhatsApp to Ahmed Ali",
+      name: "مراسلة Ahmed Ali عبر واتساب",
     });
     const url = new URL(link.getAttribute("href"));
     expect(url.origin + url.pathname).toBe("https://wa.me/966560000001");
@@ -188,27 +192,26 @@ describe("CartRecoveryTab", () => {
     expect(link).toHaveAttribute("target", "_blank");
 
     fireEvent.click(link);
-    expect(await screen.findByText(/^WhatsApp just now$/)).toBeInTheDocument();
+    expect(await screen.findByText(/^واتساب الآن$/)).toBeInTheDocument();
 
     // Sara has no mobile number in Salla: the button explains why.
     const saraRow = screen.getByText("Sara").closest("tr");
     expect(
-      within(saraRow).getByRole("button", { name: "WhatsApp" }),
+      within(saraRow).getByRole("button", { name: "واتساب" }),
     ).toBeDisabled();
   });
 
   it("adds an existing coupon to the message", async () => {
     renderTab();
     await screen.findByText("Ahmed Ali");
-    fireEvent.change(
-      await screen.findByLabelText("Recovery incentive (optional)"),
-      { target: { value: "SAVE10" } },
-    );
+    fireEvent.change(await screen.findByLabelText("حافز الاسترجاع (اختياري)"), {
+      target: { value: "SAVE10" },
+    });
     const link = screen.getByRole("link", {
-      name: "Send WhatsApp to Ahmed Ali",
+      name: "مراسلة Ahmed Ali عبر واتساب",
     });
     expect(new URL(link.href).searchParams.get("text")).toContain("SAVE10");
-    expect(screen.getByText(/Preview · sample data/)).toBeInTheDocument();
+    expect(screen.getByText(/معاينة · بيانات تجريبية/)).toBeInTheDocument();
   });
 
   it("shows cart details with product names and Salla's status", async () => {
@@ -232,21 +235,17 @@ describe("CartRecoveryTab", () => {
     });
     renderTab();
     fireEvent.click(
-      await screen.findByRole("button", { name: "View cart of Ahmed Ali" }),
+      await screen.findByRole("button", { name: "عرض سلة Ahmed Ali" }),
     );
     const dialog = await screen.findByRole("dialog");
     expect(await within(dialog).findByText("Blue Shirt")).toBeInTheDocument();
-    expect(within(dialog).getByText("Product #8")).toBeInTheDocument();
+    expect(within(dialog).getByText("منتج رقم 8")).toBeInTheDocument();
     expect(within(dialog).getByText("SAR 200")).toBeInTheDocument();
     // Email wasn't provided by Salla: say so, don't guess.
+    expect(within(dialog).getByText("غير متوفر من سلة")).toBeInTheDocument();
+    expect(within(dialog).getByText("تم شراء هذه السلة")).toBeInTheDocument();
     expect(
-      within(dialog).getByText("Not provided by Salla"),
-    ).toBeInTheDocument();
-    expect(
-      within(dialog).getByText("This cart was purchased."),
-    ).toBeInTheDocument();
-    expect(
-      within(dialog).getByRole("button", { name: "WhatsApp" }),
+      within(dialog).getByRole("button", { name: "واتساب" }),
     ).toBeDisabled();
     expect(fetchAbandonedCart).toHaveBeenCalledWith("tok", 11);
   });
@@ -259,20 +258,24 @@ describe("CartRecoveryTab", () => {
       error: "scope",
     });
     renderTab();
-    expect(await screen.findByText(/carts\.read scope/)).toBeInTheDocument();
+    expect(await screen.findByText(/carts\.read/)).toBeInTheDocument();
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument(),
+      expect(
+        screen.getByRole("button", { name: "إعادة المحاولة" }),
+      ).toBeInTheDocument(),
     );
   });
 
   it("is manual-only until the merchant connects WhatsApp", async () => {
     renderTab();
-    expect(await screen.findByText("Manual sending only")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Send via API/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /shown carts/ })).toBeNull();
+    expect(await screen.findByText("الإرسال اليدوي فقط")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /إرسال عبر واتساب/ }),
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /سلة معروضة/ })).toBeNull();
     // The manual WhatsApp link is still there.
     expect(
-      await screen.findByRole("link", { name: "Send WhatsApp to Ahmed Ali" }),
+      await screen.findByRole("link", { name: "مراسلة Ahmed Ali عبر واتساب" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("switch")).toBeNull();
   });
@@ -282,11 +285,13 @@ describe("CartRecoveryTab", () => {
     setWhatsAppEnabled.mockResolvedValue({ success: true, settings: {} });
     const { showToast } = renderTab();
     const toggle = await screen.findByRole("switch", {
-      name: /Send from the app/,
+      name: /الإرسال من التطبيق/,
     });
     expect(toggle).toBeChecked();
     expect(
-      await screen.findByRole("button", { name: "Send via API to Ahmed Ali" }),
+      await screen.findByRole("button", {
+        name: "إرسال عبر واتساب إلى Ahmed Ali",
+      }),
     ).toBeInTheDocument();
 
     fetchWhatsAppStatus.mockResolvedValue({
@@ -300,19 +305,21 @@ describe("CartRecoveryTab", () => {
     );
     await waitFor(() =>
       expect(
-        screen.queryByRole("button", { name: "Send via API to Ahmed Ali" }),
+        screen.queryByRole("button", {
+          name: "إرسال عبر واتساب إلى Ahmed Ali",
+        }),
       ).toBeNull(),
     );
     expect(
-      screen.getByRole("switch", { name: /Send from the app/ }),
+      screen.getByRole("switch", { name: /الإرسال من التطبيق/ }),
     ).not.toBeChecked();
     expect(showToast).toHaveBeenCalledWith(
-      "Sending from the app is off: manual only",
+      "تم إيقاف الإرسال من التطبيق: الإرسال اليدوي فقط",
       "success",
     );
     // Manual sending still works.
     expect(
-      screen.getByRole("link", { name: "Send WhatsApp to Ahmed Ali" }),
+      screen.getByRole("link", { name: "مراسلة Ahmed Ali عبر واتساب" }),
     ).toBeInTheDocument();
   });
 
@@ -325,28 +332,28 @@ describe("CartRecoveryTab", () => {
     });
     const { showToast } = renderTab();
     expect(
-      await screen.findByText("WhatsApp connected: My Store"),
+      await screen.findByText("تم ربط واتساب: My Store"),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/doesn't include the cart link/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/لا يتضمن رابط السلة/)).toBeInTheDocument();
 
     fireEvent.click(
-      await screen.findByRole("button", { name: "Send via API to Ahmed Ali" }),
+      await screen.findByRole("button", {
+        name: "إرسال عبر واتساب إلى Ahmed Ali",
+      }),
     );
     await waitFor(() =>
       expect(sendCartWhatsApp).toHaveBeenCalledWith("tok", 11, ""),
     );
     expect(
-      await screen.findByText(/Sent via API just now/),
+      await screen.findByText(/أُرسلت من التطبيق الآن/),
     ).toBeInTheDocument();
     expect(showToast).toHaveBeenCalledWith(
-      "Meta accepted the message to Ahmed Ali",
+      "قبلت Meta الرسالة الموجهة إلى Ahmed Ali",
       "success",
     );
     // No second message to the same cart within 24 hours.
     expect(
-      screen.getByRole("button", { name: "Send via API to Ahmed Ali" }),
+      screen.getByRole("button", { name: "إرسال عبر واتساب إلى Ahmed Ali" }),
     ).toBeDisabled();
   });
 
@@ -357,17 +364,16 @@ describe("CartRecoveryTab", () => {
       status: 422,
       code: "meta_error",
       metaCode: 131030,
-      error:
-        "Meta's test number can only message recipients you added in API Setup.",
+      error: "رقم الاختبار من Meta يرسل فقط إلى المستلمين الذين أضفتهم.",
     });
     renderTab();
     fireEvent.click(
-      await screen.findByRole("button", { name: "Send via API to Ahmed Ali" }),
+      await screen.findByRole("button", {
+        name: "إرسال عبر واتساب إلى Ahmed Ali",
+      }),
     );
     const row = screen.getByText("Ahmed Ali").closest("tr");
-    expect(
-      await within(row).findByText(/only message recipients you added/),
-    ).toBeInTheDocument();
+    expect(await within(row).findByText(/الذين أضفتهم/)).toBeInTheDocument();
     expect(screen.queryByText(/Sent via API/)).toBeNull();
   });
 
@@ -383,16 +389,14 @@ describe("CartRecoveryTab", () => {
       return { success: true, messageId: "wamid", status: "accepted" };
     });
     renderTab();
-    fireEvent.click(await screen.findByLabelText("Show recent carts"));
+    fireEvent.click(await screen.findByLabelText("إظهار السلات الحديثة"));
     // Ahmed (eligible, has number); Sara has no number; Fresh Cart is recent.
     fireEvent.click(
-      await screen.findByRole("button", { name: "Send to 1 shown carts" }),
+      await screen.findByRole("button", { name: "إرسال إلى 1 سلة معروضة" }),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Send to 1" }));
+    fireEvent.click(screen.getByRole("button", { name: "إرسال إلى 1" }));
     await waitFor(() =>
-      expect(
-        screen.getByText(/Last run: 1 accepted by Meta/),
-      ).toBeInTheDocument(),
+      expect(screen.getByText(/آخر عملية: 1 قبلتها Meta/)).toBeInTheDocument(),
     );
     expect(sendCartWhatsApp).toHaveBeenCalledTimes(1);
     expect(sendCartWhatsApp).toHaveBeenCalledWith("tok", 11, "");
@@ -415,40 +419,38 @@ describe("CartRecoveryTab", () => {
       },
     }));
     const { showToast } = renderTab();
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Connect WhatsApp" }),
-    );
+    fireEvent.click(await screen.findByRole("button", { name: "ربط واتساب" }));
     const dialog = await screen.findByRole("dialog");
-    await within(dialog).findByLabelText(/Phone Number ID/);
+    await within(dialog).findByLabelText(/معرّف رقم الهاتف/);
 
     // The token is required the first time.
-    fireEvent.change(within(dialog).getByLabelText(/Phone Number ID/), {
+    fireEvent.change(within(dialog).getByLabelText(/معرّف رقم الهاتف/), {
       target: { value: "1324055010792496" },
     });
-    fireEvent.change(within(dialog).getByLabelText(/Template name/), {
+    fireEvent.change(within(dialog).getByLabelText(/اسم القالب/), {
       target: { value: "cart_reminder_ar" },
     });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "حفظ" }));
     expect(
-      await within(dialog).findByText("An access token is required"),
+      await within(dialog).findByText("رمز الوصول مطلوب"),
     ).toBeInTheDocument();
     expect(saveWhatsAppSettings).not.toHaveBeenCalled();
 
-    const token = within(dialog).getByLabelText(/Access token/);
+    const token = within(dialog).getByLabelText(/رمز الوصول/);
     expect(token).toHaveAttribute("type", "password");
     fireEvent.change(token, {
       target: { value: "EAAmerchantTokenValue1234abcd" },
     });
     for (const key of ["customer_name", "cart_total", "checkout_url"]) {
       fireEvent.click(
-        within(dialog).getByRole("button", { name: "Add variable" }),
+        within(dialog).getByRole("button", { name: "إضافة متغير" }),
       );
-      const selects = within(dialog).getAllByLabelText(/Value for \{\{/);
+      const selects = within(dialog).getAllByLabelText(/قيمة المتغير \{\{/);
       fireEvent.change(selects[selects.length - 1], {
         target: { value: key },
       });
     }
-    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "حفظ" }));
 
     await waitFor(() =>
       expect(saveWhatsAppSettings).toHaveBeenCalledWith("tok", {
@@ -460,10 +462,7 @@ describe("CartRecoveryTab", () => {
         params: ["customer_name", "cart_total", "checkout_url"],
       }),
     );
-    expect(showToast).toHaveBeenCalledWith(
-      "WhatsApp settings saved",
-      "success",
-    );
+    expect(showToast).toHaveBeenCalledWith("تم حفظ إعدادات واتساب", "success");
   });
 
   it("shows the saved token only as its last 4 characters", async () => {
@@ -489,17 +488,17 @@ describe("CartRecoveryTab", () => {
     });
     renderTab();
     expect(
-      await screen.findByText("WhatsApp connected: My Store"),
+      await screen.findByText("تم ربط واتساب: My Store"),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "WhatsApp settings" }));
+    fireEvent.click(screen.getByRole("button", { name: "إعدادات واتساب" }));
     const dialog = await screen.findByRole("dialog");
-    const token = await within(dialog).findByLabelText(/Access token/);
+    const token = await within(dialog).findByLabelText(/رمز الوصول/);
     expect(token).toHaveValue("");
     expect(token).toHaveAttribute("placeholder", "••••abcd");
     expect(
-      within(dialog).getByText(/Saved \(ends in abcd\)/),
+      within(dialog).getByText(/محفوظ \(ينتهي بـ abcd\)/),
     ).toBeInTheDocument();
-    expect(within(dialog).getByText("Send a test message")).toBeInTheDocument();
+    expect(within(dialog).getByText("رسالة تجريبية")).toBeInTheDocument();
   });
 
   it("offers WhatsApp settings even before storage is set up, and explains it", async () => {
@@ -514,13 +513,13 @@ describe("CartRecoveryTab", () => {
     });
     renderTab();
     expect(
-      await screen.findByText(/needs settings storage on the server first/),
+      await screen.findByText(/تخزين الإعدادات على الخادم/),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Connect WhatsApp" }));
+    fireEvent.click(screen.getByRole("button", { name: "ربط واتساب" }));
     const dialog = await screen.findByRole("dialog");
     expect(
-      await within(dialog).findByText("Settings storage isn't set up yet."),
+      await within(dialog).findByText("تخزين الإعدادات غير مفعّل بعد"),
     ).toBeInTheDocument();
-    expect(within(dialog).queryByRole("button", { name: "Save" })).toBeNull();
+    expect(within(dialog).queryByRole("button", { name: "حفظ" })).toBeNull();
   });
 });

@@ -17,6 +17,7 @@ import {
 } from "../../utils/bulkActions/bulkActionSpec.js";
 import {
   APPLY_ON_LABELS,
+  CHANNEL_LABELS,
   COLUMN_LABELS,
   FORMULA_LABELS,
 } from "../../utils/bulkActions/bulkActionUi.js";
@@ -100,7 +101,7 @@ export function PricingForm({ form, currency }) {
   return (
     <div className="bulk-form">
       <ChoiceGroup
-        legend="Apply to"
+        legend="تطبيق على"
         name="column"
         register={register}
         options={PRICING_COLUMNS.map((value) => ({
@@ -109,7 +110,7 @@ export function PricingForm({ form, currency }) {
         }))}
       />
       <FormRow>
-        <Field label="Change" error={errors.formulaId?.message}>
+        <Field label="التغيير" error={errors.formulaId?.message}>
           <Select
             {...register("formulaId")}
             options={(PRICING_FORMULAS[column] || []).map((f) => ({
@@ -118,7 +119,7 @@ export function PricingForm({ form, currency }) {
             }))}
           />
         </Field>
-        <Field label="Value" required error={errors.amount?.message}>
+        <Field label="القيمة" required error={errors.amount?.message}>
           <TextInput
             type="number"
             inputMode="decimal"
@@ -131,7 +132,7 @@ export function PricingForm({ form, currency }) {
         </Field>
       </FormRow>
       <ChoiceGroup
-        legend="Apply on"
+        legend="نطاق التطبيق"
         name="apply_on"
         register={register}
         options={APPLY_ON.map((value) => ({
@@ -141,8 +142,8 @@ export function PricingForm({ form, currency }) {
       />
       {column === "sale_price" && (
         <p className="form-hint">
-          To discount products, Salla sets the sale price below the price. The
-          price itself stays the same.
+          لتطبيق خصم، تضبط سلة سعر التخفيض أقل من السعر، ويبقى السعر الأساسي كما
+          هو.
         </p>
       )}
     </div>
@@ -161,17 +162,21 @@ export function FeaturesForm({ form, field, lookups }) {
         <CheckboxList
           control={control}
           name="categories"
-          legend="Categories"
+          legend="التصنيفات"
           items={lookups.categories}
           error={errors.categories?.message}
-          emptyText="No categories found in this store."
+          emptyText="لا توجد تصنيفات في هذا المتجر."
         />
       )}
       {field === "brand_id" && (
-        <Field label="Brand" required error={errors.brand_id?.message}>
+        <Field
+          label="العلامة التجارية"
+          required
+          error={errors.brand_id?.message}
+        >
           <Select
             {...register("brand_id")}
-            placeholder="Choose a brand"
+            placeholder="اختر علامة تجارية"
             options={lookups.brands.map((b) => ({
               value: String(b.id),
               label: b.name,
@@ -183,16 +188,15 @@ export function FeaturesForm({ form, field, lookups }) {
         <CheckboxList
           control={control}
           name="tags"
-          legend="Tags"
+          legend="الوسوم"
           items={lookups.tags}
           error={errors.tags?.message}
-          emptyText="No product tags found in this store."
+          emptyText="لا توجد وسوم منتجات في هذا المتجر."
         />
       )}
       <Alert tone="info">
-        Salla&apos;s docs don&apos;t say whether this adds to or replaces the
-        products&apos; current values. Check one product after the operation
-        finishes.
+        لا توضح وثائق سلة هل تُضاف هذه القيم إلى قيم المنتجات الحالية أم
+        تستبدلها. تحقق من أحد المنتجات بعد اكتمال العملية.
       </Alert>
     </div>
   );
@@ -203,7 +207,7 @@ export function ChannelsForm({ form }) {
     control,
     formState: { errors },
   } = form;
-  const labels = { web: "Web store", app: "Mobile app" };
+  const labels = CHANNEL_LABELS;
   return (
     <div className="bulk-form">
       <Controller
@@ -211,7 +215,7 @@ export function ChannelsForm({ form }) {
         name="channels"
         render={({ field }) => (
           <fieldset className="bulk-choice-group">
-            <legend className="form-label">Sell these products on</legend>
+            <legend className="form-label">بيع هذه المنتجات عبر</legend>
             <div className="bulk-checkbox-list">
               {SALE_CHANNELS.map((channel) => (
                 <Checkbox
@@ -259,9 +263,9 @@ export function NotifyForm({ form }) {
   return (
     <div className="bulk-form">
       <FormRow columns={3}>
-        {number("notify_quantity", "Notify quantity")}
-        {number("minimum_notify_quantity", "Minimum notify quantity")}
-        {number("subscribers_percentage", "Subscribers percentage", "0–100", {
+        {number("notify_quantity", "كمية التنبيه")}
+        {number("minimum_notify_quantity", "الحد الأدنى لكمية التنبيه")}
+        {number("subscribers_percentage", "نسبة المشتركين", "من 0 إلى 100", {
           max: 100,
           suffix: "%",
         })}

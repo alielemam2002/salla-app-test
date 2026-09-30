@@ -14,7 +14,7 @@ import {
 /** Error carrying the API result so the UI can describe it. */
 export class CampaignApiError extends Error {
   constructor(result) {
-    super(result?.error || "Request failed");
+    super(result?.error || "تعذّر تنفيذ الطلب");
     this.name = "CampaignApiError";
     this.result = result;
   }
@@ -24,7 +24,7 @@ const noToken = {
   success: false,
   status: 401,
   code: "session_invalid",
-  error: "No embedded token found",
+  error: "لم يتم العثور على رمز الجلسة. افتح التطبيق من لوحة تحكم سلة.",
 };
 
 /** Every store customer (with the flags a campaign needs). */

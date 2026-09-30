@@ -31,20 +31,20 @@ export default function ProductsTable({
                   if (el) el.indeterminate = selection.isSomeSelected;
                 }}
                 onChange={selection.toggleAll}
-                aria-label="Select all on this page"
+                aria-label="تحديد كل منتجات هذه الصفحة"
               />
             </th>
             <th className="products-expand-col">
-              <span className="sr-only">Details</span>
+              <span className="sr-only">التفاصيل</span>
             </th>
             <th className="products-thumb-col">
-              <span className="sr-only">Image</span>
+              <span className="sr-only">الصورة</span>
             </th>
-            <th>Product</th>
-            <th>Price</th>
-            <th>Stock</th>
-            <th>Status</th>
-            <th className="products-actions-col">Actions</th>
+            <th>المنتج</th>
+            <th>السعر</th>
+            <th>المخزون</th>
+            <th>الحالة</th>
+            <th className="products-actions-col">الإجراءات</th>
           </tr>
         </thead>
         <tbody>

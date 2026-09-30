@@ -34,8 +34,8 @@ export default function ProductsToolbar({ search, disabled, categories = [] }) {
           <input
             type="search"
             className="form-input products-search-input"
-            placeholder="Search by name or SKU..."
-            aria-label="Search products"
+            placeholder="ابحث بالاسم أو رمز SKU…"
+            aria-label="بحث في المنتجات"
             value={keywordInput}
             onChange={(e) => setKeywordInput(e.target.value)}
           />
@@ -43,14 +43,14 @@ export default function ProductsToolbar({ search, disabled, categories = [] }) {
             <IconButton
               icon={X}
               size={14}
-              label="Clear search"
+              label="مسح البحث"
               className="products-search-clear"
               onClick={clearSearch}
             />
           )}
         </div>
         <Button type="submit" variant="secondary" disabled={disabled}>
-          Search
+          بحث
         </Button>
       </form>
 
@@ -58,7 +58,7 @@ export default function ProductsToolbar({ search, disabled, categories = [] }) {
         <Filter size={15} className="products-filter-icon" aria-hidden="true" />
         <Select
           className="products-filter-select"
-          aria-label="Filter by status"
+          aria-label="تصفية حسب الحالة"
           value={statusFilter}
           onChange={(e) => changeStatusFilter(e.target.value)}
           disabled={disabled}
@@ -67,12 +67,12 @@ export default function ProductsToolbar({ search, disabled, categories = [] }) {
         {categories.length > 0 && changeCategoryFilter && (
           <Select
             className="products-filter-select"
-            aria-label="Filter by category"
+            aria-label="تصفية حسب التصنيف"
             value={categoryFilter || ""}
             onChange={(e) => changeCategoryFilter(e.target.value)}
             disabled={disabled}
             options={[
-              { value: "", label: "All Categories" },
+              { value: "", label: "كل التصنيفات" },
               ...categories.map((c) => ({
                 value: String(c.id),
                 label: c.name,

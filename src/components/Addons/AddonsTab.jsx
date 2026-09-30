@@ -15,11 +15,12 @@ function SelectionBar({ count, onBuy, onClear }) {
   return (
     <div className="addons-selection" role="status">
       <span>
-        <strong>{count}</strong> addon{count > 1 ? "s" : ""} selected
+        تم تحديد <strong>{count}</strong>{" "}
+        {count > 2 && count < 11 ? "إضافات" : "إضافة"}
       </span>
       <div className="addons-selection-actions">
         <Button size="small" variant="ghost" icon={X} onClick={onClear}>
-          Clear
+          إلغاء التحديد
         </Button>
         <Button
           size="small"
@@ -27,7 +28,7 @@ function SelectionBar({ count, onBuy, onClear }) {
           icon={ShoppingCart}
           onClick={onBuy}
         >
-          Buy selected
+          شراء المحدد
         </Button>
       </div>
     </div>
@@ -58,11 +59,11 @@ export default function AddonsTab({ embedded, logMessage, showToast }) {
       <EmptyState
         icon={AlertCircle}
         tone="danger"
-        title="Failed to load addons"
+        title="تعذّر تحميل الإضافات"
         description={error}
         action={
           <Button variant="primary" icon={RefreshCw} onClick={reload}>
-            Retry
+            إعادة المحاولة
           </Button>
         }
       />
@@ -71,8 +72,8 @@ export default function AddonsTab({ embedded, logMessage, showToast }) {
     content = (
       <EmptyState
         icon={PackageOpen}
-        title="No addons yet"
-        description="Define addons in the Partners Portal publish form (Pricing step), then refresh."
+        title="لا توجد إضافات بعد"
+        description="لم يتم إعداد أي إضافة لهذا التطبيق حتى الآن. أضفها من مرحلة التسعير في بوابة الشركاء ثم اضغط تحديث."
       />
     );
   } else {
@@ -100,8 +101,8 @@ export default function AddonsTab({ embedded, logMessage, showToast }) {
       <Card>
         <Card.Header
           icon={Store}
-          title="Addon Store"
-          subtitle="Test checkout flow with embedded.checkout.getAddons() and embedded.checkout.create()"
+          title="متجر الإضافات"
+          subtitle="تصفّح إضافات التطبيق واشترِها وأتمم الدفع بأمان عبر سلة"
           actions={
             <Button
               size="small"
@@ -109,7 +110,7 @@ export default function AddonsTab({ embedded, logMessage, showToast }) {
               onClick={reload}
               disabled={isLoading}
             >
-              Refresh
+              تحديث
             </Button>
           }
         />

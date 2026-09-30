@@ -180,7 +180,7 @@ describe("api/whatsapp", () => {
     expect(await res.json()).toMatchObject({
       code: "meta_error",
       metaCode: 190,
-      error: expect.stringMatching(/token expired/),
+      error: expect.stringMatching(/انتهت صلاحية/),
     });
     expect(kv.size).toBe(0);
   });
@@ -289,7 +289,7 @@ describe("api/whatsapp", () => {
     expect(status).toMatchObject({ connected: false, tokenUnreadable: true });
     const send = await call({ action: "send", cartId: 77 });
     expect(send.status).toBe(503);
-    expect((await send.json()).error).toMatch(/Enter it again/);
+    expect((await send.json()).error).toMatch(/أدخله مرة أخرى/);
   });
 
   it("refuses to save settings without storage", async () => {
@@ -336,8 +336,7 @@ describe("api/whatsapp", () => {
     expect(await res.json()).toMatchObject({
       code: "meta_error",
       metaCode: 132001,
-      error:
-        "The template doesn't exist in this language or isn't approved yet.",
+      error: "القالب غير موجود بهذه اللغة أو لم تعتمده Meta بعد.",
       detail: "template name does not exist in ar",
     });
   });

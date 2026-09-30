@@ -21,17 +21,17 @@ export default function WhatsAppButton({
   const reason =
     disabledReason ||
     (!cart?.customer?.mobile
-      ? "Salla has no mobile number for this customer"
+      ? "لا يوجد رقم جوال لهذا العميل في سلة"
       : !number
-        ? "The mobile number has no country code"
+        ? "رقم الجوال بلا رمز الدولة"
         : !cart?.checkout_url
-          ? "Salla returned no checkout link for this cart"
+          ? "لم ترجع سلة رابط إكمال الطلب لهذه السلة"
           : null);
 
   if (reason) {
     return (
       <Button size={size} icon={MessageCircle} disabled title={reason}>
-        WhatsApp
+        واتساب
       </Button>
     );
   }
@@ -43,10 +43,10 @@ export default function WhatsAppButton({
       target="_blank"
       rel="noopener noreferrer"
       onClick={() => onOpened?.(cart.id)}
-      aria-label={`Send WhatsApp to ${cart.customer?.name || "customer"}`}
+      aria-label={`مراسلة ${cart.customer?.name || "العميل"} عبر واتساب`}
     >
       <MessageCircle size={size === "small" ? 14 : 16} aria-hidden="true" />
-      WhatsApp
+      واتساب
     </a>
   );
 }

@@ -74,7 +74,7 @@ describe("ProductsTab", () => {
     render(<ProductsTab embedded={makeEmbedded(null)} showToast={vi.fn()} />);
 
     expect(
-      await screen.findByText(/No embedded token found/),
+      await screen.findByText(/لم يتم العثور على رمز الجلسة/),
     ).toBeInTheDocument();
     expect(fetchProductsPage).not.toHaveBeenCalled();
   });
@@ -89,7 +89,7 @@ describe("ProductsTab", () => {
 
     render(<ProductsTab embedded={embedded} showToast={vi.fn()} />);
 
-    fireEvent.click(await screen.findByText("Refresh session"));
+    fireEvent.click(await screen.findByText("تحديث الجلسة"));
     expect(embedded.auth.refresh).toHaveBeenCalled();
   });
 
@@ -104,7 +104,7 @@ describe("ProductsTab", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText(/Add the store's Merchant API access token/),
+        screen.getByText(/لم يتم ربط التطبيق بالمتجر بعد/),
       ).toBeInTheDocument(),
     );
   });
@@ -128,10 +128,10 @@ describe("ProductsTab", () => {
     render(<ProductsTab embedded={makeEmbedded()} showToast={vi.fn()} />);
     await screen.findByText("Red Shoes");
 
-    const searchInput = screen.getByPlaceholderText(/Search by name or SKU/i);
+    const searchInput = screen.getByPlaceholderText(/ابحث بالاسم أو رمز SKU/);
     fireEvent.change(searchInput, { target: { value: "Shoes" } });
 
-    const searchButton = screen.getByRole("button", { name: "Search" });
+    const searchButton = screen.getByRole("button", { name: "بحث" });
     fireEvent.click(searchButton);
 
     await waitFor(() => {
@@ -165,23 +165,23 @@ describe("ProductsTab", () => {
     render(<ProductsTab embedded={makeEmbedded()} showToast={showToast} />);
 
     // Click Add Product button in header
-    const addBtn = await screen.findByRole("button", { name: /Add Product/i });
+    const addBtn = await screen.findByRole("button", { name: /إضافة منتج/ });
     fireEvent.click(addBtn);
 
     // Form modal should be open
     expect(
-      screen.getByRole("heading", { name: "Add New Product" }),
+      screen.getByRole("heading", { name: "إضافة منتج" }),
     ).toBeInTheDocument();
 
     // Fill form
-    const nameInput = screen.getByLabelText(/Product Name/i);
+    const nameInput = screen.getByLabelText(/اسم المنتج/);
     fireEvent.change(nameInput, { target: { value: "New Summer Cap" } });
 
-    const priceInput = screen.getByLabelText(/Regular Price/i);
+    const priceInput = screen.getByLabelText(/السعر \(SAR\)/);
     fireEvent.change(priceInput, { target: { value: "45" } });
 
     // Submit form
-    const submitBtn = screen.getByRole("button", { name: "Create Product" });
+    const submitBtn = screen.getByRole("button", { name: "إضافة المنتج" });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
@@ -194,7 +194,7 @@ describe("ProductsTab", () => {
         }),
       );
       expect(showToast).toHaveBeenCalledWith(
-        expect.stringContaining("created successfully"),
+        expect.stringContaining("تمت إضافة المنتج"),
         "success",
       );
     });
@@ -230,21 +230,21 @@ describe("ProductsTab", () => {
     await screen.findByText("Green Jacket");
 
     // Click Edit button
-    const editBtn = screen.getByTitle("Edit product");
+    const editBtn = screen.getByTitle("تعديل Green Jacket");
     fireEvent.click(editBtn);
 
     // Form modal should be open with product details
     expect(
-      screen.getByRole("heading", { name: /Edit Product #55/i }),
+      screen.getByRole("heading", { name: /تعديل المنتج #55/ }),
     ).toBeInTheDocument();
 
-    const nameInput = screen.getByLabelText(/Product Name/i);
+    const nameInput = screen.getByLabelText(/اسم المنتج/);
     expect(nameInput.value).toBe("Green Jacket");
 
     fireEvent.change(nameInput, { target: { value: "Green Jacket Premium" } });
 
     // Submit update
-    const submitBtn = screen.getByRole("button", { name: "Update Product" });
+    const submitBtn = screen.getByRole("button", { name: "حفظ التعديلات" });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
@@ -256,7 +256,7 @@ describe("ProductsTab", () => {
         }),
       );
       expect(showToast).toHaveBeenCalledWith(
-        expect.stringContaining("updated successfully"),
+        expect.stringContaining("تم تحديث المنتج"),
         "success",
       );
     });
@@ -285,27 +285,24 @@ describe("ProductsTab", () => {
     await screen.findByText("Old Item");
 
     // Click Delete icon
-    const deleteIconBtn = screen.getByTitle("Delete product");
+    const deleteIconBtn = screen.getByTitle("حذف Old Item");
     fireEvent.click(deleteIconBtn);
 
     // Confirmation dialog should be visible
     expect(
-      screen.getByRole("heading", { name: "Delete Product" }),
+      screen.getByRole("heading", { name: "حذف المنتج" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Are you sure you want to delete this product/i),
+      screen.getByText(/هل أنت متأكد من حذف هذا المنتج/),
     ).toBeInTheDocument();
 
     // Confirm deletion
-    const confirmBtn = screen.getByRole("button", { name: "Delete Product" });
+    const confirmBtn = screen.getByRole("button", { name: "حذف المنتج" });
     fireEvent.click(confirmBtn);
 
     await waitFor(() => {
       expect(deleteProduct).toHaveBeenCalledWith("tok", 77);
-      expect(showToast).toHaveBeenCalledWith(
-        "Product deleted successfully",
-        "success",
-      );
+      expect(showToast).toHaveBeenCalledWith("تم حذف المنتج بنجاح", "success");
     });
   });
 
@@ -327,21 +324,21 @@ describe("ProductsTab", () => {
     await screen.findByText("Bulk Target Item");
 
     // Select row checkbox
-    const rowCheckbox = screen.getByLabelText("Select Bulk Target Item");
+    const rowCheckbox = screen.getByLabelText("تحديد Bulk Target Item");
     fireEvent.click(rowCheckbox);
 
     // Selection bar should appear with count
-    expect(await screen.findByText(/products selected/i)).toBeInTheDocument();
+    expect(await screen.findByText(/منتج محدد/)).toBeInTheDocument();
 
     // Click Bulk Discount button
     const bulkDiscountBtns = screen.getAllByRole("button", {
-      name: /Bulk Discount/i,
+      name: /خصم جماعي/,
     });
     fireEvent.click(bulkDiscountBtns[0]);
 
     // Bulk Discount Modal should be open
     expect(
-      await screen.findByRole("heading", { name: "Bulk Product Discount" }),
+      await screen.findByRole("heading", { name: "خصم جماعي على المنتجات" }),
     ).toBeInTheDocument();
   });
 
@@ -365,7 +362,7 @@ describe("ProductsTab", () => {
     await screen.findByText("Discounted Sneakers");
 
     expect(screen.getByText("200 SAR")).toBeInTheDocument();
-    expect(screen.getByText("Sale: 150 SAR")).toBeInTheDocument();
+    expect(screen.getByText("سعر التخفيض: 150 SAR")).toBeInTheDocument();
   });
 
   describe("productImage resolution", () => {

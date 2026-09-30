@@ -74,16 +74,16 @@ export function operationStatusMeta(status) {
     case "in_progress":
     case "queued":
     case "pending":
-      return { label: "Processing in Salla", tone: "info" };
+      return { label: "قيد المعالجة في سلة", tone: "info" };
     case "completed":
     case "done":
     case "success":
-      return { label: "Completed", tone: "success" };
+      return { label: "مكتمل", tone: "success" };
     case "failed":
     case "error":
-      return { label: "Failed", tone: "danger" };
+      return { label: "فشل", tone: "danger" };
     default:
-      return { label: status || "Submitted", tone: "neutral" };
+      return { label: status || "تم الإرسال", tone: "neutral" };
   }
 }
 

@@ -9,11 +9,11 @@ export function ProductsErrorState({ error, onRetry, onRefreshSession }) {
     <EmptyState
       tone="danger"
       icon={AlertTriangle}
-      title="Couldn't load products"
+      title="تعذّر تحميل المنتجات"
       description={
         <>
           <p className="products-error-message">
-            Failed to load products: {error.message}
+            تعذّر تحميل المنتجات: {error.message}
           </p>
           {hint && <p className="products-hint">{hint}</p>}
         </>
@@ -22,11 +22,11 @@ export function ProductsErrorState({ error, onRetry, onRefreshSession }) {
         <>
           {error.code === "session_invalid" && (
             <Button variant="primary" onClick={onRefreshSession}>
-              Refresh session
+              تحديث الجلسة
             </Button>
           )}
           <Button variant="secondary" onClick={onRetry}>
-            Retry
+            إعادة المحاولة
           </Button>
         </>
       }
@@ -39,18 +39,18 @@ export function ProductsEmptyState({ hasFilters, onClearFilters }) {
   return (
     <EmptyState
       icon={hasFilters ? PackageSearch : PackageOpen}
-      title={hasFilters ? "No matches" : "No products yet"}
+      title={hasFilters ? "لا توجد نتائج مطابقة" : "لا توجد منتجات بعد"}
       description={
         <p>
           {hasFilters
-            ? "No products found matching your search filter."
-            : "This store has no products."}
+            ? "لم نجد منتجات تطابق البحث أو الفلاتر الحالية. جرّب كلمات أخرى أو امسح الفلاتر."
+            : "لا توجد منتجات في هذا المتجر بعد. ابدأ بإضافة أول منتج."}
         </p>
       }
       action={
         hasFilters && (
           <Button size="small" variant="secondary" onClick={onClearFilters}>
-            Clear Filters
+            مسح الفلاتر
           </Button>
         )
       }

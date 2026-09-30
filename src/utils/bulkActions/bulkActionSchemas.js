@@ -11,10 +11,10 @@ const blankToUndefined = (v) => (v === "" || v === null ? undefined : v);
 
 const wholeNumber = (label, max) => {
   let schema = z.coerce
-    .number({ error: `${label} is required` })
-    .int(`${label} must be a whole number`)
-    .min(0, `${label} can't be negative`);
-  if (max !== undefined) schema = schema.max(max, `${label} is at most ${max}`);
+    .number({ error: `${label} مطلوب` })
+    .int(`${label} يجب أن يكون عددًا صحيحًا`)
+    .min(0, `${label} لا يمكن أن يكون سالبًا`);
+  if (max !== undefined) schema = schema.max(max, `${label} لا يزيد عن ${max}`);
   return z.preprocess(blankToUndefined, schema);
 };
 
@@ -25,8 +25,8 @@ export const BULK_ACTION_SCHEMAS = {
       column: z.enum(PRICING_COLUMNS),
       formulaId: z.string(),
       amount: z.coerce
-        .number({ error: "Enter an amount" })
-        .positive("Amount must be greater than 0"),
+        .number({ error: "أدخل القيمة" })
+        .positive("يجب أن تكون القيمة أكبر من 0"),
       apply_on: z.enum(APPLY_ON),
     })
     .superRefine((value, ctx) => {
@@ -35,7 +35,7 @@ export const BULK_ACTION_SCHEMAS = {
         ctx.addIssue({
           code: "custom",
           path: ["formulaId"],
-          message: "Choose how to change the price",
+          message: "اختر طريقة تغيير السعر",
         });
         return;
       }
@@ -47,28 +47,28 @@ export const BULK_ACTION_SCHEMAS = {
         ctx.addIssue({
           code: "custom",
           path: ["amount"],
-          message: "A percentage decrease must be below 100%",
+          message: "يجب أن تكون نسبة الخفض أقل من 100%",
         });
       }
     }),
   categories: z.object({
-    categories: z.array(z.string()).min(1, "Choose at least one category"),
+    categories: z.array(z.string()).min(1, "اختر تصنيفًا واحدًا على الأقل"),
   }),
   brand: z.object({
-    brand_id: z.string().min(1, "Choose a brand"),
+    brand_id: z.string().min(1, "اختر علامة تجارية"),
   }),
   tags: z.object({
-    tags: z.array(z.string()).min(1, "Choose at least one tag"),
+    tags: z.array(z.string()).min(1, "اختر وسمًا واحدًا على الأقل"),
   }),
   channels: z.object({
     channels: z
       .array(z.enum(SALE_CHANNELS))
-      .min(1, "Choose at least one channel"),
+      .min(1, "اختر قناة بيع واحدة على الأقل"),
   }),
   notify: z.object({
-    notify_quantity: wholeNumber("Notify quantity"),
-    minimum_notify_quantity: wholeNumber("Minimum notify quantity"),
-    subscribers_percentage: wholeNumber("Subscribers percentage", 100),
+    notify_quantity: wholeNumber("كمية التنبيه"),
+    minimum_notify_quantity: wholeNumber("الحد الأدنى لكمية التنبيه"),
+    subscribers_percentage: wholeNumber("نسبة المشتركين", 100),
   }),
   duplicate: z.object({}),
 };

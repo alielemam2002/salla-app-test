@@ -18,8 +18,8 @@ function UsageLine({ coupon }) {
   if (used === null && limit === null) return null;
   let text;
   if (used !== null)
-    text = limit ? `Used: ${used} / ${limit}` : `Used: ${used}`;
-  else text = `Usage limit: ${limit}`;
+    text = limit ? `الاستخدام: ${used} / ${limit}` : `الاستخدام: ${used}`;
+  else text = `حد الاستخدام: ${limit}`;
   return <p className="coupon-card-usage">{text}</p>;
 }
 
@@ -36,7 +36,7 @@ function CouponCard({ coupon, status, onView, onEdit, onDelete }) {
       aria-labelledby={titleId}
     >
       <header className="coupon-card-head">
-        <h4 id={titleId} className="coupon-card-code">
+        <h4 id={titleId} className="coupon-card-code" dir="ltr">
           {coupon.code}
         </h4>
         <Badge tone={meta.tone} dot>
@@ -50,7 +50,9 @@ function CouponCard({ coupon, status, onView, onEdit, onDelete }) {
       {target !== null && (
         <CouponCountdown
           target={target}
-          label={status === COUPON_STATUS.SCHEDULED ? "Starts in" : "Ends in"}
+          label={
+            status === COUPON_STATUS.SCHEDULED ? "يبدأ خلال" : "ينتهي خلال"
+          }
         />
       )}
 
@@ -62,9 +64,9 @@ function CouponCard({ coupon, status, onView, onEdit, onDelete }) {
           variant="secondary"
           icon={Eye}
           onClick={() => onView(coupon)}
-          aria-label={`View ${coupon.code}`}
+          aria-label={`عرض ${coupon.code}`}
         >
-          View
+          عرض
         </Button>
         <Button
           size="small"
@@ -74,21 +76,21 @@ function CouponCard({ coupon, status, onView, onEdit, onDelete }) {
           disabled={unmanaged.length > 0}
           title={
             unmanaged.length
-              ? `Edit in the Salla dashboard (has ${unmanaged.join(", ")})`
+              ? `عدّل هذا الكوبون من لوحة تحكم سلة (يحتوي على: ${unmanaged.join("، ")})`
               : undefined
           }
-          aria-label={`Edit ${coupon.code}`}
+          aria-label={`تعديل ${coupon.code}`}
         >
-          Edit
+          تعديل
         </Button>
         <Button
           size="small"
           variant="danger"
           icon={Trash2}
           onClick={() => onDelete(coupon)}
-          aria-label={`Delete ${coupon.code}`}
+          aria-label={`حذف ${coupon.code}`}
         >
-          Delete
+          حذف
         </Button>
       </div>
     </article>

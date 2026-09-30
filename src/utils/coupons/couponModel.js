@@ -16,10 +16,10 @@ export const COUPON_STATUS = {
 };
 
 export const STATUS_META = {
-  active: { label: "Active", tone: "success" },
-  scheduled: { label: "Scheduled", tone: "info" },
-  expired: { label: "Expired", tone: "neutral" },
-  disabled: { label: "Disabled", tone: "warning" },
+  active: { label: "نشط", tone: "success" },
+  scheduled: { label: "مجدول", tone: "info" },
+  expired: { label: "منتهي", tone: "neutral" },
+  disabled: { label: "معطّل", tone: "warning" },
 };
 
 /** "2026-03-17 00:00:00" | "2026-03-17" → epoch ms (store time), or null. */
@@ -86,13 +86,13 @@ export function moneyCurrency(...values) {
 const formatNumber = (n) =>
   Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, "");
 
-/** "20% OFF" / "30 SAR OFF" */
+/** "خصم 20%" / "خصم 30 SAR" */
 export function formatDiscount(coupon) {
   const amount = moneyValue(coupon?.amount);
   if (amount === null) return "—";
   return String(coupon.type).toLowerCase().startsWith("p")
-    ? `${formatNumber(amount)}% OFF`
-    : `${formatNumber(amount)} ${moneyCurrency(coupon.amount)} OFF`;
+    ? `خصم ${formatNumber(amount)}%`
+    : `خصم ${formatNumber(amount)} ${moneyCurrency(coupon.amount)}`;
 }
 
 const isEmptyList = (list) => !Array.isArray(list) || list.length === 0;
@@ -116,28 +116,29 @@ export function isStorewide(coupon) {
  */
 export function getUnmanagedSettings(coupon) {
   const reasons = [];
-  if (!isStorewide(coupon)) reasons.push("product, category or brand rules");
+  if (!isStorewide(coupon))
+    reasons.push("شروط المنتجات أو التصنيفات أو الماركات");
   if (
     !isEmptyList(coupon?.include_customer_group_ids) ||
     !isEmptyList(coupon?.exclude_customer_group_ids) ||
     !isEmptyList(coupon?.include_customer_ids) ||
     coupon?.beneficiary_domain
   ) {
-    reasons.push("customer restrictions");
+    reasons.push("قيود العملاء");
   }
   if (!isEmptyList(coupon?.exclude_shipping_ids))
-    reasons.push("shipping exclusions");
+    reasons.push("استثناءات الشحن");
   const payments = coupon?.include_payment_methods;
   if (
     !isEmptyList(payments) &&
     !(payments.length === 1 && payments[0] === "all")
   ) {
-    reasons.push("payment method rules");
+    reasons.push("شروط طرق الدفع");
   }
   if (coupon?.applied_in && coupon.applied_in !== "all")
-    reasons.push("web/app only");
-  if (coupon?.is_group) reasons.push("group coupon");
-  if (coupon?.marketing_active) reasons.push("marketer settings");
+    reasons.push("الموقع أو التطبيق فقط");
+  if (coupon?.is_group) reasons.push("كوبون مجموعة");
+  if (coupon?.marketing_active) reasons.push("إعدادات المسوّقين");
   return reasons;
 }
 

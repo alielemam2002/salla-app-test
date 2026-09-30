@@ -65,13 +65,13 @@ export default function WhatsAppTemplateCard({
     <Card className="cart-template">
       <Card.Header
         icon={MessageSquareText}
-        title="WhatsApp message"
-        subtitle="Used by every WhatsApp button. Saved in this browser."
+        title="رسالة واتساب"
+        subtitle="تُستخدم مع كل أزرار واتساب اليدوية. تُحفظ في هذا المتصفح."
       />
       <div className="cart-template-body">
         <SegmentedTabs
           variant="pill"
-          ariaLabel="Message language"
+          ariaLabel="لغة الرسالة"
           tabs={MESSAGE_LOCALES.map((l) => ({ id: l.value, label: l.label }))}
           activeTab={locale}
           onTabChange={(value) => onChange({ locale: value })}
@@ -80,8 +80,8 @@ export default function WhatsAppTemplateCard({
         <div className="cart-template-grid">
           <div className="cart-template-editor">
             <Field
-              label="Message"
-              hint="A line whose variable is empty (like the coupon line with no coupon) is left out."
+              label="نص الرسالة"
+              hint="السطر الذي يحتوي على متغير فارغ (مثل سطر الكوبون عند عدم اختيار كوبون) يُحذف تلقائيًا."
             >
               <Textarea
                 ref={textareaRef}
@@ -91,7 +91,7 @@ export default function WhatsAppTemplateCard({
                 onChange={(e) => setTemplate(e.target.value)}
               />
             </Field>
-            <div className="cart-template-vars" aria-label="Insert a variable">
+            <div className="cart-template-vars" aria-label="إدراج متغير">
               {TEMPLATE_VARIABLES.map((v) => (
                 <button
                   key={v.key}
@@ -106,8 +106,8 @@ export default function WhatsAppTemplateCard({
             </div>
             {unknown.length > 0 && (
               <Alert tone="warning">
-                These variables can&apos;t be filled from Salla&apos;s cart data
-                and will stay as written: {unknown.join(", ")}
+                لا يمكن تعبئة هذه المتغيرات من بيانات السلة وستبقى كما كُتبت:{" "}
+                <span dir="ltr">{unknown.join(", ")}</span>
               </Alert>
             )}
             <Button
@@ -116,36 +116,36 @@ export default function WhatsAppTemplateCard({
               icon={RotateCcw}
               onClick={() => setTemplate(DEFAULT_TEMPLATES[locale])}
             >
-              Reset to default
+              استعادة النص الافتراضي
             </Button>
           </div>
 
           <div className="cart-template-side">
             <Field
-              label="Recovery incentive (optional)"
+              label="حافز الاسترجاع (اختياري)"
               hint={
                 couponsError
-                  ? "Coupons couldn't be loaded, so none can be added."
-                  : "An existing active coupon from the Coupons tab. No coupon is created."
+                  ? "تعذّر تحميل الكوبونات، لذا لا يمكن إضافة كوبون."
+                  : "اختر كوبونًا نشطًا من تبويب الكوبونات. لن يتم إنشاء كوبون جديد."
               }
             >
               <Select
                 value={settings.couponCode}
                 onChange={(e) => onChange({ couponCode: e.target.value })}
                 disabled={Boolean(couponsError)}
-                placeholder="No coupon"
+                placeholder="بدون كوبون"
                 options={coupons.map((c) => ({ value: c.code, label: c.code }))}
               />
             </Field>
 
             <div className="cart-preview">
               <p className="cart-preview-label">
-                Preview · sample data (Ahmed, SAR 420, 3 items)
+                معاينة · بيانات تجريبية (Ahmed Ali، SAR 420، 3 منتجات)
               </p>
               <div className="cart-preview-bubble" dir={dir}>
                 {preview}
               </div>
-              <p className="cart-preview-count">{preview.length} characters</p>
+              <p className="cart-preview-count">{preview.length} حرفًا</p>
             </div>
           </div>
         </div>

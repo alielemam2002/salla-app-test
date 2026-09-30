@@ -33,7 +33,7 @@ export function useProduct(productId, token, initialData = null) {
     queryFn: async () => {
       const res = await getProductDetails(token, productId);
       if (!res.success) {
-        throw new Error(res.error || "Failed to load product details");
+        throw new Error(res.error || "تعذّر تحميل تفاصيل المنتج");
       }
       return res.product;
     },
@@ -108,7 +108,7 @@ export function useProductImages(productId, token) {
 /**
  * Mutation: Update product details (basic info, pricing, SEO, categories, tags).
  */
-function formatApiError(res, fallbackMessage = "Operation failed") {
+function formatApiError(res, fallbackMessage = "تعذّر تنفيذ العملية") {
   let msg = res.error || fallbackMessage;
   if (res.fields && typeof res.fields === "object") {
     const details = Object.entries(res.fields)
@@ -132,7 +132,7 @@ export function useUpdateProduct(productId, token) {
     mutationFn: async (payload) => {
       const res = await updateProduct(token, productId, payload);
       if (!res.success) {
-        throw formatApiError(res, "Failed to update product");
+        throw formatApiError(res, "تعذّر حفظ المنتج");
       }
       return res.product;
     },
@@ -188,13 +188,17 @@ export function useUploadProductImage(productId, token) {
     mutationFn: async (imageData) => {
       const res = await uploadProductImage(token, productId, imageData);
       if (!res.success) {
-        throw formatApiError(res, "Failed to upload image");
+        throw formatApiError(res, "تعذّر رفع الصورة");
       }
       return res.image;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: productKeys.images(productId) });
-      queryClient.invalidateQueries({ queryKey: productKeys.detail(productId) });
+      queryClient.invalidateQueries({
+        queryKey: productKeys.images(productId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: productKeys.detail(productId),
+      });
     },
   });
 }
@@ -209,13 +213,15 @@ export function useDeleteProductImage(productId, token) {
     mutationFn: async (imageId) => {
       const res = await deleteProductImage(token, productId, imageId);
       if (!res.success) {
-        throw formatApiError(res, "Failed to delete image");
+        throw formatApiError(res, "تعذّر حذف الصورة");
       }
       return imageId;
     },
     // Only the images: refetching the product would reset unsaved form edits.
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: productKeys.images(productId) });
+      queryClient.invalidateQueries({
+        queryKey: productKeys.images(productId),
+      });
     },
   });
 }
@@ -231,12 +237,14 @@ export function useAttachProductVideo(productId, token) {
     mutationFn: async (videoUrl) => {
       const res = await attachProductVideo(token, productId, videoUrl);
       if (!res.success) {
-        throw formatApiError(res, "Failed to add the video");
+        throw formatApiError(res, "تعذّرت إضافة الفيديو");
       }
       return res.video;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: productKeys.images(productId) });
+      queryClient.invalidateQueries({
+        queryKey: productKeys.images(productId),
+      });
     },
   });
 }
@@ -256,13 +264,17 @@ export function useUpdateVariant(productId, token) {
         variantData,
       );
       if (!res.success) {
-        throw formatApiError(res, "Failed to update variant");
+        throw formatApiError(res, "تعذّر تعديل النسخة");
       }
       return res.variant;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: productKeys.variants(productId) });
-      queryClient.invalidateQueries({ queryKey: productKeys.detail(productId) });
+      queryClient.invalidateQueries({
+        queryKey: productKeys.variants(productId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: productKeys.detail(productId),
+      });
     },
   });
 }
@@ -277,14 +289,20 @@ export function useCreateOption(productId, token) {
     mutationFn: async (optionData) => {
       const res = await createProductOption(token, productId, optionData);
       if (!res.success) {
-        throw formatApiError(res, "Failed to create option");
+        throw formatApiError(res, "تعذّرت إضافة الخيار");
       }
       return res.option;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: productKeys.options(productId) });
-      queryClient.invalidateQueries({ queryKey: productKeys.variants(productId) });
-      queryClient.invalidateQueries({ queryKey: productKeys.detail(productId) });
+      queryClient.invalidateQueries({
+        queryKey: productKeys.options(productId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: productKeys.variants(productId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: productKeys.detail(productId),
+      });
     },
   });
 }
@@ -299,14 +317,20 @@ export function useDeleteOption(productId, token) {
     mutationFn: async (optionId) => {
       const res = await deleteProductOption(token, productId, optionId);
       if (!res.success) {
-        throw formatApiError(res, "Failed to delete option");
+        throw formatApiError(res, "تعذّر حذف الخيار");
       }
       return optionId;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: productKeys.options(productId) });
-      queryClient.invalidateQueries({ queryKey: productKeys.variants(productId) });
-      queryClient.invalidateQueries({ queryKey: productKeys.detail(productId) });
+      queryClient.invalidateQueries({
+        queryKey: productKeys.options(productId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: productKeys.variants(productId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: productKeys.detail(productId),
+      });
     },
   });
 }

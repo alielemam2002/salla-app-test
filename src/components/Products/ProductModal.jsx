@@ -49,15 +49,15 @@ export default function ProductModal({
     refs[key].current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   const navItems = [
-    { id: "basic", label: "Basic Information", icon: Package },
-    { id: "pricing", label: "Pricing", icon: DollarSign },
-    { id: "inventory", label: "Inventory", icon: Boxes },
+    { id: "basic", label: "المعلومات الأساسية", icon: Package },
+    { id: "pricing", label: "الأسعار", icon: DollarSign },
+    { id: "inventory", label: "المخزون", icon: Boxes },
     {
       id: "images",
-      label: `Images (${values.images.length})`,
+      label: `الصور (${values.images.length})`,
       icon: ImageIcon,
     },
-    { id: "taxonomies", label: "Categories & Brand", icon: Layers },
+    { id: "taxonomies", label: "التصنيفات والعلامة التجارية", icon: Layers },
   ].map((item) => ({ ...item, onClick: () => scrollTo(item.id) }));
 
   const fieldProps = {
@@ -73,11 +73,11 @@ export default function ProductModal({
       onClose={onClose}
       size="lg"
       icon={Package}
-      title={isEditing ? `Edit Product #${product.id}` : "Add New Product"}
+      title={isEditing ? `تعديل المنتج #${product.id}` : "إضافة منتج"}
       subtitle={
         isEditing
-          ? "Update product details on Salla Admin API"
-          : "Create and publish a new item in your Salla catalog"
+          ? "عدّل بيانات المنتج وسيتم تحديثها في متجرك على سلة"
+          : "أضف منتجًا جديدًا إلى كتالوج متجرك في سلة"
       }
       dismissible={!isSubmitting}
       headerExtra={
@@ -96,7 +96,7 @@ export default function ProductModal({
       footer={
         <>
           <Button onClick={onClose} disabled={isSubmitting}>
-            Cancel
+            إلغاء
           </Button>
           <Button
             type="submit"
@@ -105,10 +105,10 @@ export default function ProductModal({
             loading={isSubmitting}
           >
             {isSubmitting
-              ? "Saving..."
+              ? "جارٍ الحفظ…"
               : isEditing
-                ? "Update Product"
-                : "Create Product"}
+                ? "حفظ التعديلات"
+                : "إضافة المنتج"}
           </Button>
         </>
       }
@@ -120,30 +120,30 @@ export default function ProductModal({
         noValidate
       >
         {generalError && (
-          <Alert tone="error" title="Error">
+          <Alert tone="error" title="تعذّر الحفظ">
             {generalError}
             {/scope/i.test(generalError) && (
               <div className="form-alert-hint">
-                Make sure your app has the <code>products.read_write</code>{" "}
-                scope enabled in the Salla Partners Portal.
+                تأكد من تفعيل صلاحية <code dir="ltr">products.read_write</code>{" "}
+                لتطبيقك في بوابة شركاء سلة.
               </div>
             )}
           </Alert>
         )}
 
-        <FormSection ref={refs.basic} icon={Package} title="Basic Information">
+        <FormSection ref={refs.basic} icon={Package} title="المعلومات الأساسية">
           <BasicInfoFields {...fieldProps} isEditing={isEditing} />
         </FormSection>
 
-        <FormSection ref={refs.pricing} icon={DollarSign} title="Pricing">
+        <FormSection ref={refs.pricing} icon={DollarSign} title="الأسعار">
           <PricingFields {...fieldProps} />
         </FormSection>
 
-        <FormSection ref={refs.inventory} icon={Boxes} title="Inventory">
+        <FormSection ref={refs.inventory} icon={Boxes} title="المخزون">
           <InventoryFields {...fieldProps} />
         </FormSection>
 
-        <FormSection ref={refs.images} icon={ImageIcon} title="Images">
+        <FormSection ref={refs.images} icon={ImageIcon} title="الصور">
           <ImagesField
             images={values.images}
             urlInput={form.images.urlInput}
@@ -158,7 +158,7 @@ export default function ProductModal({
         <FormSection
           ref={refs.taxonomies}
           icon={Layers}
-          title="Categories & Brand"
+          title="التصنيفات والعلامة التجارية"
         >
           <TaxonomyFields
             values={values}

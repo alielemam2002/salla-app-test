@@ -23,7 +23,8 @@ describe("productCompletion", () => {
       subtitle: "خامة قطنية 100%",
       tags: ["summer", "cotton"],
       metadata_title: "قميص قطني فاخر | متجرنا",
-      metadata_description: "تسوق قميص قطني فاخر بأفضل الأسعار وخامات عالية الجودة",
+      metadata_description:
+        "تسوق قميص قطني فاخر بأفضل الأسعار وخامات عالية الجودة",
       metadata_url: "premium-cotton-tshirt",
       price: 150,
       cost_price: 60,
@@ -84,7 +85,10 @@ describe("productCompletion", () => {
     );
     expect(Math.round(totalTarget)).toBe(100);
 
-    const totalGain = res.remainingItems.reduce((sum, item) => sum + item.gain, 0);
+    const totalGain = res.remainingItems.reduce(
+      (sum, item) => sum + item.gain,
+      0,
+    );
     expect(Math.round(totalGain)).toBe(100);
   });
 
@@ -93,7 +97,10 @@ describe("productCompletion", () => {
     const before = calculateCompletionScore(base);
     const item = before.remainingItems.find((i) => i.key === "seoTitle");
 
-    const after = calculateCompletionScore({ ...base, metadata_title: "Title" });
+    const after = calculateCompletionScore({
+      ...base,
+      metadata_title: "Title",
+    });
     expect(item.expectedScore).toBe(after.score);
   });
 

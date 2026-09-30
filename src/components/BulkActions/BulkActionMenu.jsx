@@ -36,7 +36,7 @@ export default function BulkActionMenu({ actions, onSelect, disabled }) {
         aria-expanded={open}
         aria-controls={menuId}
       >
-        More <ChevronDown size={12} aria-hidden="true" />
+        المزيد <ChevronDown size={12} aria-hidden="true" />
       </Button>
       {open && (
         <ul className="bulk-menu-list" role="menu" id={menuId}>

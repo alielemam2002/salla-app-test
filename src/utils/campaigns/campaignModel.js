@@ -7,17 +7,16 @@ import { createLocalStore } from "../localStore.js";
  * per customer from these sources.
  */
 export const VARIABLE_SOURCES = [
-  { value: "customer_name", label: "Customer's first name" },
-  { value: "coupon_code", label: "Coupon code" },
-  { value: "custom", label: "Custom text (offer, discount, link…)" },
+  { value: "customer_name", label: "الاسم الأول للعميل" },
+  { value: "coupon_code", label: "كود الكوبون" },
+  { value: "custom", label: "نص مخصص (عرض، خصم، رابط…)" },
 ];
 
 /** Why a customer can't get a campaign message, or null if they can. */
 export function ineligibleReason(customer) {
-  if (customer.isBlocked) return "Blocked in Salla";
-  if (customer.notificationsEnabled === false)
-    return "Notifications off in Salla";
-  if (!whatsappNumber(customer.mobile)) return "No international mobile number";
+  if (customer.isBlocked) return "محظور في سلة";
+  if (customer.notificationsEnabled === false) return "الإشعارات متوقفة في سلة";
+  if (!whatsappNumber(customer.mobile)) return "لا يوجد رقم جوال دولي";
   return null;
 }
 
@@ -49,12 +48,10 @@ export function formToCampaign(form) {
 }
 
 /** "{{1}} = Ahmed" lines for the review step (sample customer). */
-export function describeVariables(campaign, sampleName = "Ahmed") {
+export function describeVariables(campaign, sampleName = "أحمد") {
   return campaign.params.map((p, i) => {
     const value =
-      p.source === "customer_name"
-        ? `${sampleName} (each customer's name)`
-        : p.value;
+      p.source === "customer_name" ? `${sampleName} (اسم كل عميل)` : p.value;
     return `{{${i + 1}}} = ${value}`;
   });
 }

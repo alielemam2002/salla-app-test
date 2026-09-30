@@ -17,7 +17,7 @@ function parseJson(text, status, label) {
   } catch {
     return {
       success: false,
-      error: { message: `${label} returned non-JSON (status ${status})` },
+      error: { message: `ردّ غير متوقع من ${label} (الحالة ${status})` },
     };
   }
 }
@@ -42,7 +42,9 @@ export async function introspectEmbeddedToken(token, appId) {
     return {
       ok: false,
       status: 401,
-      error: body.error?.message || "Invalid or expired session token",
+      // Salla's own reason is English and technical; the merchant only needs
+      // to reopen the app.
+      error: "انتهت جلسة سلة أو أنها غير صالحة. أعد فتح التطبيق من لوحة سلة.",
     };
   }
   return { ok: true, data: body.data };
@@ -66,7 +68,7 @@ export async function merchantApi(path, options = {}) {
     .replace(/^Bearer\s+/i, "");
   if (!accessToken) {
     const error = new Error(
-      "SALLA_ACCESS_TOKEN is not set in Vercel environment variables",
+      "لم يتم إعداد رمز الوصول لواجهة سلة (SALLA_ACCESS_TOKEN) على الخادم.",
     );
     error.code = "token_not_configured";
     throw error;
@@ -104,9 +106,10 @@ export async function merchantApi(path, options = {}) {
 
   if (response.status === 401 || response.status === 403) {
     // Surface Salla's own reason (invalid token, missing scope, inactive user…)
-    const reason = responseBody.error?.message || "no reason given";
+    const reason = responseBody.error?.message || "بدون سبب";
+    // Never put any part of the token in a message: it reaches the browser.
     const error = new Error(
-      `Salla rejected SALLA_ACCESS_TOKEN: ${reason} (token starts with "${accessToken.slice(0, 7)}…", length ${accessToken.length})`,
+      `رفضت سلة رمز الوصول (SALLA_ACCESS_TOKEN): ${reason}`,
     );
     error.code = /scope/i.test(reason) ? "missing_scope" : "token_expired";
     error.status = response.status;

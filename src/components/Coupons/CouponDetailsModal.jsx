@@ -11,7 +11,7 @@ import {
 } from "../../utils/coupons/couponModel.js";
 import CouponScope from "./CouponScope.jsx";
 
-const yesNo = (v) => (v ? "Yes" : "No");
+const yesNo = (v) => (v ? "نعم" : "لا");
 
 /** Read-only view of everything Salla returned for one coupon. */
 export default function CouponDetailsModal({
@@ -35,7 +35,7 @@ export default function CouponDetailsModal({
       isOpen={isOpen}
       onClose={onClose}
       icon={Ticket}
-      title={coupon.code}
+      title={<bdi dir="ltr">{coupon.code}</bdi>}
       subtitle={formatDiscount(coupon)}
       headerExtra={
         meta && (
@@ -50,31 +50,31 @@ export default function CouponDetailsModal({
       <CouponScope storewide={isStorewide(coupon)} detailed />
       <KeyValueList
         items={[
-          { label: "Discount", value: formatDiscount(coupon), mono: false },
-          { label: "Maximum discount", value: money(coupon.maximum_amount) },
-          { label: "Minimum order", value: money(coupon.minimum_amount) },
-          { label: "Starts", value: coupon.start_date || "Immediately" },
-          { label: "Ends", value: coupon.expiry_date || "—" },
-          { label: "Times used", value: used ?? "Not reported by Salla" },
-          { label: "Usage limit", value: limit ?? "Unlimited" },
+          { label: "قيمة الخصم", value: formatDiscount(coupon), mono: false },
+          { label: "الحد الأقصى للخصم", value: money(coupon.maximum_amount) },
+          { label: "الحد الأدنى للطلب", value: money(coupon.minimum_amount) },
+          { label: "تاريخ البداية", value: coupon.start_date || "فورًا" },
+          { label: "تاريخ الانتهاء", value: coupon.expiry_date || "—" },
+          { label: "عدد مرات الاستخدام", value: used ?? "غير متوفر من سلة" },
+          { label: "حد الاستخدام", value: limit ?? "غير محدود" },
           {
-            label: "Limit per customer",
-            value: coupon.usage_limit_per_user || "Unlimited",
+            label: "حد الاستخدام لكل عميل",
+            value: coupon.usage_limit_per_user || "غير محدود",
           },
-          { label: "Free shipping", value: yesNo(coupon.free_shipping) },
+          { label: "شحن مجاني", value: yesNo(coupon.free_shipping) },
           {
-            label: "Excludes sale products",
+            label: "استثناء المنتجات المخفضة",
             value: yesNo(coupon.is_sale_products_exclude),
           },
-          { label: "Salla status", value: coupon.status || "—" },
-          { label: "Coupon ID", value: coupon.id },
+          { label: "الحالة في سلة", value: coupon.status || "—" },
+          { label: "معرّف الكوبون", value: coupon.id },
         ]}
       />
-      <p className="coupon-details-note">Dates are in store time (Riyadh).</p>
+      <p className="coupon-details-note">التواريخ بتوقيت المتجر (الرياض).</p>
       {unmanaged.length > 0 && (
-        <Alert tone="info" title="Edit this coupon in the Salla dashboard">
-          It has settings this page doesn't manage: {unmanaged.join(", ")}.
-          Saving here could remove them.
+        <Alert tone="info" title="عدّل هذا الكوبون من لوحة تحكم سلة">
+          يحتوي على إعدادات لا تُدار من هذه الصفحة: {unmanaged.join("، ")}. حفظ
+          التعديل من هنا قد يحذفها.
         </Alert>
       )}
     </Modal>

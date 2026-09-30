@@ -4,25 +4,25 @@
  */
 
 const ACTION_TITLES = {
-  load: "Could not load coupons.",
-  create: "Could not create coupon.",
-  update: "Could not update coupon.",
-  delete: "Could not delete coupon.",
+  load: "تعذّر تحميل الكوبونات.",
+  create: "تعذّر إنشاء الكوبون.",
+  update: "تعذّر تعديل الكوبون.",
+  delete: "تعذّر حذف الكوبون.",
 };
 
 export const FIELD_LABELS = {
-  code: "Coupon code",
-  type: "Discount type",
-  amount: "Discount",
-  maximum_amount: "Maximum discount",
-  minimum_amount: "Minimum order",
-  start_date: "Start date",
-  expiry_date: "End date",
-  usage_limit: "Usage limit",
-  usage_limit_per_user: "Limit per customer",
-  free_shipping: "Free shipping",
-  exclude_sale_products: "Exclude sale products",
-  group_suffix: "Group suffix",
+  code: "كود الكوبون",
+  type: "نوع الخصم",
+  amount: "قيمة الخصم",
+  maximum_amount: "الحد الأقصى للخصم",
+  minimum_amount: "الحد الأدنى للطلب",
+  start_date: "تاريخ البداية",
+  expiry_date: "تاريخ الانتهاء",
+  usage_limit: "حد الاستخدام",
+  usage_limit_per_user: "حد الاستخدام لكل عميل",
+  free_shipping: "شحن مجاني",
+  exclude_sale_products: "استثناء المنتجات المخفضة",
+  group_suffix: "لاحقة المجموعة",
 };
 
 // Salla sometimes returns translation keys instead of sentences.
@@ -31,38 +31,38 @@ const isTranslationKey = (msg) => /^[a-z_]+(\.[a-z_]+)+$/i.test(msg || "");
 function reasonFor(result) {
   const { status, code } = result;
   if (code === "network_error" || status === 0) {
-    return "Network problem. Check your connection and try again.";
+    return "مشكلة في الاتصال. تحقق من الإنترنت ثم أعد المحاولة.";
   }
   if (code === "session_invalid") {
-    return "Your Salla session has expired. Refresh the session and try again.";
+    return "انتهت جلسة سلة. حدّث الجلسة ثم أعد المحاولة.";
   }
   if (code === "token_not_configured") {
-    return "The store's API access token (SALLA_ACCESS_TOKEN) is not configured on the server.";
+    return "لم يتم إعداد رمز الوصول لواجهة سلة (SALLA_ACCESS_TOKEN) على الخادم. تواصل مع مسؤول التطبيق.";
   }
   if (code === "missing_scope") {
-    return "The app doesn't have permission to manage coupons. It needs the marketing.read_write scope.";
+    return "ليس لدى التطبيق صلاحية إدارة الكوبونات. يحتاج إلى صلاحية marketing.read_write.";
   }
   if (code === "token_expired") {
-    return "The store's API access token is invalid or expired. Replace SALLA_ACCESS_TOKEN.";
+    return "رمز الوصول لواجهة سلة غير صالح أو منتهي. يجب استبدال SALLA_ACCESS_TOKEN.";
   }
   switch (status) {
     case 400:
-      return "The request was invalid.";
+      return "الطلب غير صالح.";
     case 401:
-      return "Salla didn't accept the app's credentials.";
+      return "لم تقبل سلة بيانات اعتماد التطبيق.";
     case 403:
-      return "The app isn't allowed to do this.";
+      return "غير مسموح للتطبيق بتنفيذ هذا الإجراء.";
     case 404:
-      return "This coupon no longer exists. It may have been deleted.";
+      return "هذا الكوبون لم يعد موجودًا. ربما تم حذفه.";
     case 409:
-      return "A coupon with this code already exists.";
+      return "يوجد كوبون بنفس الكود مسبقًا.";
     case 422:
-      return "Some fields are invalid.";
+      return "بعض الحقول غير صحيحة.";
     case 429:
-      return "Too many requests to Salla. Wait a minute and try again.";
+      return "طلبات كثيرة إلى سلة. انتظر دقيقة ثم أعد المحاولة.";
     default:
       if (status >= 500)
-        return "Salla had a temporary problem. Try again later.";
+        return "حدثت مشكلة مؤقتة في سلة. حاول مرة أخرى لاحقًا.";
       return null;
   }
 }
@@ -93,7 +93,7 @@ export function describeCouponError(result = {}, action = "load") {
     (result.status >= 400 && result.status < 500 && sallaMessage) ||
     known ||
     sallaMessage ||
-    "Something went wrong. Try again.";
+    "حدث خطأ ما. أعد المحاولة.";
 
   return {
     title: ACTION_TITLES[action] || ACTION_TITLES.load,

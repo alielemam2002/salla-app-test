@@ -9,11 +9,12 @@ export default function InventoryFields({
   return (
     <>
       <FormRow columns={3}>
-        <Field label="SKU (Stock Keeping Unit)" htmlFor="product-sku">
+        <Field label="رمز المنتج (SKU)" htmlFor="product-sku">
           <TextInput
             type="text"
             className="font-mono"
-            placeholder="e.g. TSH-BLU-001"
+            dir="ltr"
+            placeholder="TSH-BLU-001"
             value={values.sku}
             onChange={(e) => setField("sku", e.target.value)}
             disabled={disabled}
@@ -21,7 +22,7 @@ export default function InventoryFields({
         </Field>
 
         <Field
-          label="Stock Quantity"
+          label="الكمية"
           error={errors.quantity}
           htmlFor="product-quantity"
         >
@@ -29,18 +30,18 @@ export default function InventoryFields({
             type="number"
             min="0"
             invalid={Boolean(errors.quantity)}
-            placeholder={values.unlimited_quantity ? "Unlimited" : "0"}
+            placeholder={values.unlimited_quantity ? "غير محدود" : "0"}
             value={values.unlimited_quantity ? "" : values.quantity}
             onChange={(e) => setField("quantity", e.target.value)}
             disabled={values.unlimited_quantity || disabled}
           />
         </Field>
 
-        <Field label="Max Qty / Order" htmlFor="product-max-qty">
+        <Field label="أقصى كمية للطلب" htmlFor="product-max-qty">
           <TextInput
             type="number"
             min="1"
-            placeholder="No limit"
+            placeholder="بدون حد"
             value={values.maximum_quantity_per_order}
             onChange={(e) =>
               setField("maximum_quantity_per_order", e.target.value)
@@ -52,8 +53,8 @@ export default function InventoryFields({
 
       <Switch
         className="product-form-switch"
-        label="Unlimited Quantity"
-        description="Never runs out of stock"
+        label="كمية غير محدودة"
+        description="لن ينفد المنتج من المخزون"
         checked={values.unlimited_quantity}
         onChange={(checked) => setField("unlimited_quantity", checked)}
         disabled={disabled}

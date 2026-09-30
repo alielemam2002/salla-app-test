@@ -20,7 +20,7 @@ const Row = memo(function Row({
           checked={selected}
           disabled={Boolean(reason) || locked}
           onChange={() => onToggle(customer.id)}
-          aria-label={`Select ${customer.name || "customer"}`}
+          aria-label={`تحديد ${customer.name || "العميل"}`}
           title={reason || undefined}
         />
       </td>
@@ -35,13 +35,13 @@ const Row = memo(function Row({
             tone={result.ok ? "success" : "danger"}
             title={result.ok ? result.messageId : result.detail || undefined}
           >
-            {result.ok ? "Accepted by Meta" : result.error}
+            {result.ok ? "قبلتها Meta" : result.error}
           </Badge>
         ) : reason ? (
           <Badge tone="neutral">{reason}</Badge>
         ) : (
           <Badge tone="success" dot>
-            Can receive
+            يمكن مراسلته
           </Badge>
         )}
       </td>
@@ -76,19 +76,19 @@ export default function RecipientsTable({
       <div className="campaign-toolbar">
         <TextInput
           type="search"
-          aria-label="Search customers"
-          placeholder="Search name, phone or city"
+          aria-label="بحث في العملاء"
+          placeholder="بحث بالاسم أو الجوال أو المدينة"
           prefix={<Search size={14} aria-hidden="true" />}
           value={search}
           onChange={(e) => onSearch(e.target.value)}
         />
         {groups.length > 0 && (
           <Select
-            aria-label="Customer group"
+            aria-label="مجموعة العملاء"
             value={groupId}
             onChange={(e) => onGroup(e.target.value)}
             options={[
-              { value: "", label: "All customers" },
+              { value: "", label: "كل العملاء" },
               ...groups.map((g) => ({ value: String(g.id), label: g.name })),
             ]}
           />
@@ -98,7 +98,7 @@ export default function RecipientsTable({
           onClick={() => onSelectVisible(selectableVisible)}
           disabled={!selectableVisible.length || locked}
         >
-          Select all shown ({selectableVisible.length})
+          تحديد الكل ({selectableVisible.length})
         </Button>
         <Button
           size="small"
@@ -106,10 +106,10 @@ export default function RecipientsTable({
           onClick={onClear}
           disabled={!selected.size || locked}
         >
-          Clear
+          إلغاء التحديد
         </Button>
         <span className="campaign-count">
-          <strong>{selected.size}</strong> of {customers.length} selected
+          تم تحديد <strong>{selected.size}</strong> من {customers.length}
         </span>
       </div>
 
@@ -118,12 +118,12 @@ export default function RecipientsTable({
           <thead>
             <tr>
               <th scope="col">
-                <span className="sr-only">Select</span>
+                <span className="sr-only">تحديد</span>
               </th>
-              <th scope="col">Customer</th>
-              <th scope="col">Mobile</th>
-              <th scope="col">Groups</th>
-              <th scope="col">Status</th>
+              <th scope="col">العميل</th>
+              <th scope="col">الجوال</th>
+              <th scope="col">المجموعات</th>
+              <th scope="col">الحالة</th>
             </tr>
           </thead>
           <tbody>

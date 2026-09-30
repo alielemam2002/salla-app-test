@@ -65,7 +65,9 @@ describe("AddonsTab", () => {
       success: true,
       addons: ADDONS,
     });
-    await userEvent.click(screen.getByRole("button", { name: /retry/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /إعادة المحاولة/ }),
+    );
     expect(await screen.findByText("100 SMS")).toBeInTheDocument();
   });
 
@@ -78,7 +80,7 @@ describe("AddonsTab", () => {
         showToast={showToast}
       />,
     );
-    expect(await screen.findByText("No addons yet")).toBeInTheDocument();
+    expect(await screen.findByText("لا توجد إضافات بعد")).toBeInTheDocument();
   });
 
   it("buys a single addon via checkout.create", async () => {
@@ -91,7 +93,7 @@ describe("AddonsTab", () => {
       />,
     );
     await screen.findByText("100 SMS");
-    await userEvent.click(screen.getAllByRole("button", { name: /^buy$/i })[0]);
+    await userEvent.click(screen.getAllByRole("button", { name: /^شراء$/ })[0]);
     expect(embedded.checkout.create).toHaveBeenCalledWith(
       { type: "addon", slug: "sms-100", quantity: 1 },
       { context: { addonSlug: "sms-100" } },
@@ -109,19 +111,17 @@ describe("AddonsTab", () => {
     );
     await screen.findByText("100 SMS");
     await userEvent.click(
-      screen.getByRole("checkbox", { name: /select 100 sms/i }),
+      screen.getByRole("checkbox", { name: /تحديد 100 SMS/ }),
     );
     await userEvent.click(
-      screen.getByRole("checkbox", { name: /select 500 sms/i }),
+      screen.getByRole("checkbox", { name: /تحديد 500 SMS/ }),
     );
     await waitFor(() =>
       expect(embedded.nav.setAction).toHaveBeenLastCalledWith(
-        expect.objectContaining({ title: "Buy Selected (2)" }),
+        expect.objectContaining({ title: "شراء المحدد (2)" }),
       ),
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: /buy selected/i }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: /شراء المحدد/ }));
     expect(embedded.checkout.create).toHaveBeenCalledWith(
       [
         { type: "addon", slug: "sms-100", quantity: 1 },

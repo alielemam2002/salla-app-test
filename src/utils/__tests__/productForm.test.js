@@ -49,8 +49,8 @@ describe("validateProductForm", () => {
 
   it("requires name and price", () => {
     expect(validateProductForm(base)).toEqual({
-      name: "Product name is required.",
-      price: "A valid price is required.",
+      name: "اسم المنتج مطلوب.",
+      price: "يرجى إدخال سعر صحيح.",
     });
   });
 
@@ -61,7 +61,7 @@ describe("validateProductForm", () => {
       price: "10",
       sale_price: "10",
     });
-    expect(errors.sale_price).toMatch(/lower than the regular price/);
+    expect(errors.sale_price).toMatch(/أقل من السعر الأساسي/);
   });
 });
 

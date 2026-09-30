@@ -82,7 +82,7 @@ export default function CartRecoveryTab({ embedded, showToast }) {
   const { abandonedAfter, locale } = settings;
   const thresholdLabel =
     ABANDONED_AFTER_OPTIONS.find((o) => o.value === abandonedAfter)?.label ||
-    `${abandonedAfter} minutes`;
+    `${abandonedAfter} دقيقة`;
 
   const summary = useMemo(
     () => summarizeCarts(carts, abandonedAfter),
@@ -127,7 +127,7 @@ export default function CartRecoveryTab({ embedded, showToast }) {
     async (cart) => {
       const ok = await copy(cart.checkout_url);
       showToast?.(
-        ok ? "Recovery link copied" : "Couldn't copy the link",
+        ok ? "تم نسخ رابط الاسترجاع" : "تعذّر نسخ الرابط",
         ok ? "success" : "error",
       );
     },
@@ -138,8 +138,8 @@ export default function CartRecoveryTab({ embedded, showToast }) {
     (cart, result) =>
       showToast?.(
         result.success
-          ? `Meta accepted the message to ${cart.customer?.name || "the customer"}`
-          : result.error || "Couldn't send the message",
+          ? `قبلت Meta الرسالة الموجهة إلى ${cart.customer?.name || "العميل"}`
+          : result.error || "تعذّر إرسال الرسالة",
         result.success ? "success" : "error",
       ),
     [showToast],
@@ -159,7 +159,7 @@ export default function CartRecoveryTab({ embedded, showToast }) {
     setConfirmBulk(false);
     const result = await sender.sendMany(bulkTargets, couponCode);
     showToast?.(
-      `Meta accepted ${result.sent} of ${result.total} messages${result.failed ? `, ${result.failed} failed` : ""}.`,
+      `قبلت Meta ${result.sent} من ${result.total} رسالة${result.failed ? `، وفشل إرسال ${result.failed}` : ""}.`,
       result.failed ? "warning" : "success",
     );
   };
@@ -177,10 +177,10 @@ export default function CartRecoveryTab({ embedded, showToast }) {
     content = (
       <Alert
         tone="error"
-        title="Could not load abandoned carts."
+        title="تعذّر تحميل السلات المتروكة"
         action={
           <Button size="small" onClick={() => query.refetch()}>
-            Retry
+            إعادة المحاولة
           </Button>
         }
       >
@@ -191,11 +191,13 @@ export default function CartRecoveryTab({ embedded, showToast }) {
     content = (
       <EmptyState
         icon={ShoppingCart}
-        title={carts.length ? "No carts match" : "No abandoned carts right now"}
+        title={
+          carts.length ? "لا توجد سلات مطابقة" : "لا توجد سلات متروكة حاليًا"
+        }
         description={
           carts.length
-            ? `Carts younger than ${thresholdLabel} are hidden. Tick "Show recent carts" or change the search.`
-            : "Salla hasn't listed any abandoned carts for this store."
+            ? `السلات الأحدث من ${thresholdLabel} مخفية. فعّل «إظهار السلات الحديثة» أو غيّر كلمة البحث.`
+            : "لم تعرض سلة أي سلات متروكة لهذا المتجر. ستظهر هنا عندما يترك العملاء منتجات في سلاتهم."
         }
       />
     );
@@ -219,8 +221,8 @@ export default function CartRecoveryTab({ embedded, showToast }) {
       <Card className="cart-panel">
         <Card.Header
           icon={ShoppingCart}
-          title="Cart Recovery"
-          subtitle="Abandoned carts from Salla. Remind customers on WhatsApp."
+          title="السلات المتروكة"
+          subtitle="تابع السلات المتروكة في متجرك وذكّر العملاء عبر واتساب."
           actions={
             <Button
               variant="secondary"
@@ -229,18 +231,17 @@ export default function CartRecoveryTab({ embedded, showToast }) {
               loading={query.isFetching && !query.isPending}
               disabled={query.isPending}
             >
-              Refresh
+              تحديث
             </Button>
           }
         />
 
         <div className="cart-body">
           <Alert tone="info">
-            <strong>WhatsApp</strong> opens WhatsApp with a ready message that
-            you send yourself. <strong>Send</strong> (when the WhatsApp API is
-            connected) sends the approved template from the app. Salla may also
-            send its own abandoned-cart reminders if they&apos;re enabled in
-            your store.
+            زر <strong>واتساب</strong> يفتح محادثة برسالة جاهزة ترسلها بنفسك
+            (الإرسال اليدوي). زر <strong>إرسال</strong> (بعد ربط واتساب) يرسل
+            القالب المعتمد من التطبيق مباشرة. وقد ترسل سلة تذكيراتها الخاصة
+            أيضًا إذا كانت مفعّلة في متجرك.
           </Alert>
 
           <WhatsAppApiStatus
@@ -252,13 +253,13 @@ export default function CartRecoveryTab({ embedded, showToast }) {
                 onSuccess: () =>
                   showToast?.(
                     enabled
-                      ? "Sending from the app is on"
-                      : "Sending from the app is off: manual only",
+                      ? "تم تفعيل الإرسال من التطبيق"
+                      : "تم إيقاف الإرسال من التطبيق: الإرسال اليدوي فقط",
                     "success",
                   ),
                 onError: (error) =>
                   showToast?.(
-                    error.result?.error || "Couldn't change the setting",
+                    error.result?.error || "تعذّر تغيير الإعداد",
                     "error",
                   ),
               })
@@ -274,16 +275,16 @@ export default function CartRecoveryTab({ embedded, showToast }) {
           )}
           {query.data?.truncated && (
             <Alert tone="warning">
-              Showing the first {carts.length} carts; the numbers above cover
-              those only.
+              يتم عرض أول {carts.length} سلة فقط، والأرقام أعلاه تخص هذه السلات
+              فقط.
             </Alert>
           )}
 
           <div className="cart-toolbar">
             <label className="cart-threshold">
-              <span>Abandoned after</span>
+              <span>تعتبر متروكة بعد</span>
               <Select
-                aria-label="Abandoned after"
+                aria-label="تعتبر متروكة بعد"
                 value={String(abandonedAfter)}
                 onChange={(e) =>
                   updateSettings({ abandonedAfter: Number(e.target.value) })
@@ -295,14 +296,14 @@ export default function CartRecoveryTab({ embedded, showToast }) {
               />
             </label>
             <Checkbox
-              label="Show recent carts"
+              label="إظهار السلات الحديثة"
               checked={includeRecent}
               onChange={setIncludeRecent}
             />
             <TextInput
               type="search"
-              aria-label="Search carts"
-              placeholder="Search name, phone or email"
+              aria-label="بحث في السلات"
+              placeholder="بحث بالاسم أو الجوال أو البريد"
               prefix={<Search size={14} aria-hidden="true" />}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -314,10 +315,10 @@ export default function CartRecoveryTab({ embedded, showToast }) {
               {sender.batch?.running ? (
                 <>
                   <span aria-live="polite">
-                    Sending {sender.batch.done} / {sender.batch.total}…
+                    جارٍ الإرسال {sender.batch.done} / {sender.batch.total}…
                   </span>
                   <Button size="small" variant="danger" onClick={sender.stop}>
-                    Stop
+                    إيقاف
                   </Button>
                 </>
               ) : (
@@ -330,17 +331,17 @@ export default function CartRecoveryTab({ embedded, showToast }) {
                   title={
                     bulkTargets.length
                       ? undefined
-                      : "No shown cart has a number that wasn't messaged in the last 24 hours"
+                      : "لا توجد سلة معروضة يمكن مراسلتها: إما بلا رقم دولي أو تمت مراسلتها خلال آخر 24 ساعة"
                   }
                 >
-                  Send to {bulkTargets.length} shown carts
+                  إرسال إلى {bulkTargets.length} سلة معروضة
                 </Button>
               )}
               {sender.batch && !sender.batch.running && (
                 <span className="cart-bulk-summary">
-                  Last run: {sender.batch.sent} accepted by Meta,{" "}
-                  {sender.batch.failed} failed
-                  {sender.batch.stopped ? " (stopped)" : ""}.
+                  آخر عملية: {sender.batch.sent} قبلتها Meta،{" "}
+                  {sender.batch.failed} فشلت
+                  {sender.batch.stopped ? " (تم الإيقاف)" : ""}.
                 </span>
               )}
             </div>
@@ -355,15 +356,14 @@ export default function CartRecoveryTab({ embedded, showToast }) {
         onClose={() => setConfirmBulk(false)}
         onConfirm={startBulk}
         tone="default"
-        title="Send WhatsApp reminders"
-        confirmText={`Send to ${bulkTargets.length}`}
-        cancelText="Cancel"
+        title="إرسال تذكيرات واتساب"
+        confirmText={`إرسال إلى ${bulkTargets.length}`}
+        cancelText="إلغاء"
       >
         <p>
-          Send the <strong>{waStatus.data?.template}</strong> template to{" "}
-          {bulkTargets.length} customers, one at a time. Carts without an
-          international mobile number, or messaged through the API in the last
-          24 hours, are skipped.
+          سيتم إرسال القالب <strong dir="ltr">{waStatus.data?.template}</strong>{" "}
+          إلى {bulkTargets.length} عميل، واحدًا تلو الآخر. تُتخطى السلات التي
+          بلا رقم جوال دولي أو التي تمت مراسلتها من التطبيق خلال آخر 24 ساعة.
         </p>
       </ConfirmDialog>
 

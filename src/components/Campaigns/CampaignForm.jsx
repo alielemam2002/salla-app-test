@@ -25,15 +25,15 @@ export default function CampaignForm({ form, coupons, disabled }) {
 
   return (
     <fieldset className="campaign-form" disabled={disabled}>
-      <Field label="Campaign name" required error={errors.name?.message}>
-        <TextInput placeholder="Weekend offer" {...register("name")} />
+      <Field label="اسم الحملة" required error={errors.name?.message}>
+        <TextInput placeholder="عرض نهاية الأسبوع" {...register("name")} />
       </Field>
 
       <FormRow>
         <Field
-          label="Template name"
+          label="اسم القالب"
           required
-          hint="An approved Marketing template in WhatsApp Manager"
+          hint="قالب تسويقي (Marketing) معتمد في مدير واتساب (WhatsApp Manager)"
           error={errors.template?.message}
         >
           <TextInput
@@ -42,20 +42,17 @@ export default function CampaignForm({ form, coupons, disabled }) {
             {...register("template")}
           />
         </Field>
-        <Field
-          label="Template language"
-          required
-          error={errors.language?.message}
-        >
+        <Field label="لغة القالب" required error={errors.language?.message}>
           <TextInput dir="ltr" placeholder="ar" {...register("language")} />
         </Field>
       </FormRow>
 
       <div className="campaign-vars">
-        <span className="form-label">Template variables, in order</span>
+        <span className="form-label">متغيرات القالب بالترتيب</span>
         <p className="form-hint">
-          Match your template: {"{{1}}"} is the first variable, {"{{2}}"} the
-          second… Leave empty for a template without variables.
+          طابق قالبك: <span dir="ltr">{"{{1}}"}</span> هو المتغير الأول،{" "}
+          <span dir="ltr">{"{{2}}"}</span> الثاني… اتركها فارغة إذا كان القالب
+          بلا متغيرات.
         </p>
         {params.fields.map((field, index) => {
           const source = sources[index]?.source;
@@ -64,15 +61,15 @@ export default function CampaignForm({ form, coupons, disabled }) {
             <div key={field.id} className="campaign-var-row">
               <span className="wa-param-slot">{`{{${index + 1}}}`}</span>
               <Select
-                aria-label={`Type of {{${index + 1}}}`}
+                aria-label={`نوع المتغير {{${index + 1}}}`}
                 options={VARIABLE_SOURCES}
                 {...register(`params.${index}.source`)}
               />
               {source === "coupon_code" && (
                 <Select
-                  aria-label={`Coupon for {{${index + 1}}}`}
+                  aria-label={`كوبون المتغير {{${index + 1}}}`}
                   placeholder={
-                    coupons.length ? "Choose a coupon" : "No active coupons"
+                    coupons.length ? "اختر كوبونًا" : "لا توجد كوبونات نشطة"
                   }
                   options={coupons.map((c) => ({
                     value: c.code,
@@ -88,8 +85,8 @@ export default function CampaignForm({ form, coupons, disabled }) {
                   name={`params.${index}.value`}
                   render={({ field: input }) => (
                     <TextInput
-                      aria-label={`Text for {{${index + 1}}}`}
-                      placeholder="e.g. 20% off everything"
+                      aria-label={`نص المتغير {{${index + 1}}}`}
+                      placeholder="مثال: خصم 20% على كل المنتجات"
                       maxLength={1000}
                       invalid={Boolean(rowError)}
                       {...input}
@@ -98,11 +95,13 @@ export default function CampaignForm({ form, coupons, disabled }) {
                 />
               )}
               {source === "customer_name" && (
-                <span className="campaign-var-note">Filled per customer</span>
+                <span className="campaign-var-note">
+                  يُعبّأ تلقائيًا لكل عميل
+                </span>
               )}
               <IconButton
                 icon={X}
-                label={`Remove {{${index + 1}}}`}
+                label={`حذف المتغير {{${index + 1}}}`}
                 size={14}
                 onClick={() => params.remove(index)}
               />
@@ -121,7 +120,7 @@ export default function CampaignForm({ form, coupons, disabled }) {
           onClick={() => params.append({ source: "customer_name", value: "" })}
           disabled={params.fields.length >= 10}
         >
-          Add variable
+          إضافة متغير
         </Button>
       </div>
     </fieldset>

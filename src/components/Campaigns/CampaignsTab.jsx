@@ -36,15 +36,15 @@ import CampaignForm from "./CampaignForm.jsx";
 import RecipientsTable from "./RecipientsTable.jsx";
 
 const schema = z.object({
-  name: z.string().trim().min(1, "Give the campaign a name"),
+  name: z.string().trim().min(1, "اكتب اسمًا للحملة"),
   template: z
     .string()
     .trim()
-    .regex(/^[a-z0-9_]{1,512}$/, "Lowercase letters, numbers and _ only"),
+    .regex(/^[a-z0-9_]{1,512}$/, "أحرف إنجليزية صغيرة وأرقام و _ فقط"),
   language: z
     .string()
     .trim()
-    .regex(/^[a-z]{2,3}(_[A-Z]{2})?$/, "A language code like ar or en_US"),
+    .regex(/^[a-z]{2,3}(_[A-Z]{2})?$/, "رمز لغة مثل ar أو en_US"),
   params: z
     .array(
       z
@@ -55,9 +55,7 @@ const schema = z.object({
               code: "custom",
               path: ["value"],
               message:
-                p.source === "coupon_code"
-                  ? "Choose a coupon"
-                  : "Enter the text",
+                p.source === "coupon_code" ? "اختر كوبونًا" : "اكتب النص",
             });
           }
         }),
@@ -146,7 +144,7 @@ export default function CampaignsTab({ embedded, showToast }) {
     setReview(null);
     const result = await sender.start(campaign, recipients);
     showToast?.(
-      `Meta accepted ${result.sent} of ${result.total} messages${result.failed ? `, ${result.failed} failed` : ""}.`,
+      `قبلت Meta ${result.sent} من ${result.total} رسالة${result.failed ? `، وفشل إرسال ${result.failed}` : ""}.`,
       result.failed ? "warning" : "success",
     );
   };
@@ -155,22 +153,22 @@ export default function CampaignsTab({ embedded, showToast }) {
   if (waStatus.isPending) status = null;
   else if (!waStatus.data?.connected) {
     status = (
-      <Alert tone="info" title="Connect WhatsApp first">
-        Campaigns send from your own WhatsApp Business account. Connect it in
-        Cart Recovery → WhatsApp settings.
+      <Alert tone="info" title="اربط واتساب أولًا">
+        تُرسل الحملات من حساب واتساب للأعمال الخاص بك. اربطه من تبويب «السلات
+        المتروكة» ← «إعدادات واتساب».
       </Alert>
     );
   } else if (!waStatus.data?.enabled) {
     status = (
-      <Alert tone="info" title="Sending from the app is switched off">
-        Turn on &quot;Send from the app&quot; in Cart Recovery to send
-        campaigns.
+      <Alert tone="info" title="الإرسال من التطبيق متوقف">
+        فعّل «الإرسال من التطبيق» من تبويب «السلات المتروكة» لتتمكن من إرسال
+        الحملات.
       </Alert>
     );
   } else {
     status = (
-      <Alert tone="success" title="Sending from your WhatsApp account">
-        {waStatus.data.profile?.verifiedName || "WhatsApp Business"}
+      <Alert tone="success" title="الإرسال من حساب واتساب الخاص بك">
+        {waStatus.data.profile?.verifiedName || "واتساب للأعمال"}
         {waStatus.data.profile?.displayPhone && (
           <>
             {" "}
@@ -194,22 +192,22 @@ export default function CampaignsTab({ embedded, showToast }) {
     recipientsContent = (
       <Alert
         tone="error"
-        title="Could not load customers."
+        title="تعذّر تحميل العملاء"
         action={
           <Button size="small" onClick={() => customersQuery.refetch()}>
-            Retry
+            إعادة المحاولة
           </Button>
         }
       >
         {customersQuery.error.result?.code === "missing_scope" ||
         customersQuery.error.result?.status === 403
-          ? "The app needs the customers.read scope. Add it in the Partners Portal, reinstall the app, and update SALLA_ACCESS_TOKEN."
+          ? "يحتاج التطبيق إلى صلاحية customers.read (قراءة العملاء). أضفها من بوابة الشركاء، ثم أعد تثبيت التطبيق وحدّث SALLA_ACCESS_TOKEN."
           : describeCartsError(customersQuery.error.result)}
       </Alert>
     );
   } else if (!customers.length) {
     recipientsContent = (
-      <EmptyState icon={Megaphone} title="No customers yet" />
+      <EmptyState icon={Megaphone} title="لا يوجد عملاء بعد" />
     );
   } else {
     recipientsContent = (
@@ -237,8 +235,8 @@ export default function CampaignsTab({ embedded, showToast }) {
       <Card className="cart-panel">
         <Card.Header
           icon={Megaphone}
-          title="WhatsApp Campaigns"
-          subtitle="Send an offer or a promo code to the customers you choose."
+          title="حملات واتساب"
+          subtitle="أرسل عرضًا أو كود خصم إلى العملاء الذين تختارهم."
           actions={
             <Button
               variant="secondary"
@@ -247,7 +245,7 @@ export default function CampaignsTab({ embedded, showToast }) {
               loading={customersQuery.isFetching && !customersQuery.isPending}
               disabled={customersQuery.isPending || running}
             >
-              Refresh customers
+              تحديث العملاء
             </Button>
           }
         />
@@ -264,13 +262,13 @@ export default function CampaignsTab({ embedded, showToast }) {
       <Card className="cart-panel">
         <Card.Header
           icon={Send}
-          title="Recipients"
-          subtitle="Only customers who can receive WhatsApp messages can be selected."
+          title="المستلمون"
+          subtitle="يمكن تحديد العملاء القادرين على استقبال رسائل واتساب فقط."
         />
         <div className="cart-body">
           {customersQuery.data?.truncated && (
             <Alert tone="warning">
-              Showing the first {customers.length} customers.
+              يتم عرض أول {customers.length} عميل فقط.
             </Alert>
           )}
           {recipientsContent}
@@ -279,10 +277,10 @@ export default function CampaignsTab({ embedded, showToast }) {
             {running ? (
               <>
                 <span aria-live="polite">
-                  Sending {run.done} / {run.total}…
+                  جارٍ الإرسال {run.done} / {run.total}…
                 </span>
                 <Button variant="danger" size="small" onClick={sender.stop}>
-                  Stop
+                  إيقاف
                 </Button>
               </>
             ) : (
@@ -293,24 +291,24 @@ export default function CampaignsTab({ embedded, showToast }) {
                 disabled={!canSend || !recipients.length}
                 title={
                   !canSend
-                    ? "Connect WhatsApp and turn on sending from the app first"
+                    ? "اربط واتساب وفعّل الإرسال من التطبيق أولًا"
                     : !recipients.length
-                      ? "Select at least one customer"
+                      ? "حدّد عميلًا واحدًا على الأقل"
                       : undefined
                 }
               >
-                Review & send to {recipients.length}
+                مراجعة وإرسال إلى {recipients.length}
               </Button>
             )}
             {run && !run.running && (
               <span className="cart-bulk-summary">
-                Last run: {run.sent} accepted by Meta, {run.failed} failed
-                {run.stopped ? " (stopped)" : ""}.
+                آخر عملية: {run.sent} قبلتها Meta، {run.failed} فشلت
+                {run.stopped ? " (تم الإيقاف)" : ""}.
               </span>
             )}
           </div>
           {run?.fatal && !run.running && (
-            <Alert tone="error" title="The campaign stopped.">
+            <Alert tone="error" title="توقفت الحملة">
               {run.fatal}
             </Alert>
           )}
@@ -321,8 +319,8 @@ export default function CampaignsTab({ embedded, showToast }) {
         <Card className="cart-panel">
           <Card.Header
             icon={History}
-            title="Recent campaigns"
-            subtitle="From this browser."
+            title="الحملات السابقة"
+            subtitle="من هذا المتصفح."
           />
           <ul className="campaign-history">
             {history.map((c) => (
@@ -333,8 +331,8 @@ export default function CampaignsTab({ embedded, showToast }) {
                 </span>
                 <span>{new Date(c.at).toLocaleString()}</span>
                 <Badge tone={c.failed ? "warning" : "success"}>
-                  {c.sent}/{c.total} accepted
-                  {c.stopped ? " · stopped" : ""}
+                  {c.sent}/{c.total} قبلتها Meta
+                  {c.stopped ? " · تم الإيقاف" : ""}
                 </Badge>
               </li>
             ))}
@@ -348,16 +346,17 @@ export default function CampaignsTab({ embedded, showToast }) {
         onConfirm={send}
         confirmDisabled={!consent}
         tone="default"
-        title={`Send "${review?.name || ""}"`}
-        confirmText={`Send to ${recipients.length}`}
-        cancelText="Cancel"
+        title={`إرسال «${review?.name || ""}»`}
+        confirmText={`إرسال إلى ${recipients.length}`}
+        cancelText="إلغاء"
       >
         {review && (
           <div className="campaign-review">
             <p>
-              Template <code>{review.template}</code> ({review.language}) to{" "}
-              <strong>{recipients.length}</strong> customers, one at a time.
-              Keep this tab open until it finishes.
+              سيتم إرسال القالب <code dir="ltr">{review.template}</code> (
+              <span dir="ltr">{review.language}</span>) إلى{" "}
+              <strong>{recipients.length}</strong> عميل، واحدًا تلو الآخر. أبقِ
+              هذه الصفحة مفتوحة حتى تنتهي العملية.
             </p>
             {review.params.length > 0 && (
               <ul>
@@ -367,18 +366,18 @@ export default function CampaignsTab({ embedded, showToast }) {
               </ul>
             )}
             <p className="form-hint">
-              Meta limits how many different customers a new WhatsApp account
-              can message per day; the rest are rejected until the limit rises.
+              تحدّ Meta عدد العملاء المختلفين الذين يمكن لحساب واتساب جديد
+              مراسلتهم يوميًا؛ وتُرفض الرسائل الزائدة حتى يرتفع الحد.
             </p>
             <Checkbox
-              label="These customers agreed to receive WhatsApp messages from my store."
+              label="وافق هؤلاء العملاء على استقبال رسائل واتساب من متجري."
               checked={consent}
               onChange={setConsent}
             />
             {!consent && (
               <p className="form-hint">
-                WhatsApp only allows marketing messages to customers who opted
-                in. Tick the box to send.
+                يسمح واتساب بالرسائل التسويقية للعملاء الذين وافقوا على
+                استقبالها فقط. فعّل الخيار أعلاه لتتمكن من الإرسال.
               </p>
             )}
           </div>

@@ -17,22 +17,31 @@ export function getCountdownParts(remainingMs) {
 
 const pad = (n) => String(n).padStart(2, "0");
 
-/** "04d 12h 33m 17s" */
+/** "04 ي 12 س 33 د 17 ث" (days, hours, minutes, seconds) */
 export function formatCountdown({ days, hours, minutes, seconds }) {
-  return `${pad(days)}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+  return `${pad(days)} ي ${pad(hours)} س ${pad(minutes)} د ${pad(seconds)} ث`;
 }
 
-const unit = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+/** Arabic count phrase: [one, two, few (3-10), many (11+)] */
+const unit = (n, [one, two, few, many]) => {
+  if (n === 1) return one;
+  if (n === 2) return two;
+  return `${n} ${n >= 3 && n <= 10 ? few : many}`;
+};
+
+const DAYS = ["يوم واحد", "يومان", "أيام", "يومًا"];
+const HOURS = ["ساعة واحدة", "ساعتان", "ساعات", "ساعة"];
+const MINUTES = ["دقيقة واحدة", "دقيقتان", "دقائق", "دقيقة"];
 
 /**
- * Minute-precision text for screen readers ("4 days 12 hours 33 minutes"),
+ * Minute-precision text for screen readers ("4 أيام و 12 ساعة و 33 دقيقة"),
  * so the accessible label changes at most once a minute.
  */
 export function describeCountdown({ days, hours, minutes, done }) {
-  if (done) return "now";
+  if (done) return "الآن";
   const parts = [];
-  if (days) parts.push(unit(days, "day"));
-  if (hours) parts.push(unit(hours, "hour"));
-  if (minutes || !parts.length) parts.push(unit(minutes, "minute"));
-  return parts.join(" ");
+  if (days) parts.push(unit(days, DAYS));
+  if (hours) parts.push(unit(hours, HOURS));
+  if (minutes || !parts.length) parts.push(unit(minutes, MINUTES));
+  return parts.join(" و ");
 }

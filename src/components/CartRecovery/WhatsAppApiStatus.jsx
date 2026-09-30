@@ -28,7 +28,7 @@ export default function WhatsAppApiStatus({
 
   const settingsButton = (
     <Button size="small" icon={Settings2} onClick={onOpenSettings}>
-      {connected || tokenUnreadable ? "WhatsApp settings" : "Connect WhatsApp"}
+      {connected || tokenUnreadable ? "إعدادات واتساب" : "ربط واتساب"}
     </Button>
   );
 
@@ -36,21 +36,21 @@ export default function WhatsAppApiStatus({
     return (
       <Alert
         tone="warning"
-        title="Enter your WhatsApp token again"
+        title="أدخل رمز الوصول لواتساب مرة أخرى"
         action={settingsButton}
       >
-        The saved token can&apos;t be read anymore. Until you paste it again in
-        WhatsApp settings, reminders can only be sent manually.
+        تعذّرت قراءة الرمز المحفوظ. إلى أن تدخله مرة أخرى في إعدادات واتساب،
+        يمكنك إرسال التذكيرات يدويًا فقط.
       </Alert>
     );
   }
 
   if (!connected) {
     return (
-      <Alert tone="info" title="Manual sending only" action={settingsButton}>
+      <Alert tone="info" title="الإرسال اليدوي فقط" action={settingsButton}>
         {storageReady
-          ? "Use the WhatsApp button to send each reminder yourself. Connect your WhatsApp Business account to send them from the app."
-          : "Use the WhatsApp button to send each reminder yourself. Sending from the app needs settings storage on the server first (Upstash Redis + WA_SETTINGS_KEY)."}
+          ? "استخدم زر «واتساب» لإرسال كل تذكير بنفسك. اربط حساب واتساب للأعمال لتتمكن من الإرسال من التطبيق."
+          : "استخدم زر «واتساب» لإرسال كل تذكير بنفسك. الإرسال من التطبيق يحتاج أولًا إلى تفعيل تخزين الإعدادات على الخادم (Upstash Redis و WA_SETTINGS_KEY)."}
       </Alert>
     );
   }
@@ -58,15 +58,15 @@ export default function WhatsAppApiStatus({
   return (
     <Alert
       tone={enabled && !invalidParams.length ? "success" : "info"}
-      title={`WhatsApp connected${profile?.verifiedName ? `: ${profile.verifiedName}` : ""}`}
+      title={`تم ربط واتساب${profile?.verifiedName ? `: ${profile.verifiedName}` : ""}`}
       action={settingsButton}
     >
       <Switch
-        label="Send from the app"
+        label="الإرسال من التطبيق"
         description={
           enabled
-            ? "The Send buttons use your WhatsApp Business account."
-            : "Off: only manual sending (the WhatsApp button)."
+            ? "أزرار «إرسال» تستخدم حساب واتساب للأعمال الخاص بك."
+            : "متوقف: الإرسال اليدوي فقط (زر «واتساب»)."
         }
         checked={enabled}
         disabled={toggling}
@@ -75,27 +75,34 @@ export default function WhatsAppApiStatus({
       <p>
         {profile?.displayPhone && (
           <>
-            From <span dir="ltr">{profile.displayPhone}</span> ·{" "}
+            من الرقم <span dir="ltr">{profile.displayPhone}</span> ·{" "}
           </>
         )}
-        Template <code>{template}</code> ({language})
-        {params.length
-          ? ` with variables: ${params.join(", ")}.`
-          : " with no variables."}
+        القالب <code dir="ltr">{template}</code> (
+        <span dir="ltr">{language}</span>)
+        {params.length ? " بالمتغيرات: " : " بلا متغيرات."}
+        {params.length > 0 && (
+          <>
+            <span dir="ltr">{params.join(", ")}</span>.
+          </>
+        )}
       </p>
       {!params.length && (
         <p>
-          This template doesn&apos;t include the cart link. Use an approved
-          template with variables for real reminders.
+          هذا القالب لا يتضمن رابط السلة. استخدم قالبًا معتمدًا بمتغيرات
+          للتذكيرات الفعلية.
         </p>
       )}
       {invalidParams.length > 0 && (
-        <p>Unknown template variables: {invalidParams.join(", ")}</p>
+        <p>
+          متغيرات قالب غير معروفة:{" "}
+          <span dir="ltr">{invalidParams.join(", ")}</span>
+        </p>
       )}
       {enabled && (
         <p>
-          &quot;Sent&quot; means Meta accepted the message; delivery and read
-          status need Meta&apos;s webhook (stage 2).
+          «تم الإرسال» تعني أن Meta قبلت الرسالة؛ أما حالة التسليم والقراءة
+          فتحتاج إلى ربط Meta بخطاف الويب (المرحلة 2).
         </p>
       )}
     </Alert>

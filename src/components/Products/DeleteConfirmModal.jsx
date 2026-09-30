@@ -26,10 +26,10 @@ export default function DeleteConfirmModal({
       onConfirm={confirm}
       icon={Trash2}
       tone="danger"
-      title="Delete Product"
-      subtitle="This will remove the product from your Salla store"
-      confirmText="Delete Product"
-      loadingText="Deleting..."
+      title="حذف المنتج"
+      subtitle="سيتم حذف المنتج من متجرك في سلة"
+      confirmText="حذف المنتج"
+      loadingText="جارٍ الحذف…"
       loading={isDeleting}
     >
       {error && <Alert tone="error">{error}</Alert>}
@@ -39,15 +39,20 @@ export default function DeleteConfirmModal({
         <div className="delete-product-info">
           <div className="delete-product-name">{product.name}</div>
           <div className="delete-product-meta">
-            ID: #{product.id}
-            {product.sku ? ` · SKU: ${product.sku}` : ""}
+            <span dir="ltr">#{product.id}</span>
+            {product.sku ? (
+              <>
+                {" · SKU: "}
+                <span dir="ltr">{product.sku}</span>
+              </>
+            ) : null}
           </div>
         </div>
       </div>
 
       <p className="delete-warning-text">
-        Are you sure you want to delete this product? Salla will permanently
-        remove it from your catalog and storefront.
+        هل أنت متأكد من حذف هذا المنتج؟ ستحذفه سلة نهائيًا من كتالوج متجرك
+        وواجهة المتجر، ولا يمكن التراجع عن ذلك.
       </p>
     </ConfirmDialog>
   );

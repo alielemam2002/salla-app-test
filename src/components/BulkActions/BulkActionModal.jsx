@@ -86,8 +86,8 @@ export default function BulkActionModal({
           onSubmitted?.();
           showToast?.(
             selection.count > 1
-              ? `Bulk operation started: ${selection.count} products are being processed by Salla.`
-              : "Salla accepted the change.",
+              ? `بدأت العملية الجماعية: تتم معالجة ${selection.count} منتج في سلة.`
+              : "قبلت سلة التغيير.",
             "success",
           );
         },
@@ -115,9 +115,9 @@ export default function BulkActionModal({
     );
     footer = (
       <>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={onClose}>إلغاء</Button>
         <Button variant="primary" onClick={goReview}>
-          Review changes
+          مراجعة التغييرات
         </Button>
       </>
     );
@@ -129,15 +129,15 @@ export default function BulkActionModal({
             <p>{error.reason}</p>
             {error.debug && (
               <details className="bulk-error-debug">
-                <summary>Technical details</summary>
+                <summary>تفاصيل تقنية</summary>
                 <pre>{error.debug}</pre>
               </details>
             )}
           </Alert>
         )}
         {blocked && (
-          <Alert tone="error" title="These prices can't be applied.">
-            Change the value so no product ends up at 0 or below.
+          <Alert tone="error" title="لا يمكن تطبيق هذه الأسعار.">
+            عدّل القيمة حتى لا يصبح سعر أي منتج صفرًا أو أقل.
           </Alert>
         )}
         <BulkActionPreview
@@ -157,11 +157,11 @@ export default function BulkActionModal({
       <>
         {hasForm ? (
           <Button onClick={() => setStep("form")} disabled={mutation.isPending}>
-            Back
+            رجوع
           </Button>
         ) : (
           <Button onClick={onClose} disabled={mutation.isPending}>
-            Cancel
+            إلغاء
           </Button>
         )}
         <Button
@@ -171,10 +171,10 @@ export default function BulkActionModal({
           disabled={blocked}
         >
           {mutation.isPending
-            ? "Applying…"
+            ? "جارٍ التطبيق…"
             : uiAction.key === "duplicate"
-              ? "Duplicate"
-              : "Confirm & Apply"}
+              ? "تكرار"
+              : "تأكيد وتطبيق"}
         </Button>
       </>
     );
@@ -188,20 +188,19 @@ export default function BulkActionModal({
           className="bulk-result-icon"
         />
         <h4>
-          {selection.count > 1
-            ? "Bulk operation started"
-            : "Salla accepted the change"}
+          {selection.count > 1 ? "بدأت العملية الجماعية" : "قبلت سلة التغيير"}
         </h4>
         <p>
           {selection.count > 1
-            ? `${selection.count} products are being processed by Salla. You can continue working while the operation is processed.`
-            : "Salla applies single-product changes right away. Refresh the list to see it."}
+            ? `تتم معالجة ${selection.count} منتج في سلة، ويمكنك متابعة عملك أثناء ذلك.`
+            : "تطبّق سلة تغييرات المنتج الواحد فورًا. حدّث القائمة لرؤية النتيجة."}
         </p>
         {operations.length > 0 && (
           <ul className="bulk-result-ops">
             {operations.map((op) => (
               <li key={op.operation_id}>
-                <span>Operation ID:</span> <code>{op.operation_id}</code>{" "}
+                <span>رقم العملية:</span>{" "}
+                <code dir="ltr">{op.operation_id}</code>{" "}
                 <span className="bulk-result-status">
                   {operationStatusMeta(op.status).label}
                 </span>
@@ -213,9 +212,9 @@ export default function BulkActionModal({
     );
     footer = (
       <>
-        <Button onClick={onRefreshProducts}>Refresh products</Button>
+        <Button onClick={onRefreshProducts}>تحديث المنتجات</Button>
         <Button variant="primary" onClick={onClose}>
-          Done
+          تم
         </Button>
       </>
     );
@@ -229,7 +228,7 @@ export default function BulkActionModal({
       icon={Layers}
       tone={uiAction.danger ? "danger" : "default"}
       title={uiAction.title}
-      subtitle={`${selection.count} products selected`}
+      subtitle={`${selection.count} منتج محدد`}
       size="lg"
       footer={footer}
     >

@@ -3,7 +3,11 @@ import AddonCard from "./AddonCard.jsx";
 
 export function AddonsGridSkeleton({ count = 3 }) {
   return (
-    <div className="addons-grid" aria-busy="true" aria-label="Loading addons">
+    <div
+      className="addons-grid"
+      aria-busy="true"
+      aria-label="جارٍ تحميل الإضافات"
+    >
       {Array.from({ length: count }, (_, i) => (
         <Card key={i} as="div" className="addon-card addon-card--skeleton">
           <Skeleton width="60%" height={18} />

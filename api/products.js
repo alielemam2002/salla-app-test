@@ -42,7 +42,7 @@ const ERROR_STATUS = {
 };
 
 const fail = (status, code, error, fields = null) => {
-  let message = error || "Operation failed";
+  let message = error || "تعذّر تنفيذ العملية";
   if (fields && typeof fields === "object") {
     const details = Object.entries(fields)
       .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
@@ -63,15 +63,15 @@ export async function POST(request) {
   try {
     body = await request.json();
   } catch {
-    return fail(400, "bad_request", "Invalid JSON body");
+    return fail(400, "bad_request", "البيانات المرسلة غير صالحة");
   }
 
   const { token } = body;
   const appId = process.env.SALLA_APP_ID || body.appId;
   const action = (body.action || "list").toLowerCase();
 
-  if (!token) return fail(400, "bad_request", "Token is required");
-  if (!appId) return fail(400, "bad_request", "App ID is required");
+  if (!token) return fail(400, "bad_request", "رمز الجلسة مطلوب");
+  if (!appId) return fail(400, "bad_request", "معرّف التطبيق مطلوب");
 
   try {
     // 1. Verify caller session with Salla exchange authority
@@ -127,7 +127,7 @@ export async function POST(request) {
           return fail(
             status >= 400 ? status : 502,
             "salla_api_error",
-            result.error?.message || `Salla API error (status ${status})`,
+            result.error?.message || `حدث خطأ من سلة (الحالة ${status})`,
             result.error?.fields,
           );
         }
@@ -146,7 +146,7 @@ export async function POST(request) {
       case "get": {
         const productId = body.productId;
         if (!productId) {
-          return fail(400, "bad_request", "Product ID is required");
+          return fail(400, "bad_request", "معرّف المنتج مطلوب");
         }
 
         const { status, body: result } = await merchantApi(
@@ -157,8 +157,7 @@ export async function POST(request) {
           return fail(
             status >= 400 ? status : 502,
             "salla_api_error",
-            result.error?.message ||
-              `Failed to fetch product (status ${status})`,
+            result.error?.message || `تعذّر جلب المنتج (الحالة ${status})`,
           );
         }
 
@@ -203,13 +202,13 @@ export async function POST(request) {
       case "create": {
         const productData = body.productData;
         if (!productData || typeof productData !== "object") {
-          return fail(400, "bad_request", "Product data object is required");
+          return fail(400, "bad_request", "بيانات المنتج مطلوبة");
         }
 
         // Validate basic required fields according to Salla OpenAPI specification
         if (!productData.name || !String(productData.name).trim()) {
-          return fail(422, "validation_failed", "Product name is required", {
-            name: ["Product name is required"],
+          return fail(422, "validation_failed", "اسم المنتج مطلوب", {
+            name: ["اسم المنتج مطلوب"],
           });
         }
         if (
@@ -217,14 +216,9 @@ export async function POST(request) {
           productData.price === null ||
           isNaN(Number(productData.price))
         ) {
-          return fail(
-            422,
-            "validation_failed",
-            "A valid product price is required",
-            {
-              price: ["A valid product price is required"],
-            },
-          );
+          return fail(422, "validation_failed", "يرجى إدخال سعر صحيح للمنتج", {
+            price: ["يرجى إدخال سعر صحيح للمنتج"],
+          });
         }
 
         const payload = {
@@ -280,8 +274,7 @@ export async function POST(request) {
           return fail(
             status >= 400 ? status : 422,
             "salla_api_error",
-            result.error?.message ||
-              `Failed to create product (status ${status})`,
+            result.error?.message || `تعذّر إنشاء المنتج (الحالة ${status})`,
             result.error?.fields,
           );
         }
@@ -290,7 +283,7 @@ export async function POST(request) {
           {
             success: true,
             product: result.data,
-            message: "Product created successfully",
+            message: "تم إنشاء المنتج بنجاح",
           },
           { status: 201 },
         );
@@ -304,10 +297,10 @@ export async function POST(request) {
         const productData = body.productData;
 
         if (!productId) {
-          return fail(400, "bad_request", "Product ID is required");
+          return fail(400, "bad_request", "معرّف المنتج مطلوب");
         }
         if (!productData || typeof productData !== "object") {
-          return fail(400, "bad_request", "Product data object is required");
+          return fail(400, "bad_request", "بيانات المنتج مطلوبة");
         }
 
         const payload = { ...productData };
@@ -463,7 +456,9 @@ export async function POST(request) {
         }
 
         if (payload.promotion_title || payload.promotional_title) {
-          const promo = String(payload.promotion_title || payload.promotional_title).trim();
+          const promo = String(
+            payload.promotion_title || payload.promotional_title,
+          ).trim();
           payload.promotion_title = promo;
           payload.promotional_title = promo;
         }
@@ -510,8 +505,7 @@ export async function POST(request) {
           return fail(
             status >= 400 ? status : 422,
             "salla_api_error",
-            result.error?.message ||
-              `Failed to update product (status ${status})`,
+            result.error?.message || `تعذّر تحديث المنتج (الحالة ${status})`,
             result.error?.fields,
           );
         }
@@ -558,7 +552,7 @@ export async function POST(request) {
         return Response.json({
           success: true,
           product: mergedProduct,
-          message: "Product updated successfully",
+          message: "تم تحديث المنتج بنجاح",
         });
       }
 
@@ -568,7 +562,7 @@ export async function POST(request) {
       case "delete": {
         const productId = body.productId;
         if (!productId) {
-          return fail(400, "bad_request", "Product ID is required");
+          return fail(400, "bad_request", "معرّف المنتج مطلوب");
         }
 
         const { status, body: result } = await merchantApi(
@@ -582,15 +576,14 @@ export async function POST(request) {
           return fail(
             status >= 400 ? status : 502,
             "salla_api_error",
-            result.error?.message ||
-              `Failed to delete product (status ${status})`,
+            result.error?.message || `تعذّر حذف المنتج (الحالة ${status})`,
           );
         }
 
         return Response.json({
           success: true,
           productId,
-          message: result.data?.message || "Product deleted successfully",
+          message: result.data?.message || "تم حذف المنتج بنجاح",
         });
       }
 
@@ -600,7 +593,7 @@ export async function POST(request) {
       case "options_list": {
         const productId = body.productId;
         if (!productId) {
-          return fail(400, "bad_request", "Product ID is required");
+          return fail(400, "bad_request", "معرّف المنتج مطلوب");
         }
 
         let options = [];
@@ -630,10 +623,10 @@ export async function POST(request) {
         const productId = body.productId;
         const optionData = body.optionData;
         if (!productId) {
-          return fail(400, "bad_request", "Product ID is required");
+          return fail(400, "bad_request", "معرّف المنتج مطلوب");
         }
         if (!optionData || typeof optionData !== "object") {
-          return fail(400, "bad_request", "Option data is required");
+          return fail(400, "bad_request", "بيانات الخيار مطلوبة");
         }
 
         const { status, body: result } = await merchantApi(
@@ -648,8 +641,7 @@ export async function POST(request) {
           return fail(
             status >= 400 ? status : 422,
             "salla_api_error",
-            result.error?.message ||
-              `Failed to create option (status ${status})`,
+            result.error?.message || `تعذّر إنشاء الخيار (الحالة ${status})`,
             result.error?.fields,
           );
         }
@@ -657,7 +649,7 @@ export async function POST(request) {
         return Response.json({
           success: true,
           option: result.data,
-          message: "Option created successfully",
+          message: "تم إنشاء الخيار بنجاح",
         });
       }
 
@@ -666,7 +658,7 @@ export async function POST(request) {
         const optionId = body.optionId;
         const optionData = body.optionData;
         if (!optionId) {
-          return fail(400, "bad_request", "Option ID is required");
+          return fail(400, "bad_request", "معرّف الخيار مطلوب");
         }
 
         let result;
@@ -697,14 +689,14 @@ export async function POST(request) {
           return fail(
             status >= 400 ? status : 422,
             "salla_api_error",
-            result?.error?.message || `Failed to update option`,
+            result?.error?.message || "تعذّر تحديث الخيار",
           );
         }
 
         return Response.json({
           success: true,
           option: result.data,
-          message: "Option updated successfully",
+          message: "تم تحديث الخيار بنجاح",
         });
       }
 
@@ -712,7 +704,7 @@ export async function POST(request) {
         const productId = body.productId;
         const optionId = body.optionId;
         if (!optionId) {
-          return fail(400, "bad_request", "Option ID is required");
+          return fail(400, "bad_request", "معرّف الخيار مطلوب");
         }
 
         let result;
@@ -737,14 +729,14 @@ export async function POST(request) {
           return fail(
             status >= 400 ? status : 422,
             "salla_api_error",
-            result?.error?.message || `Failed to delete option`,
+            result?.error?.message || "تعذّر حذف الخيار",
           );
         }
 
         return Response.json({
           success: true,
           optionId,
-          message: "Option deleted successfully",
+          message: "تم حذف الخيار بنجاح",
         });
       }
 
@@ -754,7 +746,7 @@ export async function POST(request) {
       case "variants_list": {
         const productId = body.productId;
         if (!productId) {
-          return fail(400, "bad_request", "Product ID is required");
+          return fail(400, "bad_request", "معرّف المنتج مطلوب");
         }
 
         let variants = [];
@@ -770,8 +762,7 @@ export async function POST(request) {
             const pRes = await merchantApi(
               `/products/${encodeURIComponent(productId)}`,
             );
-            variants =
-              pRes.body?.data?.skus || pRes.body?.data?.variants || [];
+            variants = pRes.body?.data?.skus || pRes.body?.data?.variants || [];
           } catch {
             variants = [];
           }
@@ -786,33 +777,45 @@ export async function POST(request) {
         const variantData = body.variantData;
 
         if (!variantId) {
-          return fail(400, "bad_request", "Variant ID is required");
+          return fail(400, "bad_request", "معرّف المتغير مطلوب");
         }
         if (!variantData || typeof variantData !== "object") {
-          return fail(400, "bad_request", "Variant data is required");
+          return fail(400, "bad_request", "بيانات المتغير مطلوبة");
         }
 
         const payload = {};
-        if (variantData.sku !== undefined) payload.sku = String(variantData.sku);
+        if (variantData.sku !== undefined)
+          payload.sku = String(variantData.sku);
         if (variantData.price !== undefined && variantData.price !== "") {
           payload.price = Number(variantData.price);
         }
         if (variantData.sale_price !== undefined) {
           payload.sale_price =
-            variantData.sale_price === null ? null : Number(variantData.sale_price);
+            variantData.sale_price === null
+              ? null
+              : Number(variantData.sale_price);
         }
-        if (variantData.cost_price !== undefined && variantData.cost_price !== "") {
+        if (
+          variantData.cost_price !== undefined &&
+          variantData.cost_price !== ""
+        ) {
           payload.cost_price = Number(variantData.cost_price);
         }
         if (variantData.quantity !== undefined && variantData.quantity !== "") {
           payload.quantity = Number(variantData.quantity);
         }
-        if (variantData.stock_quantity !== undefined && variantData.stock_quantity !== "") {
+        if (
+          variantData.stock_quantity !== undefined &&
+          variantData.stock_quantity !== ""
+        ) {
           payload.stock_quantity = Number(variantData.stock_quantity);
         }
-        if (variantData.gtin !== undefined) payload.gtin = String(variantData.gtin);
-        if (variantData.barcode !== undefined) payload.barcode = String(variantData.barcode);
-        if (variantData.mpn !== undefined) payload.mpn = String(variantData.mpn);
+        if (variantData.gtin !== undefined)
+          payload.gtin = String(variantData.gtin);
+        if (variantData.barcode !== undefined)
+          payload.barcode = String(variantData.barcode);
+        if (variantData.mpn !== undefined)
+          payload.mpn = String(variantData.mpn);
         if (variantData.weight !== undefined && variantData.weight !== "") {
           payload.weight = Number(variantData.weight);
         }
@@ -847,7 +850,7 @@ export async function POST(request) {
           return fail(
             status >= 400 ? status : 422,
             "salla_api_error",
-            result?.error?.message || `Failed to update variant`,
+            result?.error?.message || "تعذّر تحديث المتغير",
             result?.error?.fields,
           );
         }
@@ -855,7 +858,7 @@ export async function POST(request) {
         return Response.json({
           success: true,
           variant: result.data,
-          message: "Variant updated successfully",
+          message: "تم تحديث المتغير بنجاح",
         });
       }
 
@@ -865,7 +868,7 @@ export async function POST(request) {
       case "images_list": {
         const productId = body.productId;
         if (!productId) {
-          return fail(400, "bad_request", "Product ID is required");
+          return fail(400, "bad_request", "معرّف المنتج مطلوب");
         }
 
         // Salla has no "list images" endpoint: images (and YouTube videos)
@@ -878,7 +881,7 @@ export async function POST(request) {
           return fail(
             status >= 400 ? status : 502,
             "salla_api_error",
-            result?.error?.message || "Failed to load product images",
+            result?.error?.message || "تعذّر تحميل صور المنتج",
           );
         }
         const images = Array.isArray(result.data?.images)
@@ -892,10 +895,10 @@ export async function POST(request) {
         const productId = body.productId;
         const imageData = body.imageData;
         if (!productId) {
-          return fail(400, "bad_request", "Product ID is required");
+          return fail(400, "bad_request", "معرّف المنتج مطلوب");
         }
         if (!imageData || (!imageData.original && !imageData.url)) {
-          return fail(400, "bad_request", "Image URL or original is required");
+          return fail(400, "bad_request", "رابط الصورة مطلوب");
         }
 
         const imgPayload = {
@@ -939,14 +942,14 @@ export async function POST(request) {
           return fail(
             status >= 400 ? status : 422,
             "salla_api_error",
-            result?.error?.message || "Failed to upload image",
+            result?.error?.message || "تعذّر رفع الصورة",
           );
         }
 
         return Response.json({
           success: true,
           image: result.data,
-          message: "Image added successfully",
+          message: "تمت إضافة الصورة بنجاح",
         });
       }
 
@@ -954,7 +957,7 @@ export async function POST(request) {
         const productId = body.productId;
         const imageId = body.imageId;
         if (!productId || !imageId) {
-          return fail(400, "bad_request", "Product ID and Image ID are required");
+          return fail(400, "bad_request", "معرّف المنتج ومعرّف الصورة مطلوبان");
         }
 
         // DELETE /products/images/{image} (the image id alone identifies it).
@@ -968,14 +971,14 @@ export async function POST(request) {
           return fail(
             status >= 400 ? status : 422,
             "salla_api_error",
-            result?.error?.message || "Failed to delete image",
+            result?.error?.message || "تعذّر حذف الصورة",
           );
         }
 
         return Response.json({
           success: true,
           imageId,
-          message: "Image deleted successfully",
+          message: "تم حذف الصورة بنجاح",
         });
       }
 
@@ -987,7 +990,7 @@ export async function POST(request) {
           ? body.operations
           : [];
         if (!rawOperations.length) {
-          return fail(400, "bad_request", "At least one operation is required");
+          return fail(400, "bad_request", "يلزم إجراء واحد على الأقل");
         }
         const operations = [];
         for (const op of rawOperations) {
@@ -1006,7 +1009,7 @@ export async function POST(request) {
           return fail(
             status >= 400 ? status : 502,
             "salla_api_error",
-            result?.error?.message || "Salla rejected the bulk action",
+            result?.error?.message || "رفضت سلة الإجراء الجماعي",
             result?.error?.fields || null,
           );
         }
@@ -1022,11 +1025,11 @@ export async function POST(request) {
         const productId = body.productId;
         const videoUrl = String(body.videoUrl || "").trim();
         if (!productId) {
-          return fail(400, "bad_request", "Product ID is required");
+          return fail(400, "bad_request", "معرّف المنتج مطلوب");
         }
         if (!isYoutubeUrl(videoUrl)) {
-          return fail(422, "validation_failed", "A YouTube link is required", {
-            video_url: ["Use a YouTube video link"],
+          return fail(422, "validation_failed", "رابط يوتيوب مطلوب", {
+            video_url: ["استخدم رابط فيديو من يوتيوب"],
           });
         }
         const payload = { video_url: videoUrl };
@@ -1040,7 +1043,7 @@ export async function POST(request) {
           return fail(
             status >= 400 ? status : 422,
             "salla_api_error",
-            result?.error?.message || "Failed to add the video",
+            result?.error?.message || "تعذّرت إضافة الفيديو",
             result?.error?.fields || null,
           );
         }
@@ -1054,7 +1057,7 @@ export async function POST(request) {
       case "bulk_discount": {
         const productsList = body.products;
         if (!Array.isArray(productsList) || productsList.length === 0) {
-          return fail(400, "bad_request", "Products array is required");
+          return fail(400, "bad_request", "قائمة المنتجات مطلوبة");
         }
 
         // Clean & validate payload
@@ -1097,7 +1100,7 @@ export async function POST(request) {
               status >= 400 ? status : 502,
               "salla_api_error",
               result.error?.message ||
-                `Failed to update bulk prices (status ${status})`,
+                `تعذّر تحديث الأسعار جماعيًا (الحالة ${status})`,
               result.error?.fields,
             );
           }
@@ -1109,9 +1112,7 @@ export async function POST(request) {
         return Response.json({
           success: true,
           count: totalUpdated,
-          message:
-            lastMessage ||
-            `Successfully processed ${totalUpdated} product prices`,
+          message: lastMessage || `تمت معالجة أسعار ${totalUpdated} منتج بنجاح`,
         });
       }
 
@@ -1160,14 +1161,14 @@ export async function POST(request) {
       }
 
       default:
-        return fail(400, "bad_request", `Unknown action: "${action}"`);
+        return fail(400, "bad_request", `إجراء غير معروف: "${action}"`);
     }
   } catch (error) {
     console.error("Products endpoint failed:", error);
     return fail(
       error.status || ERROR_STATUS[error.code] || 500,
       error.code || "server_error",
-      error.message || "Internal server error",
+      error.message || "حدث خطأ داخلي في الخادم",
       error.details?.error?.fields || null,
     );
   }

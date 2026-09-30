@@ -8,7 +8,9 @@ export default function ProductPrice({ product }) {
     return (
       <div className="products-price-block">
         <div className="products-price-original">{formatPrice(regular)}</div>
-        <div className="products-sale-badge">Sale: {formatPrice(sale)}</div>
+        <div className="products-sale-badge">
+          سعر التخفيض: {formatPrice(sale)}
+        </div>
       </div>
     );
   }

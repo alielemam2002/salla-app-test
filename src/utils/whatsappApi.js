@@ -20,7 +20,7 @@ async function callWhatsAppApi(payload) {
         success: false,
         status: response.status,
         code: "bad_response",
-        error: `Server returned non-JSON (status ${response.status})`,
+        error: `ردّ الخادم بشكل غير متوقع (الحالة ${response.status})`,
       };
     }
   } catch (error) {
@@ -28,7 +28,7 @@ async function callWhatsAppApi(payload) {
       success: false,
       status: 0,
       code: "network_error",
-      error: "Network problem. Check your connection and try again.",
+      error: "تعذّر الاتصال بالإنترنت. تحقق من اتصالك ثم حاول مرة أخرى.",
     };
   }
 }

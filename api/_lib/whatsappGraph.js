@@ -13,35 +13,30 @@ export const ALLOWED_PARAMS = new Set(TEMPLATE_VARIABLES.map((v) => v.key));
 
 // Meta error code → short, actionable reason (codes from Meta's error table).
 const META_REASONS = {
-  0: "Meta couldn't authenticate the access token. Generate a new one.",
-  190: "The WhatsApp access token expired. Generate a new one and save it in WhatsApp settings.",
-  10: "The token doesn't have WhatsApp messaging permission.",
-  200: "No WhatsApp access token was sent.",
-  100: "Meta rejected a parameter in the request (check the Phone Number ID).",
-  130429: "Meta's sending limit was reached. Wait and try again.",
-  131026: "The customer's number isn't on WhatsApp or can't receive messages.",
+  0: "تعذّر على Meta التحقق من رمز الوصول. أنشئ رمزًا جديدًا.",
+  190: "انتهت صلاحية رمز وصول واتساب. أنشئ رمزًا جديدًا واحفظه في إعدادات واتساب.",
+  10: "الرمز لا يملك صلاحية إرسال رسائل واتساب.",
+  200: "لم يُرسل رمز وصول واتساب.",
+  100: "رفضت Meta أحد بيانات الطلب (تحقق من معرّف رقم الهاتف).",
+  130429: "تم الوصول إلى حد الإرسال في Meta. انتظر قليلًا ثم حاول مرة أخرى.",
+  131026: "رقم العميل غير مسجّل في واتساب أو لا يستقبل الرسائل.",
   131030:
-    "Meta's test number can only message recipients you added in API Setup.",
-  131031: "The WhatsApp Business account is restricted.",
-  131042: "The WhatsApp Business account has a billing problem.",
-  131047:
-    "The 24-hour window is closed; only an approved template can be sent.",
+    "رقم الاختبار من Meta يرسل فقط إلى المستلمين الذين أضفتهم في إعداد واجهة البرمجة.",
+  131031: "حساب واتساب للأعمال مقيّد.",
+  131042: "هناك مشكلة في الدفع على حساب واتساب للأعمال.",
+  131047: "انتهت نافذة الـ 24 ساعة؛ يمكن إرسال قالب معتمد فقط.",
   131049:
-    "Meta held this marketing message to limit messages per customer. Try after 24 hours.",
-  131056: "Too many messages to this customer in a short time.",
+    "أوقفت Meta هذه الرسالة التسويقية للحد من عدد الرسائل لكل عميل. حاول بعد 24 ساعة.",
+  131056: "عدد الرسائل إلى هذا العميل كبير في وقت قصير.",
   132000:
-    "The number of template variables doesn't match the template. Check the variables in WhatsApp settings.",
-  132001: "The template doesn't exist in this language or isn't approved yet.",
-  132012: "A template variable has the wrong format.",
-  133010:
-    "The sending phone number isn't registered on the WhatsApp Business Platform.",
+    "عدد متغيرات القالب لا يطابق القالب. راجع المتغيرات في إعدادات واتساب.",
+  132001: "القالب غير موجود بهذه اللغة أو لم تعتمده Meta بعد.",
+  132012: "صيغة أحد متغيرات القالب غير صحيحة.",
+  133010: "رقم الإرسال غير مسجّل في منصة واتساب للأعمال.",
 };
 
 export function describeMetaError(error = {}) {
-  return (
-    META_REASONS[error.code] ||
-    "Meta rejected the request. See the technical details."
-  );
+  return META_REASONS[error.code] || "رفضت Meta الطلب. راجع التفاصيل التقنية.";
 }
 
 /** Call the Graph API. Resolves to { ok, status, json } (never throws on HTTP errors). */
@@ -122,7 +117,7 @@ export function buildTemplateMessage(config, to, values) {
     for (const key of config.params) {
       const text = String(values[key] || "").trim();
       // Meta rejects empty template parameters.
-      if (!text) return { error: `No value for {{${key}}}` };
+      if (!text) return { error: `لا توجد قيمة للمتغير {{${key}}}` };
       parameters.push({ type: "text", text });
     }
     template.components = [{ type: "body", parameters }];

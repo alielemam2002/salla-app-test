@@ -4,16 +4,16 @@ import { Alert, Badge, Button } from "../ui/index.js";
 import { cx } from "../ui/cx.js";
 
 const STATUS_CONFIG = {
-  idle: { label: "Buy", variant: "primary", disabled: false },
-  pending: { label: "Processing...", variant: "primary", loading: true },
-  success: { label: "Purchased!", variant: "success", disabled: true },
-  error: { label: "Retry", variant: "danger", disabled: false },
+  idle: { label: "شراء", variant: "primary", disabled: false },
+  pending: { label: "جارٍ المعالجة…", variant: "primary", loading: true },
+  success: { label: "تم الشراء", variant: "success", disabled: true },
+  error: { label: "إعادة المحاولة", variant: "danger", disabled: false },
 };
 
 const STATUS_BADGE = {
-  pending: { tone: "warning", label: "Pending" },
-  success: { tone: "success", label: "Purchased" },
-  error: { tone: "danger", label: "Failed" },
+  pending: { tone: "warning", label: "قيد الانتظار" },
+  success: { tone: "success", label: "تم الشراء" },
+  error: { tone: "danger", label: "فشل" },
 };
 
 /** One addon: select, set quantity, buy. Presentational only. */
@@ -45,11 +45,13 @@ export default function AddonCard({
           className="addon-card-select"
           checked={selected}
           onChange={() => onToggleSelect(addon.slug)}
-          aria-label={`Select ${addon.name}`}
+          aria-label={`تحديد ${addon.name}`}
         />
         <div className="addon-card-header">
           <h3 className="addon-card-name">{addon.name}</h3>
-          <code className="addon-card-slug">{addon.slug}</code>
+          <code className="addon-card-slug" dir="ltr">
+            {addon.slug}
+          </code>
         </div>
         {badge && <Badge tone={badge.tone}>{badge.label}</Badge>}
       </div>
@@ -67,7 +69,7 @@ export default function AddonCard({
         </div>
         <div className="addon-card-actions">
           <label className="addon-card-quantity-label" htmlFor={qtyId}>
-            Qty
+            الكمية
           </label>
           <input
             id={qtyId}
@@ -96,11 +98,12 @@ export default function AddonCard({
 
       {status === "success" && result && (
         <Alert tone="success">
-          Order: {result.order_id || "N/A"} — Status: {result.status}
+          رقم الطلب: <span dir="ltr">{result.order_id || "غير متوفر"}</span> —
+          الحالة: {result.status}
         </Alert>
       )}
       {status === "error" && result?.error && (
-        <Alert tone="error">Error: {result.error.message}</Alert>
+        <Alert tone="error">تعذّر إتمام الشراء: {result.error.message}</Alert>
       )}
     </article>
   );

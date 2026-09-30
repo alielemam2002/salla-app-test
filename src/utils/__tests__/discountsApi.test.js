@@ -34,7 +34,9 @@ describe("discountsApi", () => {
     });
 
     it("handles number types", () => {
-      expect(getProductRegularPrice({ regular_price: 300, price: 250 })).toBe(300);
+      expect(getProductRegularPrice({ regular_price: 300, price: 250 })).toBe(
+        300,
+      );
       expect(getProductRegularPrice({ price: 250 })).toBe(250);
     });
   });

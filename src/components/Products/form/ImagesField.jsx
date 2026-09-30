@@ -26,19 +26,19 @@ function ImageCard({ image, index, onSetMain, onRemove }) {
       {failed ? (
         <div className="product-image-broken">
           <ImageOff size={20} aria-hidden="true" />
-          <span>Invalid image</span>
+          <span>صورة غير صالحة</span>
         </div>
       ) : (
         <img
           src={image.original}
-          alt={image.alt || `Product image ${index + 1}`}
+          alt={image.alt || `صورة المنتج ${index + 1}`}
           className="product-image-preview"
           onError={() => setFailed(true)}
         />
       )}
       {image.default && (
         <span className="product-image-badge">
-          <Check size={12} aria-hidden="true" /> Main
+          <Check size={12} aria-hidden="true" /> رئيسية
         </span>
       )}
       <div className="product-image-overlay">
@@ -47,15 +47,15 @@ function ImageCard({ image, index, onSetMain, onRemove }) {
             type="button"
             className="product-image-btn"
             onClick={() => onSetMain(index)}
-            title="Set as main thumbnail"
+            title="تعيين كصورة رئيسية"
           >
-            Make Main
+            تعيين كرئيسية
           </button>
         )}
         <IconButton
           icon={Trash2}
           size={14}
-          label="Remove image"
+          label="حذف الصورة"
           className="product-image-btn--delete"
           onClick={() => onRemove(index)}
         />
@@ -78,13 +78,14 @@ export default function ImagesField({
     <>
       <div className="form-group">
         <label className="form-label" htmlFor="product-image-url">
-          Add Image via Direct URL
+          إضافة صورة برابط مباشر
         </label>
         <div className="image-input-group">
           <TextInput
             id="product-image-url"
             aria-describedby="product-image-url-hint"
             type="url"
+            dir="ltr"
             placeholder="https://example.com/product-image.jpg"
             value={urlInput}
             onChange={(e) => setUrlInput(e.target.value)}
@@ -102,12 +103,12 @@ export default function ImagesField({
             onClick={onAdd}
             disabled={!urlInput.trim() || disabled}
           >
-            Add Image
+            إضافة الصورة
           </Button>
         </div>
         <span id="product-image-url-hint" className="form-hint">
-          Enter direct public image URLs (JPEG, PNG, WebP). Salla requires at
-          least one image to set product status to Active.
+          أدخل رابطًا مباشرًا وعامًا للصورة (JPEG أو PNG أو WebP). تشترط سلة
+          وجود صورة واحدة على الأقل لتفعيل المنتج (حالة نشط).
         </span>
       </div>
 
@@ -115,8 +116,8 @@ export default function ImagesField({
         <EmptyState
           className="product-images-empty"
           icon={ImageIcon}
-          title="No images added yet."
-          description="Add image URLs above."
+          title="لم تتم إضافة صور بعد."
+          description="أضف روابط الصور من الحقل أعلاه."
         />
       ) : (
         <div className="product-images-grid">

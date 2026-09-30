@@ -18,9 +18,9 @@ export default function DiscountPreview({
     <section className="form-section">
       <SectionHeader
         icon={Sparkles}
-        title={`Sample Preview (${rows.length} items)`}
+        title={`معاينة عيّنة (${rows.length} منتج)`}
         actions={
-          <Badge tone="primary">Target: {estimatedTargetCount} products</Badge>
+          <Badge tone="primary">المستهدف: {estimatedTargetCount} منتج</Badge>
         }
       />
 
@@ -28,17 +28,17 @@ export default function DiscountPreview({
         <table className="preview-table">
           <thead>
             <tr>
-              <th>Product</th>
-              <th>Regular Price</th>
-              {isApply && <th>Discount</th>}
-              <th>{isApply ? "New Sale Price" : "Restored Price"}</th>
+              <th>المنتج</th>
+              <th>السعر الأساسي</th>
+              {isApply && <th>الخصم</th>}
+              <th>{isApply ? "سعر التخفيض الجديد" : "السعر بعد الإعادة"}</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={4} className="preview-empty">
-                  No sample products available for this target.
+                  لا توجد منتجات للمعاينة ضمن هذا النطاق.
                 </td>
               </tr>
             ) : (
@@ -50,18 +50,22 @@ export default function DiscountPreview({
                       #{row.id}
                       {row.hasCurrentSale && isApply && (
                         <span className="preview-replace-tag">
-                          Replaces current sale ({row.currentSale} SAR)
+                          يستبدل سعر التخفيض الحالي ({row.currentSale} SAR)
                         </span>
                       )}
                     </div>
                   </td>
-                  <td data-label="Regular">{row.regularPrice} SAR</td>
+                  <td data-label="الأساسي">{row.regularPrice} SAR</td>
                   {isApply && (
-                    <td data-label="Discount" className="preview-discount-col">
+                    <td
+                      data-label="الخصم"
+                      className="preview-discount-col"
+                      dir="ltr"
+                    >
                       {discountLabel}
                     </td>
                   )}
-                  <td data-label={isApply ? "New" : "Restored"}>
+                  <td data-label={isApply ? "الجديد" : "المُعاد"}>
                     <strong className="preview-new-price">
                       {row.newPrice} SAR
                     </strong>

@@ -67,14 +67,14 @@ export function useCheckoutFlow(embedded, showToast) {
 
         if (addons.length === 1) {
           const addon = addons[0];
-          showToast(`Initiating checkout for ${addon.name}...`, "info");
+          showToast(`جارٍ فتح إتمام الشراء لـ ${addon.name}…`, "info");
           embedded.checkout.create(
             { type: "addon", slug: addon.slug, quantity: addon._quantity || 1 },
             { context: { addonSlug: addon.slug } },
           );
         } else {
           showToast(
-            `Initiating checkout for ${addons.length} items...`,
+            `جارٍ فتح إتمام الشراء لـ ${addons.length} إضافات…`,
             "info",
           );
           embedded.checkout.create(
@@ -88,7 +88,7 @@ export function useCheckoutFlow(embedded, showToast) {
         }
       } catch (err) {
         logger.error("Checkout create error:", err);
-        showToast(`Checkout error: ${err.message}`, "error");
+        showToast(`تعذّر بدء إتمام الشراء: ${err.message}`, "error");
         setCheckoutStates((prev) => {
           const next = { ...prev };
           for (const slug of slugs) {

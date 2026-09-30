@@ -24,6 +24,10 @@ export async function verifyToken(token) {
     return result;
   } catch (error) {
     logger.error("Token verification error:", error);
-    return { success: false, error: error.message };
+    return {
+      success: false,
+      error:
+        "تعذّر الاتصال بالخادم للتحقق من الجلسة. تحقق من الإنترنت وحاول مرة أخرى.",
+    };
   }
 }

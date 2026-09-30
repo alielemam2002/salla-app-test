@@ -53,6 +53,7 @@ describe("tokenVerification", () => {
     global.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
 
     const out = await verifyToken("token");
-    expect(out).toEqual({ success: false, error: "Network error" });
+    expect(out.success).toBe(false);
+    expect(out.error).toMatch(/[؀-ۿ]/);
   });
 });

@@ -20,7 +20,7 @@ async function callProductsApi(payload) {
       return {
         success: false,
         code: "bad_response",
-        error: `Server returned non-JSON (status ${response.status})`,
+        error: `تعذّر قراءة استجابة الخادم (الحالة ${response.status})`,
       };
     }
   } catch (error) {
@@ -191,7 +191,12 @@ export async function createProductOption(token, productId, optionData) {
 /**
  * Update an existing option.
  */
-export async function updateProductOption(token, productId, optionId, optionData) {
+export async function updateProductOption(
+  token,
+  productId,
+  optionId,
+  optionData,
+) {
   return callProductsApi({
     action: "option_update",
     token,
@@ -230,7 +235,12 @@ export async function fetchProductVariants(token, productId) {
 /**
  * Update a product variant.
  */
-export async function updateProductVariant(token, productId, variantId, variantData) {
+export async function updateProductVariant(
+  token,
+  productId,
+  variantId,
+  variantData,
+) {
   return callProductsApi({
     action: "variant_update",
     token,
@@ -291,4 +301,3 @@ export async function deleteProductImage(token, productId, imageId) {
     imageId,
   });
 }
-

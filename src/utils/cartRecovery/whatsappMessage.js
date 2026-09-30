@@ -8,11 +8,11 @@ import { formatMoney, itemCount, money } from "./cartModel.js";
  * no store name in the cart response, so there is no {{store_name}}.
  */
 export const TEMPLATE_VARIABLES = [
-  { key: "customer_name", label: "Customer name" },
-  { key: "cart_total", label: "Cart total" },
-  { key: "cart_items", label: "Number of items" },
-  { key: "checkout_url", label: "Salla checkout link" },
-  { key: "coupon_code", label: "Coupon code (if chosen)" },
+  { key: "customer_name", label: "اسم العميل" },
+  { key: "cart_total", label: "قيمة السلة" },
+  { key: "cart_items", label: "عدد المنتجات" },
+  { key: "checkout_url", label: "رابط إكمال الطلب" },
+  { key: "coupon_code", label: "كود الكوبون (إن اخترته)" },
 ];
 
 export const MESSAGE_LOCALES = [

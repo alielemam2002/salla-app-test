@@ -9,7 +9,10 @@ import {
   mergeUpdatedProduct,
 } from "../../utils/productListUpdates.js";
 
-const MISSING_TOKEN = { success: false, error: "Authentication token missing" };
+const MISSING_TOKEN = {
+  success: false,
+  error: "رمز الجلسة غير موجود. افتح التطبيق من لوحة تحكم سلة.",
+};
 
 /**
  * Create / update / delete against the Salla API, keeping the in-memory list
@@ -35,7 +38,7 @@ export function useProductMutations({ getToken, list, selection, showToast }) {
             ),
           );
           showToast?.(
-            `Product "${res.product.name || productId}" updated successfully`,
+            `تم تحديث المنتج "${res.product.name || productId}" بنجاح`,
             "success",
           );
         }
@@ -45,10 +48,7 @@ export function useProductMutations({ getToken, list, selection, showToast }) {
       const res = await createProduct(token, payload);
       if (res.success && res.product) {
         setProducts((prev) => [res.product, ...prev]);
-        showToast?.(
-          `Product "${res.product.name}" created successfully`,
-          "success",
-        );
+        showToast?.(`تمت إضافة المنتج "${res.product.name}" بنجاح`, "success");
         loadPage(1);
       }
       return res;
@@ -74,7 +74,7 @@ export function useProductMutations({ getToken, list, selection, showToast }) {
               }
             : null,
         );
-        showToast?.("Product deleted successfully", "success");
+        showToast?.("تم حذف المنتج بنجاح", "success");
       }
       return res;
     },

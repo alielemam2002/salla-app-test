@@ -102,12 +102,12 @@ describe("nextStatusChange", () => {
 
 describe("coupon display helpers", () => {
   it("formats percentage and fixed discounts", () => {
-    expect(formatDiscount(coupon())).toBe("20% OFF");
+    expect(formatDiscount(coupon())).toBe("خصم 20%");
     expect(
       formatDiscount(
         coupon({ type: "fixed", amount: { amount: 30, currency: "SAR" } }),
       ),
-    ).toBe("30 SAR OFF");
+    ).toBe("خصم 30 SAR");
   });
 
   it("detects storewide scope", () => {
@@ -124,7 +124,7 @@ describe("coupon display helpers", () => {
       getUnmanagedSettings(
         coupon({ is_group: true, include_category_ids: ["5"] }),
       ),
-    ).toEqual(["product, category or brand rules", "group coupon"]);
+    ).toEqual(["شروط المنتجات أو التصنيفات أو الماركات", "كوبون مجموعة"]);
   });
 
   it("reports usage only when Salla sends it", () => {
@@ -156,9 +156,9 @@ describe("countdown", () => {
 
   it("formats the visible and accessible text", () => {
     const parts = getCountdownParts(ms);
-    expect(formatCountdown(parts)).toBe("04d 12h 33m 17s");
-    expect(describeCountdown(parts)).toBe("4 days 12 hours 33 minutes");
-    expect(describeCountdown(getCountdownParts(61000))).toBe("1 minute");
+    expect(formatCountdown(parts)).toBe("04 ي 12 س 33 د 17 ث");
+    expect(describeCountdown(parts)).toBe("4 أيام و 12 ساعة و 33 دقيقة");
+    expect(describeCountdown(getCountdownParts(61000))).toBe("دقيقة واحدة");
   });
 });
 
@@ -210,11 +210,11 @@ describe("coupon form", () => {
     expect(
       validateCouponForm({ ...validForm, expiry_date: "2026-06-01T23:00" }, NOW)
         .expiry_date,
-    ).toMatch(/one day after today/);
+    ).toMatch(/بيوم واحد على الأقل/);
     expect(
       validateCouponForm({ ...validForm, start_date: "2026-06-11T00:00" }, NOW)
         .start_date,
-    ).toMatch(/before the end date/);
+    ).toMatch(/يسبق تاريخ الانتهاء/);
   });
 
   it("rejects percentages above 100 and per-customer limit above the total", () => {
@@ -228,7 +228,7 @@ describe("coupon form", () => {
       NOW,
     );
     expect(errors.amount).toMatch(/100/);
-    expect(errors.usage_limit_per_user).toMatch(/total usage limit/);
+    expect(errors.usage_limit_per_user).toMatch(/حد الاستخدام الكلي/);
   });
 
   it("maps a Salla coupon back into form values", () => {
@@ -254,14 +254,14 @@ describe("coupon form", () => {
 
 describe("describeCouponError", () => {
   it.each([
-    [{ status: 400 }, /invalid/],
-    [{ status: 401, code: "session_invalid" }, /session has expired/],
+    [{ status: 400 }, /غير صالح/],
+    [{ status: 401, code: "session_invalid" }, /انتهت جلسة سلة/],
     [{ status: 403, code: "missing_scope" }, /marketing.read_write/],
-    [{ status: 404 }, /no longer exists/],
-    [{ status: 409 }, /already exists/],
-    [{ status: 429 }, /Too many requests/],
-    [{ status: 500, code: "server_error" }, /temporary problem/],
-    [{ status: 0, code: "network_error" }, /Network problem/],
+    [{ status: 404 }, /لم يعد موجودًا/],
+    [{ status: 409 }, /بنفس الكود/],
+    [{ status: 429 }, /طلبات كثيرة/],
+    [{ status: 500, code: "server_error" }, /مشكلة مؤقتة/],
+    [{ status: 0, code: "network_error" }, /مشكلة في الاتصال/],
   ])("explains %o", (result, pattern) => {
     expect(describeCouponError(result, "create").reason).toMatch(pattern);
   });
@@ -276,8 +276,8 @@ describe("describeCouponError", () => {
       },
       "create",
     );
-    expect(described.title).toBe("Could not create coupon.");
-    expect(described.reason).toBe("Some fields are invalid.");
+    expect(described.title).toBe("تعذّر إنشاء الكوبون.");
+    expect(described.reason).toBe("بعض الحقول غير صحيحة.");
     expect(described.fieldErrors.code).toMatch(/بنفس الاسم/);
   });
 

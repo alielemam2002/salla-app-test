@@ -45,7 +45,7 @@ export function useProductsList({ getToken, showToast }) {
         setError({
           code: "no_token",
           message:
-            "No embedded token found. Open this app from the Salla dashboard.",
+            "لم يتم العثور على رمز الجلسة. افتح التطبيق من لوحة تحكم سلة.",
         });
         setIsLoading(false);
         return;
@@ -103,7 +103,7 @@ export function useProductsList({ getToken, showToast }) {
       setProducts(result.products);
       setPagination(result.pagination);
       setShowingAll(true);
-      showToast?.(`Loaded all ${result.products.length} products`, "success");
+      showToast?.(`تم جلب كل المنتجات (${result.products.length})`, "success");
     } else {
       handleFailure(result);
     }

@@ -47,29 +47,29 @@ export default function CartDetailsModal({
     );
   } else if (query.isError) {
     body = (
-      <Alert tone="error" title="Could not load this cart.">
+      <Alert tone="error" title="تعذّر تحميل هذه السلة">
         {describeCartsError(query.error.result)}
       </Alert>
     );
   } else {
-    const missing = <span className="cart-missing">Not provided by Salla</span>;
+    const missing = <span className="cart-missing">غير متوفر من سلة</span>;
     body = (
       <div className="cart-details">
         {purchased && (
-          <Alert tone="success" title="This cart was purchased.">
-            The customer completed the order, so no reminder is needed.
+          <Alert tone="success" title="تم شراء هذه السلة">
+            أكمل العميل الطلب، لذا لا حاجة لإرسال تذكير.
           </Alert>
         )}
 
         <KeyValueList
           items={[
             {
-              label: "Customer",
+              label: "العميل",
               value: cart.customer?.name || missing,
               mono: false,
             },
             {
-              label: "Email",
+              label: "البريد الإلكتروني",
               value: cart.customer?.email ? (
                 <span dir="ltr">{cart.customer.email}</span>
               ) : (
@@ -77,7 +77,7 @@ export default function CartDetailsModal({
               ),
             },
             {
-              label: "Phone",
+              label: "الجوال",
               value: cart.customer?.mobile ? (
                 <span dir="ltr">{cart.customer.mobile}</span>
               ) : (
@@ -85,16 +85,16 @@ export default function CartDetailsModal({
               ),
             },
             {
-              label: "Status",
+              label: "الحالة",
               mono: false,
               value: (
                 <Badge tone={purchased ? "success" : "warning"} dot>
-                  {purchased ? "Purchased" : "Active"}
+                  {purchased ? "تم الشراء" : "نشطة"}
                 </Badge>
               ),
             },
             ...(cart.coupon?.code
-              ? [{ label: "Coupon on cart", value: cart.coupon.code }]
+              ? [{ label: "الكوبون على السلة", value: cart.coupon.code }]
               : []),
           ]}
         />
@@ -102,9 +102,9 @@ export default function CartDetailsModal({
         <table className="cart-items">
           <thead>
             <tr>
-              <th scope="col">Item</th>
-              <th scope="col">Qty</th>
-              <th scope="col">Total</th>
+              <th scope="col">المنتج</th>
+              <th scope="col">الكمية</th>
+              <th scope="col">الإجمالي</th>
             </tr>
           </thead>
           <tbody>
@@ -114,7 +114,7 @@ export default function CartDetailsModal({
               return (
                 <tr key={item.id}>
                   <td>
-                    {product?.name || `Product #${item.product_id}`}
+                    {product?.name || `منتج رقم ${item.product_id}`}
                     {item.notes && (
                       <span className="cart-item-notes">{item.notes}</span>
                     )}
@@ -131,7 +131,7 @@ export default function CartDetailsModal({
             {cart.total_discount && money(cart.total_discount).amount > 0 && (
               <tr>
                 <th scope="row" colSpan={2}>
-                  Discount
+                  الخصم
                 </th>
                 <td className="cart-num">
                   −{formatMoney(money(cart.total_discount, currency))}
@@ -140,7 +140,7 @@ export default function CartDetailsModal({
             )}
             <tr>
               <th scope="row" colSpan={2}>
-                Total
+                الإجمالي
               </th>
               <td className="cart-num">
                 <strong>{formatMoney(money(cart.total))}</strong>
@@ -157,8 +157,8 @@ export default function CartDetailsModal({
       isOpen
       onClose={onClose}
       icon={ShoppingCart}
-      title={`Cart #${cartId}`}
-      subtitle="Abandoned cart"
+      title={`سلة رقم ${cartId}`}
+      subtitle="سلة متروكة"
       size="lg"
       footer={
         cart && (
@@ -169,7 +169,7 @@ export default function CartDetailsModal({
               onClick={() => onCopyLink(cart)}
               disabled={!cart.checkout_url}
             >
-              Copy recovery link
+              نسخ رابط الاسترجاع
             </Button>
             {cart.checkout_url && (
               <a
@@ -178,7 +178,7 @@ export default function CartDetailsModal({
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <ExternalLink size={14} aria-hidden="true" /> Open checkout
+                <ExternalLink size={14} aria-hidden="true" /> فتح صفحة الدفع
               </a>
             )}
             {api && (
@@ -188,18 +188,14 @@ export default function CartDetailsModal({
                 apiSends={api.sends}
                 couponCode={api.couponCode}
                 onResult={api.onResult}
-                disabledReason={
-                  purchased ? "The customer already completed the order" : null
-                }
+                disabledReason={purchased ? "أكمل العميل الطلب بالفعل" : null}
               />
             )}
             <WhatsAppButton
               cart={cart}
               message={messageFor(cart)}
               onOpened={onContacted}
-              disabledReason={
-                purchased ? "The customer already completed the order" : null
-              }
+              disabledReason={purchased ? "أكمل العميل الطلب بالفعل" : null}
             />
           </>
         )

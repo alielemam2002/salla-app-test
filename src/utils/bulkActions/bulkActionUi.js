@@ -10,51 +10,51 @@ export const BULK_UI_ACTIONS = {
   pricing: {
     key: "pricing",
     actionName: "pricing",
-    label: "Edit Price",
-    title: "Bulk Pricing",
+    label: "تعديل السعر",
+    title: "تعديل الأسعار جماعيًا",
     primary: true,
   },
   categories: {
     key: "categories",
     actionName: "features",
     field: "categories",
-    label: "Categories",
-    title: "Set Categories",
+    label: "التصنيفات",
+    title: "تعيين التصنيفات",
     primary: true,
   },
   brand: {
     key: "brand",
     actionName: "features",
     field: "brand_id",
-    label: "Brand",
-    title: "Set Brand",
+    label: "العلامة التجارية",
+    title: "تعيين العلامة التجارية",
     primary: true,
   },
   tags: {
     key: "tags",
     actionName: "features",
     field: "tags",
-    label: "Tags",
-    title: "Set Tags",
+    label: "الوسوم",
+    title: "تعيين الوسوم",
     primary: true,
   },
   channels: {
     key: "channels",
     actionName: "sale-channels",
-    label: "Sale Channels",
-    title: "Sale Channels",
+    label: "قنوات البيع",
+    title: "قنوات البيع",
   },
   notify: {
     key: "notify",
     actionName: "notify-quantity",
-    label: "Stock Notification",
-    title: "Stock Notification",
+    label: "تنبيه المخزون",
+    title: "تنبيه المخزون",
   },
   duplicate: {
     key: "duplicate",
     actionName: "duplicate",
-    label: "Duplicate",
-    title: "Duplicate Products",
+    label: "تكرار",
+    title: "تكرار المنتجات",
     danger: true,
   },
 };
@@ -67,41 +67,43 @@ export const MORE_ACTIONS = Object.values(BULK_UI_ACTIONS).filter(
 );
 
 export const COLUMN_LABELS = {
-  price: "Price",
-  sale_price: "Sale Price",
-  cost_price: "Cost Price",
+  price: "السعر",
+  sale_price: "سعر التخفيض",
+  cost_price: "سعر التكلفة",
 };
 
 export const APPLY_ON_LABELS = {
-  product: "Products only",
-  product_and_variants: "Products and their variants",
-  variants: "Variants only",
+  product: "المنتجات فقط",
+  product_and_variants: "المنتجات ومتغيراتها",
+  variants: "المتغيرات فقط",
 };
 
 /** Plain-language names for the documented formulas, per column. */
 export const FORMULA_LABELS = {
   price: {
-    price_add_percent: "Increase price by %",
-    price_add_amount: "Increase price by a fixed amount",
-    cost_add_percent: "Set price to cost + %",
-    cost_add_amount: "Set price to cost + fixed amount",
-    set_amount: "Set a new price",
+    price_add_percent: "زيادة السعر بنسبة مئوية",
+    price_add_amount: "زيادة السعر بمبلغ ثابت",
+    cost_add_percent: "السعر = التكلفة + نسبة مئوية",
+    cost_add_amount: "السعر = التكلفة + مبلغ ثابت",
+    set_amount: "تحديد سعر جديد",
   },
   sale_price: {
-    price_minus_percent: "Discount: price − %",
-    price_minus_amount: "Discount: price − fixed amount",
-    sale_minus_percent: "Lower current sale price by %",
-    sale_minus_amount: "Lower current sale price by a fixed amount",
-    cost_add_percent: "Set sale price to cost + %",
-    cost_add_amount: "Set sale price to cost + fixed amount",
-    set_amount: "Set a new sale price",
+    price_minus_percent: "خصم: السعر − نسبة مئوية",
+    price_minus_amount: "خصم: السعر − مبلغ ثابت",
+    sale_minus_percent: "خفض سعر التخفيض الحالي بنسبة مئوية",
+    sale_minus_amount: "خفض سعر التخفيض الحالي بمبلغ ثابت",
+    cost_add_percent: "سعر التخفيض = التكلفة + نسبة مئوية",
+    cost_add_amount: "سعر التخفيض = التكلفة + مبلغ ثابت",
+    set_amount: "تحديد سعر تخفيض جديد",
   },
   cost_price: {
-    cost_add_percent: "Increase cost by %",
-    cost_add_amount: "Increase cost by a fixed amount",
-    set_amount: "Set a new cost",
+    cost_add_percent: "زيادة التكلفة بنسبة مئوية",
+    cost_add_amount: "زيادة التكلفة بمبلغ ثابت",
+    set_amount: "تحديد تكلفة جديدة",
   },
 };
+
+export const CHANNEL_LABELS = { web: "المتجر الإلكتروني", app: "تطبيق الجوال" };
 
 export const PREVIEW_LIMIT = 10;
 
@@ -137,17 +139,17 @@ export function describeAction(uiAction, value, lookups = {}) {
       return `${FORMULA_LABELS[value.column]?.[value.formulaId]} (${value.amount}${unit}) · ${APPLY_ON_LABELS[value.apply_on]}`;
     }
     case "categories":
-      return `Categories: ${names(value.categories, lookups.categories)}`;
+      return `التصنيفات: ${names(value.categories, lookups.categories)}`;
     case "brand":
-      return `Brand: ${names([value.brand_id], lookups.brands)}`;
+      return `العلامة التجارية: ${names([value.brand_id], lookups.brands)}`;
     case "tags":
-      return `Tags: ${names(value.tags, lookups.tags)}`;
+      return `الوسوم: ${names(value.tags, lookups.tags)}`;
     case "channels":
-      return `Sale channels: ${value.channels.join(" + ")}`;
+      return `قنوات البيع: ${value.channels.map((c) => CHANNEL_LABELS[c] || c).join(" + ")}`;
     case "notify":
-      return `Notify at ${value.notify_quantity}, minimum ${value.minimum_notify_quantity}, ${value.subscribers_percentage}% of subscribers`;
+      return `التنبيه عند ${value.notify_quantity}، الحد الأدنى ${value.minimum_notify_quantity}، ${value.subscribers_percentage}% من المشتركين`;
     case "duplicate":
-      return "Duplicate each product";
+      return "تكرار كل منتج";
     default:
       return uiAction.label;
   }
@@ -220,10 +222,10 @@ export function buildPricingPreview(products, value) {
 }
 
 export const PREVIEW_PROBLEMS = {
-  missing: "No value to calculate from",
-  negative: "New price cannot be negative",
-  zero: "New price would be 0",
-  not_below_price: "Sale price must be below the price",
+  missing: "لا توجد قيمة لحساب السعر الجديد",
+  negative: "لا يمكن أن يكون السعر الجديد سالبًا",
+  zero: "سيصبح السعر الجديد صفرًا",
+  not_below_price: "يجب أن يكون سعر التخفيض أقل من السعر",
 };
 
 /** Problems that block submitting (the rest are warnings). */
@@ -234,24 +236,25 @@ export function describeBulkError(result = {}) {
   const { status, code } = result;
   let reason;
   if (code === "network_error" || status === 0) {
-    reason = "Network problem. Check your connection and try again.";
+    reason = "مشكلة في الاتصال. تحقق من الإنترنت وحاول مرة أخرى.";
   } else if (code === "session_invalid") {
-    reason = "Your Salla session expired. Refresh the page and try again.";
+    reason = "انتهت جلستك في سلة. حدّث الصفحة وحاول مرة أخرى.";
   } else if (code === "token_not_configured") {
     reason =
-      "The store's access token (SALLA_ACCESS_TOKEN) isn't set on the server.";
+      "لم يتم ربط التطبيق بالمتجر بعد (رمز SALLA_ACCESS_TOKEN غير مضبوط على الخادم).";
   } else if (code === "missing_scope" || status === 403) {
-    reason = "The app needs the products.read_write scope for bulk actions.";
+    reason =
+      "يحتاج التطبيق إلى صلاحية products.read_write لتنفيذ الإجراءات الجماعية.";
   } else if (code === "token_expired" || status === 401) {
-    reason = "Salla didn't accept the app's access token. It may have expired.";
+    reason = "لم تقبل سلة رمز وصول التطبيق، وقد تكون صلاحيته انتهت.";
   } else if (status === 422) {
-    reason = "Salla rejected the requested settings for this action.";
+    reason = "رفضت سلة الإعدادات المطلوبة لهذا الإجراء.";
   } else if (status === 429) {
-    reason = "Too many requests to Salla. Wait a minute and try again.";
+    reason = "عدد الطلبات إلى سلة كبير. انتظر دقيقة ثم حاول مرة أخرى.";
   } else if (status >= 500) {
-    reason = "Salla had a temporary problem. Try again later.";
+    reason = "حدثت مشكلة مؤقتة لدى سلة. حاول لاحقًا.";
   } else {
-    reason = "Something went wrong. Try again.";
+    reason = "حدث خطأ ما. حاول مرة أخرى.";
   }
   const fields = result.fields
     ? Object.entries(result.fields)
@@ -259,7 +262,7 @@ export function describeBulkError(result = {}) {
         .join("\n")
     : "";
   return {
-    title: "Unable to apply this action.",
+    title: "تعذّر تطبيق هذا الإجراء.",
     reason,
     debug: [result.error, fields].filter(Boolean).join("\n") || null,
   };

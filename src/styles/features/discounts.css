@@ -220,10 +220,8 @@
   top: 0;
   padding: 8px 12px;
   text-align: start;
-  font-size: 0.7rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
   color: var(--text-tertiary);
   background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border-color);

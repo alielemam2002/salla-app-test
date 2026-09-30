@@ -28,7 +28,7 @@ export function useAddonSelection({ embedded, onBuySelected }) {
     if (!embedded?.nav) return;
     if (selected.size > 0) {
       embedded.nav.setAction({
-        title: `Buy Selected (${selected.size})`,
+        title: `شراء المحدد (${selected.size})`,
         value: BUY_SELECTED_ACTION,
         icon: "hgi hgi-stroke hgi-shopping-cart-01",
       });

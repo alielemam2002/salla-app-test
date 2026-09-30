@@ -63,16 +63,17 @@ export function buildCouponPayload(input) {
   const startDate = String(input?.start_date || "").trim();
   const expiryDate = String(input?.expiry_date || "").trim();
 
-  if (!code) fields.code = ["Coupon code is required"];
-  else if (/\s/.test(code)) fields.code = ["Coupon code can't contain spaces"];
+  if (!code) fields.code = ["كود الكوبون مطلوب"];
+  else if (/\s/.test(code))
+    fields.code = ["كود الكوبون لا يجوز أن يحتوي على مسافات"];
 
   if (type !== "percentage" && type !== "fixed") {
-    fields.type = ["Discount type must be percentage or fixed"];
+    fields.type = ["نوع الخصم يجب أن يكون نسبة مئوية أو مبلغًا ثابتًا"];
   }
   if (amount === undefined || !Number.isFinite(amount) || amount <= 0) {
-    fields.amount = ["Discount must be greater than 0"];
+    fields.amount = ["قيمة الخصم يجب أن تكون أكبر من 0"];
   } else if (type === "percentage" && amount > 100) {
-    fields.amount = ["A percentage discount can't exceed 100"];
+    fields.amount = ["النسبة المئوية لا يمكن أن تتجاوز 100"];
   }
   // Salla: maximum_amount is required when type is percentage.
   if (
@@ -82,13 +83,14 @@ export function buildCouponPayload(input) {
       maximumAmount <= 0)
   ) {
     fields.maximum_amount = [
-      "Maximum discount is required for percentage coupons",
+      "الحد الأقصى للخصم مطلوب في الكوبونات ذات النسبة المئوية",
     ];
   }
-  if (!expiryDate) fields.expiry_date = ["End date is required"];
-  else if (!DATE_RE.test(expiryDate)) fields.expiry_date = ["Invalid end date"];
+  if (!expiryDate) fields.expiry_date = ["تاريخ الانتهاء مطلوب"];
+  else if (!DATE_RE.test(expiryDate))
+    fields.expiry_date = ["تاريخ الانتهاء غير صحيح"];
   if (startDate && !DATE_RE.test(startDate)) {
-    fields.start_date = ["Invalid start date"];
+    fields.start_date = ["تاريخ البداية غير صحيح"];
   }
   for (const [key, value] of [
     ["minimum_amount", minimumAmount],
@@ -96,7 +98,7 @@ export function buildCouponPayload(input) {
     ["usage_limit_per_user", usageLimitPerUser],
   ]) {
     if (value !== undefined && (!Number.isFinite(value) || value < 0)) {
-      fields[key] = ["Must be a positive number"];
+      fields[key] = ["يجب أن يكون رقمًا موجبًا"];
     }
   }
 
@@ -129,15 +131,15 @@ export async function POST(request) {
   try {
     body = await request.json();
   } catch {
-    return fail(400, "bad_request", "Invalid JSON body");
+    return fail(400, "bad_request", "بيانات الطلب غير صالحة");
   }
 
   const { token } = body;
   const appId = process.env.SALLA_APP_ID || body.appId;
   const action = String(body.action || "list").toLowerCase();
 
-  if (!token) return fail(400, "bad_request", "Token is required");
-  if (!appId) return fail(400, "bad_request", "App ID is required");
+  if (!token) return fail(400, "bad_request", "رمز الجلسة مطلوب");
+  if (!appId) return fail(400, "bad_request", "معرّف التطبيق مطلوب");
 
   try {
     const session = await introspectEmbeddedToken(token, appId);
@@ -176,7 +178,7 @@ export async function POST(request) {
 
       case "get": {
         if (!body.couponId)
-          return fail(400, "bad_request", "Coupon ID is required");
+          return fail(400, "bad_request", "معرّف الكوبون مطلوب");
         const { status, body: result } = await merchantApi(couponPath());
         if (!result.success) {
           return sallaFail(
@@ -191,14 +193,14 @@ export async function POST(request) {
       case "create":
       case "update": {
         if (action === "update" && !body.couponId) {
-          return fail(400, "bad_request", "Coupon ID is required");
+          return fail(400, "bad_request", "معرّف الكوبون مطلوب");
         }
         const { payload, fields } = buildCouponPayload(body.coupon);
         if (fields) {
           return fail(
             422,
             "validation_failed",
-            "Some coupon fields are invalid",
+            "بعض حقول الكوبون غير صحيحة",
             fields,
           );
         }
@@ -221,7 +223,7 @@ export async function POST(request) {
 
       case "delete": {
         if (!body.couponId)
-          return fail(400, "bad_request", "Coupon ID is required");
+          return fail(400, "bad_request", "معرّف الكوبون مطلوب");
         const { status, body: result } = await merchantApi(couponPath(), {
           method: "DELETE",
         });
@@ -235,19 +237,19 @@ export async function POST(request) {
         return Response.json({
           success: true,
           couponId: body.couponId,
-          message: result.data?.message || "Coupon deleted",
+          message: result.data?.message || "تم حذف الكوبون",
         });
       }
 
       default:
-        return fail(400, "bad_request", `Unknown action: "${action}"`);
+        return fail(400, "bad_request", `إجراء غير معروف: "${action}"`);
     }
   } catch (error) {
     console.error("Coupons endpoint failed:", error);
     return fail(
       error.status || ERROR_STATUS[error.code] || 500,
       error.code || "server_error",
-      error.message || "Internal server error",
+      error.message || "خطأ داخلي في الخادم",
     );
   }
 }

@@ -24,18 +24,14 @@ export default function ProductsSelectionBar({
 }) {
   if (count === 0) return null;
   return (
-    <div
-      className="products-selection-bar"
-      role="region"
-      aria-label="Selection"
-    >
+    <div className="products-selection-bar" role="region" aria-label="التحديد">
       <div className="products-selection-info">
-        <strong>{count}</strong> products selected
+        <strong>{count}</strong> منتج محدد
         {allMatching && (
           <span className="products-selection-scope">
             {" "}
-            · all matching
-            {filterLabels.length ? ` ${filterLabels.join(", ")}` : " products"}
+            · كل المنتجات المطابقة
+            {filterLabels.length ? ` (${filterLabels.join("، ")})` : ""}
           </span>
         )}
         {canSelectAllMatching && (
@@ -45,13 +41,14 @@ export default function ProductsSelectionBar({
             className="products-select-all-matching"
             onClick={onSelectAllMatching}
           >
-            Select all {matchingTotal} matching
+            تحديد كل المنتجات المطابقة ({matchingTotal})
           </Button>
         )}
         {searchBlocksSelectAll && (
           <span className="products-selection-note">
-            Search results can&apos;t be selected across pages: Salla&apos;s
-            bulk filters have no text search.
+            لا يمكن تحديد نتائج البحث النصي عبر كل الصفحات، لأن فلاتر سلة
+            للإجراءات الجماعية لا تدعم البحث بالنص. امسح البحث لتحديد كل
+            المنتجات المطابقة.
           </span>
         )}
       </div>
@@ -77,11 +74,11 @@ export default function ProductsSelectionBar({
             icon={Tag}
             onClick={onBulkDiscount}
           >
-            Bulk Discount ({count})
+            خصم جماعي ({count})
           </Button>
         )}
         <Button size="small" variant="ghost" onClick={onClear}>
-          Deselect all
+          إلغاء التحديد
         </Button>
       </div>
     </div>

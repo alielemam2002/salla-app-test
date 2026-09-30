@@ -4,21 +4,21 @@ const FIELDS = [
   {
     name: "price",
     id: "product-price",
-    label: "Regular Price (SAR)",
+    label: "السعر (SAR)",
     required: true,
     placeholder: "0.00",
   },
   {
     name: "sale_price",
     id: "product-sale-price",
-    label: "Sale Price (SAR)",
-    placeholder: "Optional discounted price",
+    label: "سعر التخفيض (SAR)",
+    placeholder: "اختياري",
   },
   {
     name: "cost_price",
     id: "product-cost-price",
-    label: "Cost Price (SAR)",
-    placeholder: "Wholesale/cost",
+    label: "سعر التكلفة (SAR)",
+    placeholder: "سعر الشراء أو التكلفة",
   },
 ];
 

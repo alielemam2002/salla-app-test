@@ -1,7 +1,7 @@
 /** Jump links to each form section. items: [{ id, label, icon, onClick }] */
 export default function ProductFormNav({ items }) {
   return (
-    <nav className="modal-tabs product-form-nav" aria-label="Form sections">
+    <nav className="modal-tabs product-form-nav" aria-label="أقسام النموذج">
       {items.map(({ id, label, icon: Icon, onClick }) => (
         <button
           key={id}

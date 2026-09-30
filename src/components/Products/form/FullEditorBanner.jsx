@@ -9,10 +9,10 @@ export default function FullEditorBanner({ onOpen }) {
         <Sparkles size={18} />
       </span>
       <div className="full-editor-banner-text">
-        <strong>محرر تفاصيل المنتج المتكامل (Completion Score)</strong>
+        <strong>محرر تفاصيل المنتج المتكامل (نسبة الاكتمال)</strong>
         <span>
-          تحكّم في المظهر، تحسين محركات البحث SEO، الخيارات والمتغيرات مع نسبة
-          اكتمال ديناميكية.
+          تحكّم في المظهر وتحسين محركات البحث (SEO) والخيارات والمتغيرات، مع
+          نسبة اكتمال تتحدّث تلقائيًا.
         </span>
       </div>
       <Button size="small" variant="primary" onClick={onOpen}>

@@ -81,8 +81,8 @@ const notConnected = (unreadable) =>
     503,
     "whatsapp_not_configured",
     unreadable
-      ? "Your saved WhatsApp token can't be read anymore. Enter it again in WhatsApp settings."
-      : "Connect your WhatsApp Business account in WhatsApp settings first. Until then, send reminders manually.",
+      ? "تعذّرت قراءة رمز الوصول المحفوظ لواتساب. أدخله مرة أخرى في إعدادات واتساب."
+      : "اربط حساب واتساب للأعمال من إعدادات واتساب أولًا. حتى ذلك الحين أرسل التذكيرات يدويًا.",
   );
 
 const localeOf = (config) => (config.language.startsWith("ar") ? "ar" : "en");
@@ -98,17 +98,15 @@ const FALLBACK_NAME = { ar: "عميلنا العزيز", en: "there" };
 export function campaignConfig(base, body) {
   const template = String(body.template || "").trim();
   const language = String(body.language || "").trim();
-  if (!TEMPLATE_NAME_RE.test(template))
-    return { error: "Invalid template name" };
-  if (!LANGUAGE_RE.test(language))
-    return { error: "Invalid template language" };
+  if (!TEMPLATE_NAME_RE.test(template)) return { error: "اسم القالب غير صالح" };
+  if (!LANGUAGE_RE.test(language)) return { error: "لغة القالب غير صالحة" };
   const params = Array.isArray(body.params) ? body.params : [];
-  if (params.length > 10) return { error: "At most 10 template variables" };
+  if (params.length > 10) return { error: "الحد الأقصى 10 متغيرات للقالب" };
   for (const p of params) {
     if (!CAMPAIGN_SOURCES.has(p?.source))
-      return { error: "Unknown variable type" };
+      return { error: "نوع المتغير غير معروف" };
     if (p.source !== "customer_name" && !cleanParam(p.value)) {
-      return { error: "Every variable needs a value" };
+      return { error: "يجب إدخال قيمة لكل متغير" };
     }
   }
   const keys = params.map((_, i) => `v${i + 1}`);
@@ -137,7 +135,7 @@ async function deliver(config, to, values) {
     return fail(
       500,
       "whatsapp_bad_config",
-      `Unknown template variables: ${config.invalidParams.join(", ")}`,
+      `متغيرات قالب غير معروفة: ${config.invalidParams.join(", ")}`,
     );
   }
   const message = buildTemplateMessage(config, to, values);
@@ -166,14 +164,14 @@ export async function POST(request) {
   try {
     body = await request.json();
   } catch {
-    return fail(400, "bad_request", "Invalid JSON body");
+    return fail(400, "bad_request", "تعذّر قراءة الطلب");
   }
 
   const { token } = body;
   const appId = process.env.SALLA_APP_ID || body.appId;
   const action = String(body.action || "status").toLowerCase();
-  if (!token) return fail(400, "bad_request", "Token is required");
-  if (!appId) return fail(400, "bad_request", "App ID is required");
+  if (!token) return fail(400, "bad_request", "رمز الجلسة مطلوب");
+  if (!appId) return fail(400, "bad_request", "معرّف التطبيق مطلوب");
 
   try {
     const session = await introspectEmbeddedToken(token, appId);
@@ -218,7 +216,7 @@ export async function POST(request) {
           return fail(
             503,
             "storage_not_configured",
-            "Settings storage isn't set up on the server (Upstash Redis + WA_SETTINGS_KEY).",
+            "تخزين الإعدادات غير مفعّل على الخادم (Upstash Redis و WA_SETTINGS_KEY).",
           );
         }
         const stored = await loadStored(merchantId);
@@ -226,7 +224,7 @@ export async function POST(request) {
           hasSavedToken: Boolean(stored?.token),
         });
         if (fields) {
-          return fail(422, "validation_failed", "Some settings are invalid", {
+          return fail(422, "validation_failed", "بعض الإعدادات غير صحيحة", {
             fields,
           });
         }
@@ -236,18 +234,11 @@ export async function POST(request) {
           try {
             savedToken = open(stored.token);
           } catch {
-            return fail(
-              422,
-              "validation_failed",
-              "Enter the access token again",
-              {
-                fields: {
-                  accessToken: [
-                    "The saved token can't be read anymore. Enter it again.",
-                  ],
-                },
+            return fail(422, "validation_failed", "أدخل رمز الوصول مرة أخرى", {
+              fields: {
+                accessToken: ["تعذّرت قراءة الرمز المحفوظ. أدخله مرة أخرى."],
               },
-            );
+            });
           }
         }
         const probe = {
@@ -300,7 +291,7 @@ export async function POST(request) {
           return fail(
             422,
             "bad_number",
-            "Enter a full international number, e.g. +966500000000.",
+            "أدخل رقمًا دوليًا كاملًا، مثل +966500000000.",
           );
         }
         return deliver(
@@ -317,12 +308,12 @@ export async function POST(request) {
           return fail(
             403,
             "whatsapp_disabled",
-            "Sending from the app is switched off. Turn it on in Cart Recovery, or send the reminder manually.",
+            "الإرسال من التطبيق متوقف. فعّله من صفحة السلات المتروكة أو أرسل التذكير يدويًا.",
           );
         }
         const cartId = String(body.cartId || "");
         if (!/^\d+$/.test(cartId)) {
-          return fail(400, "bad_request", "A numeric cart ID is required");
+          return fail(400, "bad_request", "معرّف السلة مطلوب (أرقام فقط)");
         }
         const { status, body: result } = await merchantApi(
           `/carts/abandoned/${encodeURIComponent(cartId)}`,
@@ -331,23 +322,19 @@ export async function POST(request) {
           return fail(
             status >= 400 ? status : 502,
             "salla_api_error",
-            result.error?.message || "Failed to load the cart",
+            result.error?.message || "تعذّر تحميل السلة",
           );
         }
         const cart = result.data || {};
         if (cart.status === "purchased") {
-          return fail(
-            409,
-            "cart_purchased",
-            "The customer already completed this order.",
-          );
+          return fail(409, "cart_purchased", "أكمل العميل هذا الطلب بالفعل.");
         }
         const to = whatsappNumber(cart.customer?.mobile);
         if (!to) {
           return fail(
             422,
             "no_phone",
-            "Salla has no international mobile number for this customer.",
+            "لا يوجد رقم جوال دولي لهذا العميل في سلة.",
           );
         }
         const couponCode = /^[\w-]{1,40}$/.test(String(body.couponCode || ""))
@@ -367,7 +354,7 @@ export async function POST(request) {
           return fail(
             403,
             "whatsapp_disabled",
-            "Sending from the app is switched off. Turn it on in Cart Recovery.",
+            "الإرسال من التطبيق متوقف. فعّله من صفحة السلات المتروكة.",
           );
         }
         const campaign = campaignConfig(config, body);
@@ -376,24 +363,20 @@ export async function POST(request) {
         }
         const to = whatsappNumber(body.to);
         if (!to) {
-          return fail(
-            422,
-            "bad_number",
-            "This customer has no international mobile number.",
-          );
+          return fail(422, "bad_number", "لا يوجد رقم جوال دولي لهذا العميل.");
         }
         return deliver(campaign.config, to, campaign.values(body.customerName));
       }
 
       default:
-        return fail(400, "bad_request", `Unknown action: "${action}"`);
+        return fail(400, "bad_request", `إجراء غير معروف: "${action}"`);
     }
   } catch (error) {
     console.error("WhatsApp endpoint failed:", error.code || error.message);
     return fail(
       error.status || ERROR_STATUS[error.code] || 500,
       error.code || "server_error",
-      error.message || "Internal server error",
+      error.message || "حدث خطأ في الخادم",
     );
   }
 }

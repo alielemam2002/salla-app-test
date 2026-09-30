@@ -145,7 +145,7 @@ export function buildOperation(actionName, value = {}) {
       const channels = Array.isArray(value.channels)
         ? [...new Set(value.channels)].filter((c) => SALE_CHANNELS.includes(c))
         : [];
-      if (!channels.length) return { error: "Choose at least one channel" };
+      if (!channels.length) return { error: "اختر قناة بيع واحدة على الأقل" };
       return { operation: { action_name: actionName, value: { channels } } };
     }
 
@@ -158,7 +158,7 @@ export function buildOperation(actionName, value = {}) {
       if (Number.isInteger(brandId) && brandId > 0) out.brand_id = brandId;
       if (tags.length) out.tags = tags;
       if (!Object.keys(out).length) {
-        return { error: "Choose a category, brand or tag" };
+        return { error: "اختر تصنيفًا أو علامة تجارية أو وسمًا" };
       }
       return { operation: { action_name: actionName, value: out } };
     }
@@ -168,9 +168,9 @@ export function buildOperation(actionName, value = {}) {
       const minimum = Number(value.minimum_notify_quantity);
       const percent = Number(value.subscribers_percentage);
       if (![notify, minimum, percent].every(isInt)) {
-        return { error: "Use whole numbers of 0 or more" };
+        return { error: "استخدم أعدادًا صحيحة من 0 فأكثر" };
       }
-      if (percent > 100) return { error: "Subscribers percentage is 0–100" };
+      if (percent > 100) return { error: "نسبة المشتركين بين 0 و100" };
       return {
         operation: {
           action_name: actionName,
@@ -187,17 +187,18 @@ export function buildOperation(actionName, value = {}) {
       const { column, formulaId, apply_on: applyOn } = value;
       const amount = Number(value.amount);
       const formula = findFormula(column, formulaId);
-      if (!formula) return { error: "Unsupported pricing formula" };
-      if (!APPLY_ON.includes(applyOn)) return { error: "Invalid apply_on" };
+      if (!formula) return { error: "معادلة التسعير غير مدعومة" };
+      if (!APPLY_ON.includes(applyOn))
+        return { error: "قيمة apply_on غير صالحة" };
       if (!Number.isFinite(amount) || amount <= 0) {
-        return { error: "Amount must be greater than 0" };
+        return { error: "يجب أن تكون القيمة أكبر من 0" };
       }
       if (
         formula.unit === "percent" &&
         formula.id.includes("minus") &&
         amount >= 100
       ) {
-        return { error: "A percentage decrease must be below 100%" };
+        return { error: "يجب أن تكون نسبة الخفض أقل من 100%" };
       }
       return {
         operation: {
@@ -213,21 +214,21 @@ export function buildOperation(actionName, value = {}) {
     }
 
     default:
-      return { error: `Unsupported action: ${actionName}` };
+      return { error: `إجراء غير مدعوم: ${actionName}` };
   }
 }
 
 /** Server side: is this exact operation one the docs describe? */
 export function sanitizeOperation(operation) {
   if (!operation || !SALLA_BULK_ACTIONS.includes(operation.action_name)) {
-    return { error: "Unsupported action" };
+    return { error: "إجراء غير مدعوم" };
   }
   const value = operation.value || {};
   if (operation.action_name === "pricing") {
     const formula = (PRICING_FORMULAS[value.column] || []).find(
       (f) => f.formula === value.formula,
     );
-    if (!formula) return { error: "Unsupported pricing formula" };
+    if (!formula) return { error: "معادلة التسعير غير مدعومة" };
     return buildOperation("pricing", { ...value, formulaId: formula.id });
   }
   return buildOperation(operation.action_name, value);
@@ -281,7 +282,7 @@ export function sanitizeFilters(filters = {}) {
     types: [],
   };
   if (!clean.select_all && !clean.ids.length) {
-    return { error: "Select at least one product" };
+    return { error: "حدّد منتجًا واحدًا على الأقل" };
   }
   return { filters: clean };
 }

@@ -32,7 +32,7 @@ const CartRow = memo(function CartRow({
       <td>
         <div className="cart-customer">
           <span className="cart-customer-name">
-            {cart.customer?.name || "Guest"}
+            {cart.customer?.name || "زائر"}
           </span>
           {cart.customer?.mobile && (
             <span className="cart-customer-phone" dir="ltr">
@@ -43,29 +43,29 @@ const CartRow = memo(function CartRow({
       </td>
       <td className="cart-num">{formatMoney(money(cart.total))}</td>
       <td className="cart-num">
-        {items} {items === 1 ? "item" : "items"}
+        {items} {items === 1 ? "منتج" : "منتجات"}
       </td>
       <td>{timeAgo(sallaDateMs(cart.created_at), now)}</td>
       <td>{timeAgo(sallaDateMs(cart.updated_at), now)}</td>
       <td>
         <div className="cart-status">
           <Badge tone={eligible ? "warning" : "neutral"} dot>
-            {eligible ? "Abandoned" : "Recent"}
+            {eligible ? "متروكة" : "حديثة"}
           </Badge>
           {contactedAt && (
             <Badge
               tone="success"
               title={new Date(contactedAt).toLocaleString()}
             >
-              WhatsApp {timeAgo(Date.parse(contactedAt), now)}
+              واتساب {timeAgo(Date.parse(contactedAt), now)}
             </Badge>
           )}
           {apiSent && (
             <Badge
               tone="info"
-              title={`Accepted by Meta · message ${apiSent.messageId || "—"}`}
+              title={`قبلتها Meta · رقم الرسالة ${apiSent.messageId || "—"}`}
             >
-              Sent via API {timeAgo(Date.parse(apiSent.at), now)}
+              أُرسلت من التطبيق {timeAgo(Date.parse(apiSent.at), now)}
             </Badge>
           )}
         </div>
@@ -91,13 +91,13 @@ const CartRow = memo(function CartRow({
             variant="secondary"
             icon={Eye}
             onClick={() => onView(cart)}
-            aria-label={`View cart of ${cart.customer?.name || "guest"}`}
+            aria-label={`عرض سلة ${cart.customer?.name || "زائر"}`}
           >
-            Details
+            التفاصيل
           </Button>
           <IconButton
             icon={Copy}
-            label="Copy recovery link"
+            label="نسخ الرابط"
             size={14}
             onClick={() => onCopyLink(cart)}
             disabled={!cart.checkout_url}
@@ -134,13 +134,13 @@ export default function AbandonedCartsTable({
       <table className="cart-table">
         <thead>
           <tr>
-            <th scope="col">Customer</th>
-            <th scope="col">Cart value</th>
-            <th scope="col">Items</th>
-            <th scope="col">Created</th>
-            <th scope="col">Last activity</th>
-            <th scope="col">Status</th>
-            <th scope="col">Recovery</th>
+            <th scope="col">العميل</th>
+            <th scope="col">قيمة السلة</th>
+            <th scope="col">منتجات</th>
+            <th scope="col">تاريخ الإنشاء</th>
+            <th scope="col">آخر نشاط</th>
+            <th scope="col">الحالة</th>
+            <th scope="col">استرجاع السلة</th>
           </tr>
         </thead>
         <tbody>

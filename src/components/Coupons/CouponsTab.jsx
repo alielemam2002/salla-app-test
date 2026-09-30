@@ -21,7 +21,7 @@ import {
 
 const EMPTY = [];
 
-/** Coupons & Promotions tab: wires the coupon hooks to presentational parts. */
+/** Coupons tab: wires the coupon hooks to presentational parts. */
 export default function CouponsTab({ embedded, showToast }) {
   const getToken = useCallback(
     () => embedded?.auth?.getToken?.() || null,
@@ -72,8 +72,8 @@ export default function CouponsTab({ embedded, showToast }) {
       formDialog.close();
       showToast?.(
         editing
-          ? `Coupon ${input.code} updated`
-          : `Coupon ${input.code} created`,
+          ? `تم تعديل الكوبون ${input.code}`
+          : `تم إنشاء الكوبون ${input.code}`,
         "success",
       );
     };
@@ -86,7 +86,7 @@ export default function CouponsTab({ embedded, showToast }) {
     remove.mutate(coupon.id, {
       onSuccess: () => {
         deleteDialog.close();
-        showToast?.(`Coupon ${coupon.code} deleted`, "success");
+        showToast?.(`تم حذف الكوبون ${coupon.code}`, "success");
       },
     });
   };
@@ -136,8 +136,8 @@ export default function CouponsTab({ embedded, showToast }) {
       <Card className="coupons-panel">
         <Card.Header
           icon={TicketPercent}
-          title="Coupons & Promotions"
-          subtitle="Create and manage storewide discounts."
+          title="الكوبونات"
+          subtitle="أنشئ كوبونات خصم تنطبق على المتجر بالكامل وتابع حالتها."
           actions={
             <>
               <Button
@@ -145,7 +145,7 @@ export default function CouponsTab({ embedded, showToast }) {
                 icon={Plus}
                 onClick={() => openForm(null)}
               >
-                Create Coupon
+                إنشاء كوبون
               </Button>
               <Button
                 variant="secondary"
@@ -154,7 +154,7 @@ export default function CouponsTab({ embedded, showToast }) {
                 loading={query.isFetching && !query.isPending}
                 disabled={query.isPending}
               >
-                Refresh
+                تحديث
               </Button>
             </>
           }
@@ -188,16 +188,16 @@ export default function CouponsTab({ embedded, showToast }) {
         isOpen={deleteDialog.isOpen}
         onClose={deleteDialog.close}
         onConfirm={handleDelete}
-        title="Delete coupon"
+        title="حذف الكوبون"
         subtitle={deleteDialog.data?.code}
-        confirmText="Delete coupon"
+        confirmText="حذف الكوبون"
         loading={remove.isPending}
-        loadingText="Deleting…"
+        loadingText="جارٍ الحذف…"
       >
         <p>
-          Delete <strong>{deleteDialog.data?.code}</strong> from your Salla
-          store? Customers won't be able to use it anymore. This can't be
-          undone.
+          هل تريد حذف الكوبون{" "}
+          <strong dir="ltr">{deleteDialog.data?.code}</strong> من متجرك في سلة؟
+          لن يتمكن العملاء من استخدامه بعد الآن، ولا يمكن التراجع عن الحذف.
         </p>
         {deleteError && (
           <p className="coupon-delete-error" role="alert">

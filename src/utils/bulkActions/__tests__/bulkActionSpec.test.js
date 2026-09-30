@@ -50,7 +50,7 @@ describe("Salla bulk action contract", () => {
         amount: 10,
         apply_on: "product",
       }).error,
-    ).toMatch(/Unsupported/);
+    ).toMatch(/غير مدعومة/);
     expect(PRICING_FORMULAS.price.map((f) => f.formula)).not.toContain(
       "price - amount",
     );
@@ -64,14 +64,14 @@ describe("Salla bulk action contract", () => {
         formulaId: "price_minus_percent",
         amount: 100,
       }).error,
-    ).toMatch(/below 100/);
+    ).toMatch(/أقل من 100/);
     expect(
       buildOperation("pricing", {
         ...base,
         formulaId: "set_amount",
         amount: -5,
       }).error,
-    ).toMatch(/greater than 0/);
+    ).toMatch(/أكبر من 0/);
     expect(
       buildOperation("pricing", {
         ...base,
@@ -211,13 +211,11 @@ describe("pricing preview", () => {
       error: "alert.invalid_fields",
       fields: { "operations.0.action_name": ["invalid"] },
     });
-    expect(error.reason).toBe(
-      "Salla rejected the requested settings for this action.",
-    );
+    expect(error.reason).toBe("رفضت سلة الإعدادات المطلوبة لهذا الإجراء.");
     expect(error.debug).toMatch(/operations\.0\.action_name/);
-    expect(describeBulkError({ status: 429 }).reason).toMatch(/minute/);
+    expect(describeBulkError({ status: 429 }).reason).toMatch(/دقيقة/);
     expect(
       describeBulkError({ status: 0, code: "network_error" }).reason,
-    ).toMatch(/Network/);
+    ).toMatch(/الاتصال/);
   });
 });

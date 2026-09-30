@@ -10,18 +10,18 @@ export default function ProductsPagination({
 }) {
   if (totalPages <= 1) return null;
   return (
-    <nav className="products-pagination" aria-label="Pagination">
+    <nav className="products-pagination" aria-label="التنقل بين الصفحات">
       <Button
         size="small"
         variant="secondary"
-        icon={ChevronLeft}
+        icon={ChevronRight}
         onClick={() => onPageChange(page - 1)}
         disabled={page <= 1 || disabled}
       >
-        Previous
+        الصفحة السابقة
       </Button>
       <span className="products-pagination-label">
-        Page {page} / {totalPages}
+        الصفحة {page} من {totalPages}
       </span>
       <Button
         size="small"
@@ -29,8 +29,8 @@ export default function ProductsPagination({
         onClick={() => onPageChange(page + 1)}
         disabled={page >= totalPages || disabled}
       >
-        Next
-        <ChevronRight size={14} aria-hidden="true" />
+        الصفحة التالية
+        <ChevronLeft size={14} aria-hidden="true" />
       </Button>
     </nav>
   );

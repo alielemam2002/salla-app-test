@@ -8,7 +8,7 @@ export default function Spinner({ size = 16, label, className }) {
       {label ? (
         <span className="ui-spinner-label">{label}</span>
       ) : (
-        <span className="sr-only">Loading</span>
+        <span className="sr-only">جارٍ التحميل…</span>
       )}
     </span>
   );

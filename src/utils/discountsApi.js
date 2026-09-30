@@ -18,7 +18,7 @@ async function callApi(payload) {
       return {
         success: false,
         code: "bad_response",
-        error: `Server returned non-JSON (status ${response.status})`,
+        error: `تعذّر قراءة استجابة الخادم (الحالة ${response.status})`,
       };
     }
   } catch (error) {

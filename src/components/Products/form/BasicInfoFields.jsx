@@ -14,7 +14,7 @@ export default function BasicInfoFields({
   return (
     <>
       <Field
-        label="Product Name"
+        label="اسم المنتج"
         required
         error={errors.name}
         htmlFor="product-name"
@@ -22,7 +22,7 @@ export default function BasicInfoFields({
         <TextInput
           type="text"
           invalid={Boolean(errors.name)}
-          placeholder="e.g. Classic Cotton T-Shirt"
+          placeholder="مثال: تيشيرت قطن كلاسيكي"
           value={values.name}
           onChange={(e) => setField("name", e.target.value)}
           disabled={disabled}
@@ -31,12 +31,12 @@ export default function BasicInfoFields({
 
       <FormRow>
         <Field
-          label="Product Type"
+          label="نوع المنتج"
           required={!isEditing}
           htmlFor="product-type"
           hint={
             isEditing
-              ? "Product type cannot be changed after creation per Salla API rules."
+              ? "لا يمكن تغيير نوع المنتج بعد إنشائه (حسب قواعد سلة)."
               : undefined
           }
         >
@@ -48,7 +48,7 @@ export default function BasicInfoFields({
           />
         </Field>
 
-        <Field label="Status" htmlFor="product-status">
+        <Field label="الحالة" htmlFor="product-status">
           <Select
             value={values.status}
             onChange={(e) => setField("status", e.target.value)}
@@ -58,20 +58,20 @@ export default function BasicInfoFields({
         </Field>
       </FormRow>
 
-      <Field label="Subtitle / Short Tagline" htmlFor="product-subtitle">
+      <Field label="عنوان فرعي (وصف مختصر)" htmlFor="product-subtitle">
         <TextInput
           type="text"
-          placeholder="e.g. Premium Summer Collection 2026"
+          placeholder="مثال: مجموعة الصيف المميزة 2026"
           value={values.subtitle}
           onChange={(e) => setField("subtitle", e.target.value)}
           disabled={disabled}
         />
       </Field>
 
-      <Field label="Description" htmlFor="product-description">
+      <Field label="الوصف" htmlFor="product-description">
         <Textarea
           rows={3}
-          placeholder="Detailed information about the product..."
+          placeholder="اكتب تفاصيل المنتج ومميزاته…"
           value={values.description}
           onChange={(e) => setField("description", e.target.value)}
           disabled={disabled}

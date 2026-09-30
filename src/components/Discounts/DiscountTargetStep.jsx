@@ -14,35 +14,35 @@ export default function DiscountTargetStep({
   const options = [
     {
       value: "selected",
-      title: "Selected Products",
+      title: "المنتجات المحددة",
       icon: CheckSquare,
       desc:
         selectedCount > 0
-          ? `${selectedCount} items checked in table`
-          : "No products currently selected",
+          ? `${selectedCount} منتج محدد في الجدول`
+          : "لا توجد منتجات محددة حاليًا",
       disabled: selectedCount === 0,
     },
     {
       value: "category",
-      title: "Category",
+      title: "التصنيف",
       icon: FolderTree,
-      desc: "Apply to all products in a specific category",
+      desc: "طبّق على كل منتجات تصنيف معيّن",
     },
     {
       value: "all",
-      title: "All Products",
+      title: "كل المنتجات",
       icon: Store,
-      desc: "Apply storewide across all catalog items",
+      desc: "طبّق على كل منتجات المتجر",
     },
   ];
 
   return (
     <section className="form-section">
-      <SectionHeader title="1. Choose Target Products" />
+      <SectionHeader title="1. اختر المنتجات المستهدفة" />
       <div
         className="target-cards-grid"
         role="radiogroup"
-        aria-label="Target products"
+        aria-label="المنتجات المستهدفة"
       >
         {options.map((opt) => (
           <label
@@ -73,7 +73,7 @@ export default function DiscountTargetStep({
       </div>
 
       {target === "category" && (
-        <Field label="Select Category" htmlFor="discount-category">
+        <Field label="اختر التصنيف" htmlFor="discount-category">
           {categories.length > 0 ? (
             <Select
               value={selectedCategoryId}
@@ -87,7 +87,7 @@ export default function DiscountTargetStep({
           ) : (
             <TextInput
               type="number"
-              placeholder="Enter Category ID"
+              placeholder="أدخل معرّف التصنيف"
               value={selectedCategoryId}
               onChange={(e) => onCategoryChange(e.target.value)}
               disabled={disabled}

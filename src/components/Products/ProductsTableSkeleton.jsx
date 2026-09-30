@@ -6,8 +6,8 @@ export default function ProductsTableSkeleton({ rows = 6, progress }) {
     <div className="products-skeleton" aria-busy="true">
       <p className="products-skeleton-label" role="status">
         {progress
-          ? `Loading page ${progress.page} of ${progress.totalPages}… (${progress.loaded ?? 0} products)`
-          : "Loading products..."}
+          ? `جارٍ تحميل الصفحة ${progress.page} من ${progress.totalPages}… (${progress.loaded ?? 0} منتج)`
+          : "جارٍ تحميل المنتجات…"}
       </p>
       {Array.from({ length: rows }, (_, i) => (
         <div key={i} className="products-skeleton-row">

@@ -121,7 +121,9 @@ describe("useAppBootstrap", () => {
     });
 
     expect(result.current.verifyStatus).toBe("failed");
-    expect(result.current.error).toBe("Token verification failed");
+    expect(result.current.error).toBe(
+      "تعذّر التحقق من جلستك. أعد فتح التطبيق من لوحة تحكم سلة.",
+    );
     expect(result.current.isReady).toBe(false);
     expect(mockEmbedded.ready).not.toHaveBeenCalled();
   });

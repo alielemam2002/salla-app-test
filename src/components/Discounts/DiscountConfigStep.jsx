@@ -9,8 +9,8 @@ import {
 } from "../ui/index.js";
 
 const TYPES = [
-  { id: "percentage", label: "Percentage (%)", icon: Percent },
-  { id: "fixed", label: "Fixed Amount (SAR)", icon: DollarSign },
+  { id: "percentage", label: "نسبة مئوية (%)", icon: Percent },
+  { id: "fixed", label: "مبلغ ثابت (SAR)", icon: DollarSign },
 ];
 
 /** Step 2 (apply mode): discount type, value and optional end date. */
@@ -28,11 +28,11 @@ export default function DiscountConfigStep({
 
   return (
     <section className="form-section">
-      <SectionHeader title="2. Configure Discount" />
+      <SectionHeader title="2. إعداد الخصم" />
       <FormRow>
         <div className="form-group">
           <span className="form-label" id="discount-type-label">
-            Discount Type
+            نوع الخصم
           </span>
           <div
             className="discount-type-group"
@@ -58,7 +58,7 @@ export default function DiscountConfigStep({
         </div>
 
         <Field
-          label={isPercent ? "Discount Percentage" : "Discount Amount (SAR)"}
+          label={isPercent ? "نسبة الخصم" : "مبلغ الخصم (SAR)"}
           htmlFor="discount-val"
         >
           <TextInput
@@ -77,9 +77,9 @@ export default function DiscountConfigStep({
       </FormRow>
 
       <Field
-        label="Sale End Date (Optional)"
+        label="تاريخ انتهاء التخفيض (اختياري)"
         htmlFor="sale-end-date"
-        hint="Leave empty if the promotion has no fixed expiration date."
+        hint="اتركه فارغًا إذا لم يكن للعرض تاريخ انتهاء محدد."
       >
         <TextInput
           type="date"
@@ -93,7 +93,7 @@ export default function DiscountConfigStep({
               <IconButton
                 icon={X}
                 size={14}
-                label="Clear date"
+                label="مسح التاريخ"
                 className="input-clear-btn"
                 onClick={() => onSaleEndDateChange("")}
               />

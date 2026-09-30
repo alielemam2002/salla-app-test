@@ -89,7 +89,8 @@ export function useProductForm({ isOpen, product, onSave, onClose }) {
       setIsSubmitting(false);
       if (!result?.success) {
         setGeneralError(
-          result?.error || "Salla rejected the product submission.",
+          result?.error ||
+            "رفضت سلة بيانات المنتج. راجع الحقول وحاول مرة أخرى.",
         );
         if (result?.fields) setFieldErrors(mapServerFieldErrors(result.fields));
       } else {
@@ -97,7 +98,7 @@ export function useProductForm({ isOpen, product, onSave, onClose }) {
       }
     } catch (err) {
       setIsSubmitting(false);
-      setGeneralError(err.message || "An unexpected error occurred.");
+      setGeneralError(err.message || "حدث خطأ غير متوقع. حاول مرة أخرى.");
     }
   };
 

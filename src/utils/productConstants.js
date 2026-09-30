@@ -5,20 +5,20 @@ export const PRODUCTS_PER_PAGE = 30;
 // Setup hints shown for errors the merchant/developer can fix
 export const PRODUCT_ERROR_HINTS = {
   token_not_configured:
-    "Add the store's Merchant API access token to Vercel as SALLA_ACCESS_TOKEN, then redeploy.",
+    "لم يتم ربط التطبيق بالمتجر بعد. أضف رمز الوصول إلى واجهة سلة (Merchant API) في Vercel باسم SALLA_ACCESS_TOKEN، ثم أعد النشر.",
   missing_scope:
-    "The token works but lacks product permissions. In the Partners Portal enable 'Products Read & Write' (products.read_write), reinstall the app on the store, then put the NEW access_token in SALLA_ACCESS_TOKEN and redeploy.",
+    "الرمز يعمل لكنه لا يملك صلاحية المنتجات. فعّل صلاحية «المنتجات: قراءة وكتابة» (products.read_write) في بوابة الشركاء، وأعد تثبيت التطبيق على المتجر، ثم ضع access_token الجديد في SALLA_ACCESS_TOKEN وأعد النشر.",
   token_expired:
-    "SALLA_ACCESS_TOKEN was rejected. Access tokens expire after 14 days: put a fresh token in Vercel and redeploy, and make sure the app has the products scope.",
+    "تم رفض رمز SALLA_ACCESS_TOKEN. تنتهي صلاحية رموز الوصول بعد 14 يومًا: ضع رمزًا جديدًا في Vercel وأعد النشر، وتأكد من تفعيل صلاحية المنتجات للتطبيق.",
   session_invalid:
-    "The embedded session token is invalid or expired. Refresh the session to get a new one.",
+    "انتهت صلاحية جلسة التطبيق أو أنها غير صالحة. اضغط «تحديث الجلسة» للحصول على جلسة جديدة.",
 };
 
 export const STATUS_FILTER_OPTIONS = [
-  { value: "", label: "All Statuses" },
-  { value: "sale", label: "Active (Sale)" },
-  { value: "out", label: "Out of Stock" },
-  { value: "hidden", label: "Hidden" },
+  { value: "", label: "كل الحالات" },
+  { value: "sale", label: "نشط" },
+  { value: "out", label: "نفد من المخزون" },
+  { value: "hidden", label: "مخفي" },
 ];
 
 /** Badge tone per product status. */
@@ -29,24 +29,35 @@ export const PRODUCT_STATUS_TONES = {
 };
 
 export const PRODUCT_TYPES = [
-  { value: "product", label: "Standard Product (Physical)" },
-  { value: "service", label: "Service" },
-  { value: "digital", label: "Digital Product" },
-  { value: "codes", label: "Digital Cards / Codes" },
-  { value: "food", label: "Food / Meals" },
-  { value: "group_products", label: "Group / Bundle Products" },
-  { value: "donating", label: "Donation" },
+  { value: "product", label: "منتج مادي" },
+  { value: "service", label: "خدمة" },
+  { value: "digital", label: "منتج رقمي" },
+  { value: "codes", label: "بطاقات وأكواد رقمية" },
+  { value: "food", label: "وجبات وأطعمة" },
+  { value: "group_products", label: "مجموعة منتجات" },
+  { value: "donating", label: "تبرّع" },
 ];
 
 export const PRODUCT_STATUSES = [
-  { value: "sale", label: "Active (On Sale)" },
-  { value: "out", label: "Out of Stock" },
-  { value: "hidden", label: "Hidden" },
+  { value: "sale", label: "نشط" },
+  { value: "out", label: "نفد من المخزون" },
+  { value: "hidden", label: "مخفي" },
 ];
 
 export const WEIGHT_TYPES = [
-  { value: "kg", label: "kg" },
-  { value: "g", label: "g" },
-  { value: "lb", label: "lb" },
-  { value: "oz", label: "oz" },
+  { value: "kg", label: "كيلوغرام (kg)" },
+  { value: "g", label: "غرام (g)" },
+  { value: "lb", label: "رطل (lb)" },
+  { value: "oz", label: "أونصة (oz)" },
 ];
+
+/** Arabic label for a product status value; unknown values are shown as-is. */
+export function statusLabel(status) {
+  if (!status) return "—";
+  return PRODUCT_STATUSES.find((s) => s.value === status)?.label || status;
+}
+
+/** Arabic label for a product type value; unknown values are shown as-is. */
+export function productTypeLabel(type) {
+  return PRODUCT_TYPES.find((t) => t.value === type)?.label || type;
+}

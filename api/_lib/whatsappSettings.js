@@ -46,26 +46,30 @@ export function validateSettingsInput(
     : [];
 
   if (!ID_RE.test(phoneNumberId))
-    fields.phoneNumberId = ["Use the numeric Phone Number ID from API Setup"];
+    fields.phoneNumberId = [
+      "استخدم معرّف رقم الهاتف (أرقام فقط) من إعداد واجهة البرمجة",
+    ];
   if (wabaId && !ID_RE.test(wabaId))
-    fields.wabaId = ["Use the numeric WhatsApp Business Account ID"];
+    fields.wabaId = ["استخدم معرّف حساب واتساب للأعمال (أرقام فقط)"];
   if (accessToken) {
     if (accessToken.length < 20 || /\s/.test(accessToken)) {
-      fields.accessToken = ["This doesn't look like a Meta access token"];
+      fields.accessToken = ["لا يبدو هذا رمز وصول صالحًا من Meta"];
     }
   } else if (!hasSavedToken) {
-    fields.accessToken = ["An access token is required"];
+    fields.accessToken = ["رمز الوصول مطلوب"];
   }
   if (!TEMPLATE_NAME_RE.test(template)) {
-    fields.template = ["Template names use lowercase letters, numbers and _"];
+    fields.template = [
+      "اسم القالب يتكون من أحرف إنجليزية صغيرة وأرقام و _ فقط",
+    ];
   }
   if (!LANGUAGE_RE.test(language))
-    fields.language = ["Use a language code like ar or en_US"];
+    fields.language = ["استخدم رمز لغة مثل ar أو en_US"];
   const unknown = params.filter((p) => !ALLOWED_PARAMS.has(p));
   if (unknown.length)
-    fields.params = [`Unknown variables: ${unknown.join(", ")}`];
+    fields.params = [`متغيرات غير معروفة: ${unknown.join(", ")}`];
   else if (params.length > MAX_PARAMS)
-    fields.params = [`At most ${MAX_PARAMS} variables`];
+    fields.params = [`الحد الأقصى ${MAX_PARAMS} متغيرات`];
 
   if (Object.keys(fields).length) return { fields };
   return {

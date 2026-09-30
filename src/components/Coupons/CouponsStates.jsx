@@ -6,7 +6,7 @@ export function CouponsSkeleton({ count = 6 }) {
   return (
     <div className="coupon-grid coupon-grid--loading" aria-busy="true">
       <span className="sr-only" role="status">
-        Loading coupons…
+        جارٍ تحميل الكوبونات…
       </span>
       {Array.from({ length: count }, (_, i) => (
         <div key={i} className="coupon-card coupon-card--skeleton">
@@ -33,11 +33,11 @@ export function CouponsEmptyState({ filtered, onCreate, onClearFilters }) {
     return (
       <EmptyState
         icon={SearchX}
-        title="No matching coupons"
-        description={<p>Try another code or status filter.</p>}
+        title="لا توجد كوبونات مطابقة"
+        description={<p>جرّب كودًا آخر أو غيّر فلتر الحالة.</p>}
         action={
           <Button size="small" variant="secondary" onClick={onClearFilters}>
-            Clear filters
+            إعادة ضبط الفلاتر
           </Button>
         }
       />
@@ -46,11 +46,13 @@ export function CouponsEmptyState({ filtered, onCreate, onClearFilters }) {
   return (
     <EmptyState
       icon={Ticket}
-      title="No coupons yet"
-      description={<p>Create your first storewide coupon.</p>}
+      title="لا توجد كوبونات بعد"
+      description={
+        <p>أنشئ أول كوبون خصم يعمل على المتجر بالكامل وشاركه مع عملائك.</p>
+      }
       action={
         <Button variant="primary" icon={Plus} onClick={onCreate}>
-          Create Coupon
+          إنشاء كوبون
         </Button>
       }
     />
@@ -68,11 +70,11 @@ export function CouponsErrorState({ error, onRetry, onRefreshSession }) {
         <>
           {error.canRefreshSession && (
             <Button variant="primary" onClick={onRefreshSession}>
-              Refresh session
+              تحديث الجلسة
             </Button>
           )}
           <Button variant="secondary" onClick={onRetry}>
-            Retry
+            إعادة المحاولة
           </Button>
         </>
       }

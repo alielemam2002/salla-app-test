@@ -23,7 +23,7 @@ export default function BulkActionPreview({
 }) {
   // A sale price is set relative to the price, so show both.
   const showPrice = pricingColumn === "sale_price";
-  const columnLabel = COLUMN_LABELS[pricingColumn] || "Value";
+  const columnLabel = COLUMN_LABELS[pricingColumn] || "القيمة";
   const shown = pricingRows || sampleProducts.slice(0, PREVIEW_LIMIT);
   const more = Math.max(0, count - shown.length);
 
@@ -31,57 +31,54 @@ export default function BulkActionPreview({
     <div className="bulk-preview">
       <dl className="bulk-preview-summary">
         <div>
-          <dt>Action</dt>
+          <dt>الإجراء</dt>
           <dd>{title}</dd>
         </div>
         <div>
-          <dt>Details</dt>
+          <dt>التفاصيل</dt>
           <dd>{summary}</dd>
         </div>
         <div>
-          <dt>Products</dt>
+          <dt>المنتجات</dt>
           <dd>
             <strong>{count}</strong>
           </dd>
         </div>
         {filterLabels.length > 0 && (
           <div>
-            <dt>Current filters</dt>
+            <dt>الفلاتر الحالية</dt>
             <dd>{filterLabels.join(" · ")}</dd>
           </div>
         )}
       </dl>
 
       {isDuplicate && (
-        <Alert
-          tone="warning"
-          title={`You are about to duplicate ${count} products.`}
-        >
-          This may create {count} new products in your store.
+        <Alert tone="warning" title={`أنت على وشك تكرار ${count} منتج.`}>
+          قد يؤدي ذلك إلى إنشاء {count} منتج جديد في متجرك.
         </Alert>
       )}
 
       {count > 1 && (
         <p className="form-hint">
-          Salla processes several products in a queue. New values are calculated
-          by Salla.
+          تعالج سلة المنتجات المتعددة في قائمة انتظار، وتحسب القيم الجديدة
+          بنفسها.
         </p>
       )}
 
       {shown.length > 0 && (
         <div className="bulk-preview-sample">
           <p className="bulk-preview-caption">
-            {pricingRows ? "Estimated changes" : "Products"} · previewing first{" "}
+            {pricingRows ? "التغييرات المتوقعة" : "المنتجات"} · معاينة أول{" "}
             {shown.length}
           </p>
           {pricingRows ? (
             <table className="bulk-preview-table">
               <thead>
                 <tr>
-                  <th scope="col">Product</th>
-                  {showPrice && <th scope="col">Price</th>}
-                  <th scope="col">{columnLabel} now</th>
-                  <th scope="col">New {columnLabel.toLowerCase()}</th>
+                  <th scope="col">المنتج</th>
+                  {showPrice && <th scope="col">السعر</th>}
+                  <th scope="col">{columnLabel} الحالي</th>
+                  <th scope="col">{columnLabel} الجديد</th>
                 </tr>
               </thead>
               <tbody>
@@ -116,9 +113,7 @@ export default function BulkActionPreview({
               ))}
             </ul>
           )}
-          {more > 0 && (
-            <p className="bulk-preview-more">+{more} more products</p>
-          )}
+          {more > 0 && <p className="bulk-preview-more">+{more} منتج آخر</p>}
         </div>
       )}
     </div>

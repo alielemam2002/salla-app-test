@@ -64,13 +64,13 @@ export default function ProductsTab({ embedded, showToast }) {
     const labels = [];
     if (statusFilter) {
       const opt = STATUS_FILTER_OPTIONS.find((o) => o.value === statusFilter);
-      labels.push(`Status: ${opt?.label || statusFilter}`);
+      labels.push(`الحالة: ${opt?.label || statusFilter}`);
     }
     if (categoryFilter) {
       const cat = taxonomies.categories.find(
         (c) => String(c.id) === String(categoryFilter),
       );
-      labels.push(`Category: ${cat?.name || categoryFilter}`);
+      labels.push(`التصنيف: ${cat?.name || categoryFilter}`);
     }
     return labels;
   }, [statusFilter, categoryFilter, taxonomies.categories]);
@@ -179,8 +179,8 @@ export default function ProductsTab({ embedded, showToast }) {
       <Card className="products-panel">
         <Card.Header
           icon={Package}
-          title="Products Management"
-          subtitle="Full CRUD & Bulk Discounts on Salla Admin API"
+          title="إدارة المنتجات"
+          subtitle="أضف منتجاتك وعدّلها واحذفها، وطبّق خصومًا وإجراءات جماعية بسهولة"
           actions={
             <>
               <Button
@@ -190,8 +190,8 @@ export default function ProductsTab({ embedded, showToast }) {
                 disabled={isLoading}
               >
                 {selection.count > 0
-                  ? `Bulk Discount (${selection.count})`
-                  : "Bulk Discount"}
+                  ? `خصم جماعي (${selection.count})`
+                  : "خصم جماعي"}
               </Button>
               <Button
                 variant="primary"
@@ -199,7 +199,7 @@ export default function ProductsTab({ embedded, showToast }) {
                 onClick={() => productForm.open(null)}
                 disabled={isLoading}
               >
-                Add Product
+                إضافة منتج
               </Button>
               <Button
                 variant="secondary"
@@ -207,7 +207,7 @@ export default function ProductsTab({ embedded, showToast }) {
                 onClick={list.refresh}
                 disabled={isLoading}
               >
-                Refresh
+                تحديث
               </Button>
               <Button
                 variant="secondary"
@@ -215,7 +215,7 @@ export default function ProductsTab({ embedded, showToast }) {
                 onClick={list.loadAll}
                 disabled={isLoading || !!error}
               >
-                Fetch all
+                جلب الكل
               </Button>
             </>
           }

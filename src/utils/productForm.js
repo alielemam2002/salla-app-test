@@ -152,19 +152,19 @@ export function validateProductForm(values) {
   const sale = Number(values.sale_price);
 
   if (!values.name.trim()) {
-    errors.name = "Product name is required.";
+    errors.name = "اسم المنتج مطلوب.";
   }
   if (values.price === "" || isNaN(price)) {
-    errors.price = "A valid price is required.";
+    errors.price = "يرجى إدخال سعر صحيح.";
   } else if (price < 0) {
-    errors.price = "Price cannot be negative.";
+    errors.price = "لا يمكن أن يكون السعر سالبًا.";
   }
 
   if (values.sale_price !== "" && !isNaN(sale)) {
     if (sale < 0) {
-      errors.sale_price = "Sale price cannot be negative.";
+      errors.sale_price = "لا يمكن أن يكون سعر التخفيض سالبًا.";
     } else if (values.price !== "" && !isNaN(price) && sale >= price) {
-      errors.sale_price = "Sale price must be lower than the regular price.";
+      errors.sale_price = "يجب أن يكون سعر التخفيض أقل من السعر الأساسي.";
     }
   }
 
@@ -173,7 +173,7 @@ export function validateProductForm(values) {
     values.quantity !== "" &&
     (isNaN(Number(values.quantity)) || Number(values.quantity) < 0)
   ) {
-    errors.quantity = "Quantity must be a non-negative number.";
+    errors.quantity = "يجب أن تكون الكمية رقمًا صفرًا أو أكبر.";
   }
 
   return errors;

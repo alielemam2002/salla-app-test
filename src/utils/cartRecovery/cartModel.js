@@ -7,12 +7,12 @@
  */
 
 export const ABANDONED_AFTER_OPTIONS = [
-  { value: 30, label: "30 minutes" },
-  { value: 60, label: "1 hour" },
-  { value: 180, label: "3 hours" },
-  { value: 360, label: "6 hours" },
-  { value: 720, label: "12 hours" },
-  { value: 1440, label: "24 hours" },
+  { value: 30, label: "30 دقيقة" },
+  { value: 60, label: "ساعة" },
+  { value: 180, label: "3 ساعات" },
+  { value: 360, label: "6 ساعات" },
+  { value: 720, label: "12 ساعة" },
+  { value: 1440, label: "24 ساعة" },
 ];
 export const DEFAULT_ABANDONED_AFTER = 60;
 
@@ -65,15 +65,27 @@ export function sallaDateMs(value) {
   return Number.isNaN(ms) ? null : ms;
 }
 
-/** "5 min ago", "2h ago", "3d ago". */
+/** Arabic count phrase: "دقيقة", "دقيقتان", "5 دقائق", "12 دقيقة". */
+function arabicCount(n, [one, two, few, many]) {
+  if (n === 1) return one;
+  if (n === 2) return two;
+  return `${n} ${n >= 3 && n <= 10 ? few : many}`;
+}
+
+/** "الآن", "قبل 5 دقائق", "قبل ساعتين", "قبل 3 أيام". */
 export function timeAgo(ms, now = Date.now()) {
   if (ms === null || ms === undefined) return "—";
   const minutes = Math.max(0, Math.round((now - ms) / 60000));
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes} min ago`;
+  if (minutes < 1) return "الآن";
+  if (minutes < 60) {
+    return `قبل ${arabicCount(minutes, ["دقيقة", "دقيقتين", "دقائق", "دقيقة"])}`;
+  }
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+  if (hours < 24) {
+    return `قبل ${arabicCount(hours, ["ساعة", "ساعتين", "ساعات", "ساعة"])}`;
+  }
+  const days = Math.floor(hours / 24);
+  return `قبل ${arabicCount(days, ["يوم", "يومين", "أيام", "يومًا"])}`;
 }
 
 /** Old enough to count as abandoned under the chosen threshold. */
@@ -107,24 +119,24 @@ export function summarizeCarts(carts, abandonedAfter) {
 export function describeCartsError(result = {}) {
   const { status, code } = result;
   if (code === "network_error" || status === 0) {
-    return "Network problem. Check your connection and try again.";
+    return "تعذّر الاتصال بالإنترنت. تحقق من اتصالك ثم حاول مرة أخرى.";
   }
   if (code === "session_invalid") {
-    return "Your Salla session has expired. Refresh the session and try again.";
+    return "انتهت جلسة سلة. حدّث الصفحة ثم حاول مرة أخرى.";
   }
   if (code === "token_not_configured") {
-    return "The store's API access token (SALLA_ACCESS_TOKEN) is not configured on the server.";
+    return "لم يتم إعداد رمز الوصول لواجهة سلة (SALLA_ACCESS_TOKEN) على الخادم.";
   }
   if (code === "missing_scope" || status === 403) {
-    return "The app needs the carts.read scope (Carts Read Only). Add it in the Partners Portal, reinstall the app, and put the new access token in SALLA_ACCESS_TOKEN.";
+    return "يحتاج التطبيق إلى صلاحية carts.read (قراءة السلات المتروكة). أضفها من بوابة الشركاء، ثم أعد تثبيت التطبيق وضع رمز الوصول الجديد في SALLA_ACCESS_TOKEN.";
   }
   if (code === "token_expired" || status === 401) {
-    return "The store's API access token is invalid or expired. Replace SALLA_ACCESS_TOKEN.";
+    return "رمز الوصول لواجهة سلة غير صالح أو منتهي. استبدل قيمة SALLA_ACCESS_TOKEN.";
   }
-  if (status === 404) return "This cart no longer exists.";
+  if (status === 404) return "هذه السلة لم تعد موجودة.";
   if (status === 429) {
-    return "Too many requests to Salla. Wait a minute and try again.";
+    return "عدد الطلبات إلى سلة كبير جدًا. انتظر دقيقة ثم حاول مرة أخرى.";
   }
-  if (status >= 500) return "Salla had a temporary problem. Try again later.";
-  return "Something went wrong. Try again.";
+  if (status >= 500) return "حدثت مشكلة مؤقتة في سلة. حاول لاحقًا.";
+  return "حدث خطأ ما. حاول مرة أخرى.";
 }

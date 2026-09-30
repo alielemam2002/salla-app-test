@@ -72,14 +72,14 @@ export async function POST(request) {
   try {
     body = await request.json();
   } catch {
-    return fail(400, "bad_request", "Invalid JSON body");
+    return fail(400, "bad_request", "تعذّر قراءة الطلب");
   }
 
   const { token } = body;
   const appId = process.env.SALLA_APP_ID || body.appId;
   const action = String(body.action || "list").toLowerCase();
-  if (!token) return fail(400, "bad_request", "Token is required");
-  if (!appId) return fail(400, "bad_request", "App ID is required");
+  if (!token) return fail(400, "bad_request", "رمز الجلسة مطلوب");
+  if (!appId) return fail(400, "bad_request", "معرّف التطبيق مطلوب");
 
   try {
     const session = await introspectEmbeddedToken(token, appId);
@@ -101,7 +101,7 @@ export async function POST(request) {
           return sallaFail(
             status,
             result,
-            `Failed to load customers (status ${status})`,
+            `تعذّر تحميل العملاء (الحالة ${status})`,
           );
         }
         return Response.json({
@@ -119,7 +119,7 @@ export async function POST(request) {
           return sallaFail(
             status,
             result,
-            `Failed to load customer groups (status ${status})`,
+            `تعذّر تحميل مجموعات العملاء (الحالة ${status})`,
           );
         }
         return Response.json({
@@ -132,14 +132,14 @@ export async function POST(request) {
       }
 
       default:
-        return fail(400, "bad_request", `Unknown action: "${action}"`);
+        return fail(400, "bad_request", `إجراء غير معروف: "${action}"`);
     }
   } catch (error) {
     console.error("Customers endpoint failed:", error.code || error.message);
     return fail(
       error.status || ERROR_STATUS[error.code] || 500,
       error.code || "server_error",
-      error.message || "Internal server error",
+      error.message || "حدث خطأ في الخادم",
     );
   }
 }

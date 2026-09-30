@@ -14,7 +14,7 @@ export function useAddonsCatalog({ embedded, logMessage }) {
   const loadAddons = useCallback(
     async (force = false) => {
       if (!embedded?.checkout?.getAddons) {
-        setError("SDK getAddons not available");
+        setError("لا يمكن تحميل الإضافات إلا من داخل لوحة تحكم سلة.");
         setIsLoading(false);
         return;
       }
@@ -33,11 +33,13 @@ export function useAddonsCatalog({ embedded, logMessage }) {
         if (result.success) {
           setAddons(result.addons || []);
         } else {
-          setError(result.error?.message || "Failed to fetch addons");
+          setError(
+            result.error?.message || "تعذّر تحميل الإضافات، حاول مرة أخرى.",
+          );
         }
       } catch (err) {
         logger.error("Failed to fetch addons:", err);
-        setError(err.message);
+        setError(err.message || "تعذّر تحميل الإضافات، حاول مرة أخرى.");
       } finally {
         setIsLoading(false);
       }

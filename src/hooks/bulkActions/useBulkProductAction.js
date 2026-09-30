@@ -6,7 +6,7 @@ import { productKeys } from "../useProductQueries.js";
 /** Error that keeps the API result so the UI can describe it. */
 export class BulkActionError extends Error {
   constructor(result) {
-    super(result?.error || "Bulk action failed");
+    super(result?.error || "تعذّر تنفيذ الإجراء الجماعي");
     this.name = "BulkActionError";
     this.result = result;
   }
@@ -29,7 +29,7 @@ export function useBulkProductAction(getToken) {
         throw new BulkActionError({
           status: 401,
           code: "session_invalid",
-          error: "No embedded token found",
+          error: "لم يتم العثور على رمز الجلسة",
         });
       }
       const result = await executeBulkProductAction({

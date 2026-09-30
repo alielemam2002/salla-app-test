@@ -101,38 +101,36 @@ describe("CouponsTab", () => {
   it("groups coupons by status with storewide scope, countdown and usage", async () => {
     renderTab();
     const active = await screen.findByRole("article", { name: "SUMMER20" });
-    expect(within(active).getByText("20% OFF")).toBeInTheDocument();
-    expect(within(active).getByText("Entire Store")).toBeInTheDocument();
-    expect(within(active).getByText("Used: 143 / 1000")).toBeInTheDocument();
-    expect(within(active).getByRole("timer")).toHaveTextContent(/Ends in/);
+    expect(within(active).getByText("خصم 20%")).toBeInTheDocument();
+    expect(within(active).getByText("المتجر بالكامل")).toBeInTheDocument();
+    expect(
+      within(active).getByText("الاستخدام: 143 / 1000"),
+    ).toBeInTheDocument();
+    expect(within(active).getByRole("timer")).toHaveTextContent(/ينتهي خلال/);
 
     const scheduled = screen.getByRole("article", { name: "BLACKFRIDAY10" });
-    expect(within(scheduled).getByRole("timer")).toHaveTextContent(/Starts in/);
+    expect(within(scheduled).getByRole("timer")).toHaveTextContent(/يبدأ خلال/);
 
     const expired = screen.getByRole("article", { name: "OLD5" });
     expect(within(expired).queryByRole("timer")).toBeNull();
 
-    expect(screen.getByRole("heading", { name: /Active/ })).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: /Scheduled/ }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: /Expired/ }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /نشط/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /مجدول/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /منتهي/ })).toBeInTheDocument();
   });
 
   it("filters by status and searches by code", async () => {
     renderTab();
     await screen.findByRole("article", { name: "SUMMER20" });
 
-    fireEvent.click(screen.getByRole("tab", { name: /Scheduled/ }));
+    fireEvent.click(screen.getByRole("tab", { name: /مجدول/ }));
     expect(screen.queryByRole("article", { name: "SUMMER20" })).toBeNull();
     expect(
       screen.getByRole("article", { name: "BLACKFRIDAY10" }),
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("tab", { name: /All/ }));
-    fireEvent.change(screen.getByPlaceholderText("Search coupon code..."), {
+    fireEvent.click(screen.getByRole("tab", { name: /الكل/ }));
+    fireEvent.change(screen.getByPlaceholderText("ابحث بكود الكوبون…"), {
       target: { value: "old" },
     });
     expect(screen.getByRole("article", { name: "OLD5" })).toBeInTheDocument();
@@ -142,9 +140,11 @@ describe("CouponsTab", () => {
   it("shows the empty state with a create action", async () => {
     fetchAllCoupons.mockResolvedValue({ success: true, coupons: [] });
     renderTab();
-    expect(await screen.findByText("No coupons yet")).toBeInTheDocument();
+    expect(await screen.findByText("لا توجد كوبونات بعد")).toBeInTheDocument();
     expect(
-      screen.getByText("Create your first storewide coupon."),
+      screen.getByText(
+        "أنشئ أول كوبون خصم يعمل على المتجر بالكامل وشاركه مع عملائك.",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -161,11 +161,11 @@ describe("CouponsTab", () => {
       .mockResolvedValueOnce(failure);
     renderTab();
     expect(
-      await screen.findByText("Could not load coupons.", {}, { timeout: 4000 }),
+      await screen.findByText("تعذّر تحميل الكوبونات.", {}, { timeout: 4000 }),
     ).toBeInTheDocument();
     expect(screen.queryByText("boom")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    fireEvent.click(screen.getByRole("button", { name: "إعادة المحاولة" }));
     expect(
       await screen.findByRole("article", { name: "SUMMER20" }),
     ).toBeInTheDocument();
@@ -176,22 +176,20 @@ describe("CouponsTab", () => {
     const { showToast } = renderTab();
     await screen.findByRole("article", { name: "SUMMER20" });
 
-    fireEvent.click(
-      screen.getAllByRole("button", { name: "Create Coupon" })[0],
-    );
+    fireEvent.click(screen.getAllByRole("button", { name: "إنشاء كوبون" })[0]);
     const dialog = screen.getByRole("dialog");
-    expect(within(dialog).getByText("Entire Store")).toBeInTheDocument();
+    expect(within(dialog).getByText("المتجر بالكامل")).toBeInTheDocument();
 
-    fireEvent.change(within(dialog).getByLabelText(/Coupon Code/), {
+    fireEvent.change(within(dialog).getByLabelText(/كود الكوبون/), {
       target: { value: "NEW15" },
     });
-    fireEvent.change(within(dialog).getByLabelText(/^Discount\*?$/), {
+    fireEvent.change(within(dialog).getByLabelText(/^قيمة الخصم\*?$/), {
       target: { value: "15" },
     });
-    fireEvent.change(within(dialog).getByLabelText(/Maximum discount/), {
+    fireEvent.change(within(dialog).getByLabelText(/الحد الأقصى للخصم/), {
       target: { value: "100" },
     });
-    fireEvent.change(within(dialog).getByLabelText(/End date/), {
+    fireEvent.change(within(dialog).getByLabelText(/تاريخ الانتهاء/), {
       target: {
         value: storeDate(10 * DAY)
           .slice(0, 16)
@@ -199,7 +197,7 @@ describe("CouponsTab", () => {
       },
     });
     fireEvent.click(
-      within(dialog).getByRole("button", { name: "Create Coupon" }),
+      within(dialog).getByRole("button", { name: "إنشاء كوبون" }),
     );
 
     await waitFor(() =>
@@ -213,26 +211,24 @@ describe("CouponsTab", () => {
       ),
     );
     await waitFor(() => expect(fetchAllCoupons).toHaveBeenCalledTimes(2));
-    expect(showToast).toHaveBeenCalledWith("Coupon NEW15 created", "success");
+    expect(showToast).toHaveBeenCalledWith("تم إنشاء الكوبون NEW15", "success");
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("blocks submit on client validation errors", async () => {
     renderTab();
     await screen.findByRole("article", { name: "SUMMER20" });
-    fireEvent.click(
-      screen.getAllByRole("button", { name: "Create Coupon" })[0],
-    );
+    fireEvent.click(screen.getAllByRole("button", { name: "إنشاء كوبون" })[0]);
     const dialog = screen.getByRole("dialog");
     fireEvent.click(
-      within(dialog).getByRole("button", { name: "Create Coupon" }),
+      within(dialog).getByRole("button", { name: "إنشاء كوبون" }),
     );
 
     expect(
-      await within(dialog).findByText("Coupon code is required"),
+      await within(dialog).findByText("كود الكوبون مطلوب"),
     ).toBeInTheDocument();
     expect(
-      within(dialog).getByText("End date is required"),
+      within(dialog).getByText("تاريخ الانتهاء مطلوب"),
     ).toBeInTheDocument();
     expect(createCoupon).not.toHaveBeenCalled();
   });
@@ -247,19 +243,15 @@ describe("CouponsTab", () => {
     });
     renderTab();
     fireEvent.click(
-      await screen.findByRole("button", { name: "Edit SUMMER20" }),
+      await screen.findByRole("button", { name: "تعديل SUMMER20" }),
     );
     const dialog = screen.getByRole("dialog");
-    fireEvent.click(
-      within(dialog).getByRole("button", { name: "Save changes" }),
-    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "حفظ" }));
 
     expect(
-      await within(dialog).findByText("Could not update coupon."),
+      await within(dialog).findByText("تعذّر تعديل الكوبون."),
     ).toBeInTheDocument();
-    expect(
-      within(dialog).getByText(/Salla rejected the request/),
-    ).toBeInTheDocument();
+    expect(within(dialog).getByText(/رفضت سلة الطلب/)).toBeInTheDocument();
     expect(within(dialog).getByText(/بنفس الاسم/)).toBeInTheDocument();
     expect(updateCoupon).toHaveBeenCalledWith(
       "tok",
@@ -275,23 +267,21 @@ describe("CouponsTab", () => {
     });
     renderTab();
     const card = await screen.findByRole("article", { name: "SUMMER20" });
+    expect(within(card).getByText("منتجات محددة فقط")).toBeInTheDocument();
     expect(
-      within(card).getByText("Selected products only"),
-    ).toBeInTheDocument();
-    expect(
-      within(card).getByRole("button", { name: "Edit SUMMER20" }),
+      within(card).getByRole("button", { name: "تعديل SUMMER20" }),
     ).toBeDisabled();
   });
 
   it("deletes after confirmation", async () => {
     deleteCoupon.mockResolvedValue({ success: true, couponId: 3 });
     const { showToast } = renderTab();
-    fireEvent.click(await screen.findByRole("button", { name: "Delete OLD5" }));
-    fireEvent.click(screen.getByRole("button", { name: "Delete coupon" }));
+    fireEvent.click(await screen.findByRole("button", { name: "حذف OLD5" }));
+    fireEvent.click(screen.getByRole("button", { name: "حذف الكوبون" }));
 
     await waitFor(() => expect(deleteCoupon).toHaveBeenCalledWith("tok", 3));
     await waitFor(() =>
-      expect(showToast).toHaveBeenCalledWith("Coupon OLD5 deleted", "success"),
+      expect(showToast).toHaveBeenCalledWith("تم حذف الكوبون OLD5", "success"),
     );
     expect(fetchAllCoupons).toHaveBeenCalledTimes(2);
   });
@@ -299,7 +289,7 @@ describe("CouponsTab", () => {
   it("offers a session refresh when there is no embedded token", async () => {
     const { embedded } = renderTab({ embedded: makeEmbedded(null) });
     fireEvent.click(
-      await screen.findByRole("button", { name: "Refresh session" }),
+      await screen.findByRole("button", { name: "تحديث الجلسة" }),
     );
     expect(embedded.auth.refresh).toHaveBeenCalled();
     expect(fetchAllCoupons).not.toHaveBeenCalled();
@@ -313,18 +303,18 @@ describe("CouponCountdown", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-01T00:00:00Z"));
     const target = Date.now() + 61_000;
-    render(<CouponCountdown target={target} label="Ends in" />);
+    render(<CouponCountdown target={target} label="ينتهي خلال" />);
 
     const timer = screen.getByRole("timer");
     expect(timer).toHaveAttribute("aria-live", "off");
-    expect(timer).toHaveTextContent("00d 00h 01m 01s");
-    expect(timer).toHaveTextContent("Ends in 1 minute");
+    expect(timer).toHaveTextContent("00 ي 00 س 01 د 01 ث");
+    expect(timer).toHaveTextContent("ينتهي خلال دقيقة واحدة");
 
     act(() => vi.advanceTimersByTime(2000));
-    expect(timer).toHaveTextContent("00d 00h 00m 59s");
+    expect(timer).toHaveTextContent("00 ي 00 س 00 د 59 ث");
 
     act(() => vi.advanceTimersByTime(60_000));
-    expect(timer).toHaveTextContent("00d 00h 00m 00s");
+    expect(timer).toHaveTextContent("00 ي 00 س 00 د 00 ث");
     expect(vi.getTimerCount()).toBe(0);
   });
 });

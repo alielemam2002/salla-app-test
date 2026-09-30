@@ -140,11 +140,9 @@
 .products-table th {
   padding: 10px var(--space-md);
   text-align: start;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
   color: var(--text-tertiary);
-  text-transform: uppercase;
   background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border-color);
   white-space: nowrap;
@@ -410,22 +408,22 @@
     min-width: 0;
   }
 
-  .products-row td[data-label="Price"] {
+  .products-row td[data-label="السعر"] {
     grid-area: price;
   }
 
-  .products-row td[data-label="Stock"] {
+  .products-row td[data-label="المخزون"] {
     grid-area: stock;
     font-size: 0.8rem;
     color: var(--text-secondary);
   }
 
-  .products-row td[data-label="Stock"]::before {
-    content: "Stock: ";
+  .products-row td[data-label="المخزون"]::before {
+    content: "المخزون: ";
     color: var(--text-tertiary);
   }
 
-  .products-row td[data-label="Status"] {
+  .products-row td[data-label="الحالة"] {
     grid-area: status;
     justify-self: end;
   }

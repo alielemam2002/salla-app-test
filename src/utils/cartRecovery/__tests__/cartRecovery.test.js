@@ -34,7 +34,7 @@ describe("cart model", () => {
       }),
     ).toBe(Date.parse("2025-01-21T14:09:39Z"));
     expect(sallaDateMs(null)).toBeNull();
-    expect(timeAgo(Date.now() - 2 * 3600 * 1000)).toBe("2h ago");
+    expect(timeAgo(Date.now() - 2 * 3600 * 1000)).toBe("قبل ساعتين");
   });
 
   it("uses Salla's age to apply the 'abandoned after' threshold", () => {

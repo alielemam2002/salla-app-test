@@ -26,7 +26,7 @@ import { whatsappNumber } from "../../utils/cartRecovery/whatsappMessage.js";
 /** Error carrying the API result so the UI can describe it. */
 export class CartsApiError extends Error {
   constructor(result) {
-    super(result?.error || "Carts request failed");
+    super(result?.error || "تعذّر تنفيذ طلب السلات");
     this.name = "CartsApiError";
     this.result = result;
   }
@@ -42,7 +42,7 @@ const noToken = {
   success: false,
   status: 401,
   code: "session_invalid",
-  error: "No embedded token found",
+  error: "لم يتم العثور على رمز الجلسة. افتح التطبيق من لوحة تحكم سلة.",
 };
 
 // Auth / scope / validation errors won't fix themselves; retry others once.

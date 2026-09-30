@@ -8,18 +8,18 @@ export default function DiscountResult({ summary, onDone }) {
       className="bulk-success-state"
       tone="success"
       icon={CheckCircle2}
-      title="Operation Completed!"
+      title="تمت العملية بنجاح"
       description={
         <>
           <p>{summary.message}</p>
           <p className="bulk-success-meta">
-            Updated items: <strong>{summary.count}</strong>
+            المنتجات المحدّثة: <strong>{summary.count}</strong>
           </p>
         </>
       }
       action={
         <Button variant="primary" onClick={onDone}>
-          Done
+          تم
         </Button>
       }
     />

@@ -9,7 +9,8 @@
 
 const DEFAULT_GEMINI_KEY = process.env.GEMINI_API_KEY || "";
 
-const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
+const GEMINI_BASE_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models";
 
 const MODELS_PRIORITY = [
   "gemini-3.5-flash-lite",
@@ -76,7 +77,8 @@ async function callGemini(prompt, apiKey) {
       const data = await response.json();
 
       if (!response.ok) {
-        const errorMsg = data.error?.message || `HTTP ${response.status}`;
+        const errorMsg =
+          data.error?.message || `تعذّر الاتصال بالخدمة (${response.status})`;
         lastError = new Error(errorMsg);
         // If 503 (high demand) or 429, try next model in priority list
         if (response.status === 503 || response.status === 429) {
@@ -85,8 +87,7 @@ async function callGemini(prompt, apiKey) {
         throw lastError;
       }
 
-      const candidateText =
-        data.candidates?.[0]?.content?.parts?.[0]?.text;
+      const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!candidateText) {
         throw new Error("No text content returned from AI model");
       }
@@ -103,7 +104,7 @@ async function callGemini(prompt, apiKey) {
     }
   }
 
-  throw lastError || new Error("Failed to generate content with AI models");
+  throw lastError || new Error("تعذّر إنشاء المحتوى بالذكاء الاصطناعي.");
 }
 
 async function handleCopilotRequest(body) {
@@ -141,8 +142,16 @@ async function handleCopilotRequest(body) {
         success: true,
         data: {
           promotion_title: (generated.promotion_title || "").trim(),
-          subtitle: (generated.subtitle || generated.short_description || "").trim(),
-          short_description: (generated.short_description || generated.subtitle || "").trim(),
+          subtitle: (
+            generated.subtitle ||
+            generated.short_description ||
+            ""
+          ).trim(),
+          short_description: (
+            generated.short_description ||
+            generated.subtitle ||
+            ""
+          ).trim(),
           marketing_description: generated.marketing_description || "",
           meta_title: generated.meta_title || "",
           meta_description: generated.meta_description || "",
@@ -170,7 +179,7 @@ export async function POST(request) {
     body = await request.json();
   } catch {
     return Response.json(
-      { success: false, error: "Invalid JSON body" },
+      { success: false, error: "البيانات المرسلة غير صالحة." },
       { status: 400 },
     );
   }
@@ -189,12 +198,14 @@ export async function POST(request) {
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
-    return res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).json({ error: "الطريقة غير مسموحة." });
   }
 
   try {
     const body =
-      typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {};
+      typeof req.body === "string"
+        ? JSON.parse(req.body || "{}")
+        : req.body || {};
     const result = await handleCopilotRequest(body);
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -202,7 +213,7 @@ export default async function handler(req, res) {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      error: error.message || "Internal server error",
+      error: error.message || "حدث خطأ غير متوقع في الخادم.",
     });
   }
 }

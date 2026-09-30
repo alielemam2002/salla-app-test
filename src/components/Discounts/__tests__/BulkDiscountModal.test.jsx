@@ -44,10 +44,10 @@ describe("BulkDiscountModal", () => {
       />,
     );
 
-    expect(screen.getByText("Bulk Product Discount")).toBeInTheDocument();
-    expect(screen.getByText("Selected Products")).toBeInTheDocument();
-    expect(screen.getByText("Category")).toBeInTheDocument();
-    expect(screen.getByText("All Products")).toBeInTheDocument();
+    expect(screen.getByText("خصم جماعي على المنتجات")).toBeInTheDocument();
+    expect(screen.getByText("المنتجات المحددة")).toBeInTheDocument();
+    expect(screen.getByText("التصنيف")).toBeInTheDocument();
+    expect(screen.getByText("كل المنتجات")).toBeInTheDocument();
   });
 
   it("toggles between Apply Discount and Remove Discount modes", () => {
@@ -60,20 +60,20 @@ describe("BulkDiscountModal", () => {
     );
 
     const removeBtn = screen.getByRole("button", {
-      name: /^Remove Discount$/i,
+      name: /^إزالة الخصم$/,
     });
     fireEvent.click(removeBtn);
 
-    expect(screen.getByText("Remove Product Discounts")).toBeInTheDocument();
-    expect(screen.getByText(/Resetting Sale Prices/i)).toBeInTheDocument();
+    expect(screen.getByText("إزالة خصومات المنتجات")).toBeInTheDocument();
+    expect(screen.getByText(/إعادة الأسعار إلى أصلها/)).toBeInTheDocument();
 
     const applyBtn = screen.getByRole("button", {
-      name: /^Apply Discount$/i,
+      name: /^تطبيق الخصم$/,
     });
     fireEvent.click(applyBtn);
 
-    expect(screen.getByText("Bulk Product Discount")).toBeInTheDocument();
-    expect(screen.getByText(/Configure Discount/i)).toBeInTheDocument();
+    expect(screen.getByText("خصم جماعي على المنتجات")).toBeInTheDocument();
+    expect(screen.getByText(/إعداد الخصم/)).toBeInTheDocument();
   });
 
   it("switches discount type between percentage and fixed", () => {
@@ -86,7 +86,7 @@ describe("BulkDiscountModal", () => {
     );
 
     const fixedBtn = screen.getByRole("button", {
-      name: /Fixed Amount/i,
+      name: /مبلغ ثابت/,
     });
     fireEvent.click(fixedBtn);
 
@@ -109,7 +109,7 @@ describe("BulkDiscountModal", () => {
     // Jeans (200 SAR -> 160 SAR) with replace note
     expect(screen.getByText("Jeans")).toBeInTheDocument();
     expect(screen.getByText("160 SAR")).toBeInTheDocument();
-    expect(screen.getByText(/Replaces current sale/i)).toBeInTheDocument();
+    expect(screen.getByText(/يستبدل سعر التخفيض الحالي/)).toBeInTheDocument();
   });
 
   it("advances to confirmation and executes bulk discount on Salla", async () => {
@@ -134,18 +134,18 @@ describe("BulkDiscountModal", () => {
 
     // Step 1: Click Review & Apply
     const reviewBtn = screen.getByRole("button", {
-      name: /Review & Apply Discount/i,
+      name: /مراجعة وتطبيق الخصم/,
     });
     fireEvent.click(reviewBtn);
 
     // Expect confirmation view
     expect(
-      await screen.findByText(/Please confirm bulk update/i),
+      await screen.findByText(/يرجى تأكيد التحديث الجماعي/),
     ).toBeInTheDocument();
 
     // Step 2: Confirm & Apply
     const confirmBtn = screen.getByRole("button", {
-      name: /Confirm & Apply Discount/i,
+      name: /تأكيد وتطبيق الخصم/,
     });
     fireEvent.click(confirmBtn);
 
@@ -154,7 +154,7 @@ describe("BulkDiscountModal", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Operation Completed!")).toBeInTheDocument();
+      expect(screen.getByText("تمت العملية بنجاح")).toBeInTheDocument();
       expect(handleSuccess).toHaveBeenCalledWith(
         expect.objectContaining({
           mode: "apply",
@@ -162,7 +162,7 @@ describe("BulkDiscountModal", () => {
         }),
       );
       expect(showToast).toHaveBeenCalledWith(
-        expect.stringContaining("Bulk discount applied to 2 products"),
+        expect.stringContaining("تم تطبيق الخصم الجماعي على 2 منتج"),
         "success",
       );
     });
@@ -190,23 +190,23 @@ describe("BulkDiscountModal", () => {
 
     // Switch to Remove Discount mode
     const removeTab = screen.getByRole("button", {
-      name: /^Remove Discount$/i,
+      name: /^إزالة الخصم$/,
     });
     fireEvent.click(removeTab);
 
     // Click Review & Remove Discount
     const reviewBtn = screen.getByRole("button", {
-      name: /Review & Remove Discount/i,
+      name: /مراجعة وإزالة الخصم/,
     });
     fireEvent.click(reviewBtn);
 
     expect(
-      await screen.findByText(/Please confirm bulk update/i),
+      await screen.findByText(/يرجى تأكيد التحديث الجماعي/),
     ).toBeInTheDocument();
 
     // Confirm execution
     const confirmBtn = screen.getByRole("button", {
-      name: /Confirm & Remove Discount/i,
+      name: /تأكيد وإزالة الخصم/,
     });
     fireEvent.click(confirmBtn);
 

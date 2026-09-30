@@ -15,29 +15,29 @@ export default function CartRecoveryStats({ summary, contactedCount, label }) {
     <div className="cart-stats">
       <StatCard
         icon={ShoppingCart}
-        label="Abandoned carts"
+        label="السلات المتروكة"
         value={summary.eligible}
-        hint={`Older than ${label}`}
+        hint={`أقدم من ${label}`}
         tone="warning"
       />
       <StatCard
         icon={Banknote}
-        label="Potential revenue"
+        label="الإيرادات المحتملة"
         value={revenue}
-        hint="Sum of those carts' totals"
+        hint="مجموع قيمة هذه السلات"
         tone="primary"
       />
       <StatCard
         icon={Phone}
-        label="Reachable on WhatsApp"
+        label="يمكن مراسلتهم عبر واتساب"
         value={summary.withPhone}
-        hint="Have a mobile number"
+        hint="لديهم رقم جوال"
       />
       <StatCard
         icon={MessageCircle}
-        label="WhatsApp opened"
+        label="محادثات واتساب المفتوحة"
         value={contactedCount}
-        hint="From this browser; sending is up to you"
+        hint="من هذا المتصفح؛ الإرسال بيدك"
         tone="success"
       />
     </div>

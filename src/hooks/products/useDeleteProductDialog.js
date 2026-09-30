@@ -24,13 +24,13 @@ export function useDeleteProductDialog({
       const result = await onConfirm(product.id);
       setIsDeleting(false);
       if (!result?.success) {
-        setError(result?.error || "Failed to delete product from Salla");
+        setError(result?.error || "تعذّر حذف المنتج من سلة. حاول مرة أخرى.");
       } else {
         onClose();
       }
     } catch (err) {
       setIsDeleting(false);
-      setError(err.message || "Failed to delete product");
+      setError(err.message || "تعذّر حذف المنتج. حاول مرة أخرى.");
     }
   };
 

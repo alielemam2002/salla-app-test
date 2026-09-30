@@ -23,23 +23,24 @@ import { TEMPLATE_VARIABLES } from "../../utils/cartRecovery/whatsappMessage.js"
 const ID = /^\d{5,25}$/;
 
 const schema = z.object({
-  phoneNumberId: z.string().trim().regex(ID, "Use the numeric Phone Number ID"),
+  phoneNumberId: z
+    .string()
+    .trim()
+    .regex(ID, "استخدم معرّف رقم الهاتف (أرقام فقط)"),
   wabaId: z
     .string()
     .trim()
-    .refine((v) => !v || ID.test(v), "Use the numeric account ID"),
+    .refine((v) => !v || ID.test(v), "استخدم معرّف الحساب (أرقام فقط)"),
   accessToken: z.string().trim(),
   template: z
     .string()
     .trim()
-    .regex(/^[a-z0-9_]{1,512}$/, "Lowercase letters, numbers and _ only"),
+    .regex(/^[a-z0-9_]{1,512}$/, "أحرف إنجليزية صغيرة وأرقام و _ فقط"),
   language: z
     .string()
     .trim()
-    .regex(/^[a-z]{2,3}(_[A-Z]{2})?$/, "A language code like ar or en_US"),
-  params: z
-    .array(z.object({ key: z.string().min(1, "Choose a value") }))
-    .max(10),
+    .regex(/^[a-z]{2,3}(_[A-Z]{2})?$/, "رمز لغة مثل ar أو en_US"),
+  params: z.array(z.object({ key: z.string().min(1, "اختر قيمة") })).max(10),
 });
 
 const EMPTY = {
@@ -64,7 +65,7 @@ const toForm = (s) =>
     : EMPTY;
 
 const reasonOf = (error) =>
-  error?.result?.error || "Something went wrong. Try again.";
+  error?.result?.error || "حدث خطأ ما. حاول مرة أخرى.";
 
 /**
  * WhatsApp settings for this merchant: their own Cloud API number, token
@@ -94,13 +95,13 @@ export default function WhatsAppSettingsModal({
 
   const onSubmit = handleSubmit((values) => {
     if (!values.accessToken && !saved?.tokenLast4) {
-      setError("accessToken", { message: "An access token is required" });
+      setError("accessToken", { message: "رمز الوصول مطلوب" });
       return;
     }
     save.mutate(
       { ...values, params: values.params.map((p) => p.key) },
       {
-        onSuccess: () => showToast?.("WhatsApp settings saved", "success"),
+        onSuccess: () => showToast?.("تم حفظ إعدادات واتساب", "success"),
         onError: (error) => {
           const fields = error.result?.fields || {};
           Object.entries(fields).forEach(([name, messages]) =>
@@ -116,37 +117,37 @@ export default function WhatsAppSettingsModal({
     body = <Skeleton height={200} />;
   } else if (query.isError) {
     body = (
-      <Alert tone="error" title="Could not load WhatsApp settings.">
+      <Alert tone="error" title="تعذّر تحميل إعدادات واتساب">
         {reasonOf(query.error)}
       </Alert>
     );
   } else if (!query.data.storageReady) {
     body = (
-      <Alert tone="warning" title="Settings storage isn't set up yet.">
-        The app owner needs to add Upstash Redis to the Vercel project and set
-        <code> WA_SETTINGS_KEY</code>. Until then, reminders can only be sent
-        manually.
+      <Alert tone="warning" title="تخزين الإعدادات غير مفعّل بعد">
+        يجب على مالك التطبيق إضافة Upstash Redis إلى مشروع Vercel وضبط{" "}
+        <code dir="ltr">WA_SETTINGS_KEY</code>. إلى ذلك الحين يمكنك إرسال
+        التذكيرات يدويًا فقط.
       </Alert>
     );
   } else {
     body = (
       <form className="wa-settings" onSubmit={onSubmit} noValidate>
         {saved?.profile && (
-          <Alert tone="success" title="Connected">
+          <Alert tone="success" title="تم الربط">
             <CheckCircle2 size={14} aria-hidden="true" />{" "}
-            {saved.profile.verifiedName || "WhatsApp Business"} ·{" "}
+            {saved.profile.verifiedName || "واتساب للأعمال"} ·{" "}
             <span dir="ltr">{saved.profile.displayPhone}</span>
             {saved.profile.qualityRating &&
-              ` · quality ${saved.profile.qualityRating}`}
+              ` · التقييم ${saved.profile.qualityRating}`}
           </Alert>
         )}
 
         {save.error && !Object.keys(save.error.result?.fields || {}).length && (
-          <Alert tone="error" title="Not saved.">
+          <Alert tone="error" title="لم يتم الحفظ">
             <p>{reasonOf(save.error)}</p>
             {save.error.result?.detail && (
               <details>
-                <summary>Technical details</summary>
+                <summary>تفاصيل تقنية</summary>
                 <pre className="wa-detail">{save.error.result.detail}</pre>
               </details>
             )}
@@ -154,14 +155,14 @@ export default function WhatsAppSettingsModal({
         )}
 
         <p className="form-hint">
-          From Meta: WhatsApp → API Setup (or API Testing) in your app on
-          developers.facebook.com. For real use, create a permanent System User
-          token in Business Settings.
+          احصل على هذه البيانات من Meta: واتساب ← إعداد واجهة البرمجة (API
+          Setup) في تطبيقك على developers.facebook.com. للاستخدام الفعلي أنشئ
+          رمز وصول دائمًا لمستخدم النظام (System User) من إعدادات الأعمال.
         </p>
 
         <FormRow>
           <Field
-            label="Phone Number ID"
+            label="معرّف رقم الهاتف"
             required
             error={errors.phoneNumberId?.message}
           >
@@ -172,8 +173,8 @@ export default function WhatsAppSettingsModal({
             />
           </Field>
           <Field
-            label="WhatsApp Business Account ID"
-            hint="Optional"
+            label="معرّف حساب واتساب للأعمال"
+            hint="اختياري"
             error={errors.wabaId?.message}
           >
             <TextInput dir="ltr" inputMode="numeric" {...register("wabaId")} />
@@ -181,12 +182,12 @@ export default function WhatsAppSettingsModal({
         </FormRow>
 
         <Field
-          label="Access token"
+          label="رمز الوصول"
           required={!saved?.tokenLast4}
           hint={
             saved?.tokenLast4
-              ? `Saved (ends in ${saved.tokenLast4}). Leave empty to keep it.`
-              : "Stored encrypted. It's never shown again after saving."
+              ? `محفوظ (ينتهي بـ ${saved.tokenLast4}). اتركه فارغًا للإبقاء عليه.`
+              : "يُحفظ مشفّرًا ولا يظهر مرة أخرى بعد الحفظ."
           }
           error={errors.accessToken?.message}
         >
@@ -202,9 +203,9 @@ export default function WhatsAppSettingsModal({
 
         <FormRow>
           <Field
-            label="Template name"
+            label="اسم القالب"
             required
-            hint="Exactly as approved in WhatsApp Manager"
+            hint="كما هو تمامًا في مدير واتساب (WhatsApp Manager)"
             error={errors.template?.message}
           >
             <TextInput
@@ -213,28 +214,25 @@ export default function WhatsAppSettingsModal({
               {...register("template")}
             />
           </Field>
-          <Field
-            label="Template language"
-            required
-            error={errors.language?.message}
-          >
+          <Field label="لغة القالب" required error={errors.language?.message}>
             <TextInput dir="ltr" placeholder="ar" {...register("language")} />
           </Field>
         </FormRow>
 
         <fieldset className="wa-params">
-          <legend className="form-label">Template variables, in order</legend>
+          <legend className="form-label">متغيرات القالب بالترتيب</legend>
           <p className="form-hint">
-            What to put in {"{{1}}"}, {"{{2}}"}… of the template&apos;s body.
-            Leave empty for a template without variables.
+            ما الذي يوضع في <span dir="ltr">{"{{1}}"}</span>،{" "}
+            <span dir="ltr">{"{{2}}"}</span>… داخل نص القالب. اتركها فارغة إذا
+            كان القالب بلا متغيرات.
           </p>
           {params.fields.map((field, index) => (
             <div key={field.id} className="wa-param-row">
               <span className="wa-param-slot">{`{{${index + 1}}}`}</span>
               <Select
-                aria-label={`Value for {{${index + 1}}}`}
+                aria-label={`قيمة المتغير {{${index + 1}}}`}
                 {...register(`params.${index}.key`)}
-                placeholder="Choose…"
+                placeholder="اختر…"
                 options={TEMPLATE_VARIABLES.map((v) => ({
                   value: v.key,
                   label: v.label,
@@ -242,7 +240,7 @@ export default function WhatsAppSettingsModal({
               />
               <IconButton
                 icon={X}
-                label={`Remove {{${index + 1}}}`}
+                label={`حذف المتغير {{${index + 1}}}`}
                 size={14}
                 onClick={() => params.remove(index)}
               />
@@ -250,7 +248,7 @@ export default function WhatsAppSettingsModal({
           ))}
           {errors.params && (
             <span className="form-error-msg">
-              {errors.params.message || "Choose a value for every variable"}
+              {errors.params.message || "اختر قيمة لكل متغير"}
             </span>
           )}
           <Button
@@ -260,15 +258,15 @@ export default function WhatsAppSettingsModal({
             onClick={() => params.append({ key: "" })}
             disabled={params.fields.length >= 10}
           >
-            Add variable
+            إضافة متغير
           </Button>
         </fieldset>
 
         {saved && (
           <div className="wa-test">
             <Field
-              label="Send a test message"
-              hint="Uses sample data (Ahmed, SAR 420). With Meta's test number, only verified recipients receive it."
+              label="رسالة تجريبية"
+              hint="تستخدم بيانات تجريبية (Ahmed Ali، SAR 420). مع رقم الاختبار من Meta لا يستلمها إلا المستلمون الذين أضفتهم في Meta."
             >
               <div className="wa-test-row">
                 <TextInput
@@ -286,14 +284,11 @@ export default function WhatsAppSettingsModal({
                   onClick={() =>
                     sendTest.mutate(testTo, {
                       onSuccess: () =>
-                        showToast?.(
-                          "Meta accepted the test message",
-                          "success",
-                        ),
+                        showToast?.("قبلت Meta الرسالة التجريبية", "success"),
                     })
                   }
                 >
-                  Send test
+                  إرسال رسالة تجريبية
                 </Button>
               </div>
             </Field>
@@ -315,8 +310,8 @@ export default function WhatsAppSettingsModal({
       onClose={onClose}
       dismissible={!save.isPending}
       icon={Settings2}
-      title="WhatsApp settings"
-      subtitle="Connect your own WhatsApp Business account"
+      title="إعدادات واتساب"
+      subtitle="اربط حساب واتساب للأعمال الخاص بك"
       size="lg"
       footer={
         <>
@@ -332,17 +327,17 @@ export default function WhatsAppSettingsModal({
                 }
                 remove.mutate(undefined, {
                   onSuccess: () => {
-                    showToast?.("WhatsApp disconnected", "success");
+                    showToast?.("تم فصل ربط واتساب", "success");
                     onClose();
                   },
                 });
               }}
             >
-              {confirmDisconnect ? "Delete saved settings?" : "Disconnect"}
+              {confirmDisconnect ? "حذف الإعدادات المحفوظة؟" : "فصل الربط"}
             </Button>
           )}
           <Button onClick={onClose} disabled={save.isPending}>
-            Close
+            إغلاق
           </Button>
           {ready && (
             <Button
@@ -350,7 +345,7 @@ export default function WhatsAppSettingsModal({
               onClick={onSubmit}
               loading={save.isPending}
             >
-              {save.isPending ? "Checking with Meta…" : "Save"}
+              {save.isPending ? "جارٍ التحقق مع Meta…" : "حفظ"}
             </Button>
           )}
         </>

@@ -14,7 +14,7 @@ export const couponKeys = {
 /** Error carrying the API result so the UI can describe it precisely. */
 export class CouponApiError extends Error {
   constructor(result) {
-    super(result?.error || "Coupon request failed");
+    super(result?.error || "فشل طلب الكوبون");
     this.name = "CouponApiError";
     this.result = result;
   }
@@ -29,7 +29,7 @@ const noTokenResult = {
   success: false,
   status: 401,
   code: "session_invalid",
-  error: "No embedded token found",
+  error: "لم يتم العثور على رمز الجلسة",
 };
 
 /** Every coupon in the store (all pages, fetched sequentially). */

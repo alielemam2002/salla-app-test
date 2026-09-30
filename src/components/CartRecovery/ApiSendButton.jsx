@@ -18,9 +18,9 @@ export default function ApiSendButton({
   const reason =
     disabledReason ||
     (!whatsappNumber(cart?.customer?.mobile)
-      ? "No international mobile number for this customer"
+      ? "لا يوجد رقم جوال دولي لهذا العميل"
       : recentlySent(apiSends, cart.id)
-        ? "Already sent in the last 24 hours"
+        ? "تم الإرسال خلال آخر 24 ساعة"
         : null);
   const busy = sender.sending.has(cart.id);
 
@@ -30,15 +30,15 @@ export default function ApiSendButton({
       variant="primary"
       icon={Send}
       disabled={Boolean(reason) || Boolean(sender.batch?.running)}
-      title={reason || "Send the WhatsApp template through the Cloud API"}
+      title={reason || "إرسال قالب واتساب من التطبيق"}
       loading={busy}
-      aria-label={`Send via API to ${cart.customer?.name || "customer"}`}
+      aria-label={`إرسال عبر واتساب إلى ${cart.customer?.name || "العميل"}`}
       onClick={async () => {
         const result = await sender.send(cart.id, couponCode);
         onResult?.(cart, result);
       }}
     >
-      Send
+      إرسال
     </Button>
   );
 }

@@ -58,13 +58,13 @@ export async function POST(request) {
     return fail(400, "bad_request", "A numeric product ID is required");
   }
   if (!photo || typeof photo === "string") {
-    return fail(400, "bad_request", "An image file is required");
+    return fail(400, "bad_request", "يرجى اختيار ملف صورة.");
   }
   if (!String(photo.type || "").startsWith("image/")) {
-    return fail(415, "unsupported_type", "Only image files can be uploaded");
+    return fail(415, "unsupported_type", "يمكن رفع ملفات الصور فقط.");
   }
   if (photo.size > MAX_UPLOAD_BYTES) {
-    return fail(413, "file_too_large", "The file is too large to upload");
+    return fail(413, "file_too_large", "حجم الملف أكبر من الحد المسموح للرفع.");
   }
 
   try {
@@ -89,7 +89,7 @@ export async function POST(request) {
       return fail(
         status >= 400 ? status : 502,
         "salla_api_error",
-        body.error?.message || `Salla rejected the image (status ${status})`,
+        body.error?.message || `رفضت سلة الصورة (رمز الحالة ${status})`,
         body.error?.fields || null,
       );
     }
@@ -99,7 +99,7 @@ export async function POST(request) {
     return fail(
       error.status || ERROR_STATUS[error.code] || 500,
       error.code || "server_error",
-      error.message || "Internal server error",
+      error.message || "حدث خطأ غير متوقع في الخادم.",
     );
   }
 }

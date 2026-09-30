@@ -73,10 +73,8 @@
   align-items: center;
   gap: var(--space-sm);
   margin: 0 0 var(--space-sm);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: var(--text-secondary);
 }
 
@@ -86,7 +84,6 @@
   background: var(--bg-tertiary);
   color: var(--text-tertiary);
   font-weight: 600;
-  letter-spacing: 0;
 }
 
 .coupon-grid {
@@ -136,10 +133,10 @@
 
 .coupon-card-code {
   margin: 0;
+  text-align: end;
   font-family: var(--font-mono);
   font-size: 1rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
   overflow-wrap: anywhere;
 }
 
@@ -227,7 +224,7 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
-  direction: ltr;
+  direction: rtl;
   unicode-bidi: isolate;
   text-align: start;
 }

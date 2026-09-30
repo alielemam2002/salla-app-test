@@ -41,9 +41,9 @@ export function estimateTargetCount({
   if (target === "selected") return selectedProducts.length;
   if (target === "category") {
     const cat = categories.find((c) => c.id === Number(selectedCategoryId));
-    return cat?.products_count || previewCount || "All in category";
+    return cat?.products_count || previewCount || "كل منتجات التصنيف";
   }
-  return totalStoreProducts || allLoadedCount || "All store items";
+  return totalStoreProducts || allLoadedCount || "كل منتجات المتجر";
 }
 
 /** First blocking problem with the current settings, or null. */
@@ -60,17 +60,16 @@ export function validateBulkDiscount({
 
   if (mode === "apply") {
     if (discountValue === "" || isNaN(valNum) || valNum <= 0) {
-      error = "Please enter a valid discount value greater than 0.";
+      error = "أدخل قيمة خصم صحيحة أكبر من 0.";
     } else if (discountType === "percentage" && valNum > 100) {
-      error = "Discount percentage cannot exceed 100%.";
+      error = "لا يمكن أن تتجاوز نسبة الخصم 100%.";
     }
   }
   if (target === "selected" && selectedCount === 0) {
-    error =
-      "No products are selected. Please select products from the table or choose another target.";
+    error = "لم تحدد أي منتجات. حدّد منتجات من الجدول أو اختر نطاقًا آخر.";
   }
   if (target === "category" && !selectedCategoryId) {
-    error = "Please select a category.";
+    error = "اختر تصنيفًا.";
   }
   return error;
 }
@@ -105,7 +104,7 @@ export function formatDiscount(discountType, value) {
 
 /** Human label for the chosen target. */
 export function describeTarget({ target, selectedCount, selectedCategoryId }) {
-  if (target === "selected") return `${selectedCount} Selected Products`;
-  if (target === "category") return `Category #${selectedCategoryId}`;
-  return "All Store Products";
+  if (target === "selected") return `${selectedCount} منتج محدد`;
+  if (target === "category") return `التصنيف #${selectedCategoryId}`;
+  return "كل منتجات المتجر";
 }

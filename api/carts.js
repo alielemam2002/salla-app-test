@@ -82,15 +82,15 @@ export async function POST(request) {
   try {
     body = await request.json();
   } catch {
-    return fail(400, "bad_request", "Invalid JSON body");
+    return fail(400, "bad_request", "تعذّر قراءة الطلب");
   }
 
   const { token } = body;
   const appId = process.env.SALLA_APP_ID || body.appId;
   const action = String(body.action || "list").toLowerCase();
 
-  if (!token) return fail(400, "bad_request", "Token is required");
-  if (!appId) return fail(400, "bad_request", "App ID is required");
+  if (!token) return fail(400, "bad_request", "رمز الجلسة مطلوب");
+  if (!appId) return fail(400, "bad_request", "معرّف التطبيق مطلوب");
 
   try {
     const session = await introspectEmbeddedToken(token, appId);
@@ -111,7 +111,7 @@ export async function POST(request) {
           return sallaFail(
             status,
             result,
-            `Failed to load abandoned carts (status ${status})`,
+            `تعذّر تحميل السلات المتروكة (الحالة ${status})`,
           );
         }
         return Response.json({
@@ -124,7 +124,7 @@ export async function POST(request) {
       case "get": {
         const cartId = String(body.cartId || "");
         if (!/^\d+$/.test(cartId)) {
-          return fail(400, "bad_request", "A numeric cart ID is required");
+          return fail(400, "bad_request", "معرّف السلة مطلوب (أرقام فقط)");
         }
         const { status, body: result } = await merchantApi(
           `/carts/abandoned/${encodeURIComponent(cartId)}`,
@@ -133,7 +133,7 @@ export async function POST(request) {
           return sallaFail(
             status,
             result,
-            `Failed to load the cart (status ${status})`,
+            `تعذّر تحميل السلة (الحالة ${status})`,
           );
         }
         const items = Array.isArray(result.data?.items)
@@ -146,14 +146,14 @@ export async function POST(request) {
       }
 
       default:
-        return fail(400, "bad_request", `Unknown action: "${action}"`);
+        return fail(400, "bad_request", `إجراء غير معروف: "${action}"`);
     }
   } catch (error) {
     console.error("Carts endpoint failed:", error.message);
     return fail(
       error.status || ERROR_STATUS[error.code] || 500,
       error.code || "server_error",
-      error.message || "Internal server error",
+      error.message || "حدث خطأ في الخادم",
     );
   }
 }

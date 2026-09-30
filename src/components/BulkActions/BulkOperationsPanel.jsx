@@ -5,7 +5,7 @@ import { operationStatusMeta } from "../../utils/bulkActions/bulkOperationsLog.j
 
 const formatTime = (iso) => {
   try {
-    return new Date(iso).toLocaleString();
+    return new Date(iso).toLocaleString("ar-SA-u-nu-latn");
   } catch {
     return iso;
   }
@@ -24,20 +24,20 @@ export default function BulkOperationsPanel({ onRefreshProducts }) {
     <section className="bulk-ops" aria-labelledby="bulk-ops-title">
       <header className="bulk-ops-head">
         <h3 id="bulk-ops-title" className="bulk-ops-title">
-          <History size={16} aria-hidden="true" /> Bulk Operations
+          <History size={16} aria-hidden="true" /> العمليات الجماعية
         </h3>
         <div className="bulk-ops-actions">
           <Button size="small" icon={RefreshCw} onClick={onRefreshProducts}>
-            Refresh products
+            تحديث المنتجات
           </Button>
           <Button size="small" variant="ghost" icon={Trash2} onClick={clear}>
-            Clear log
+            مسح السجل
           </Button>
         </div>
       </header>
       <p className="form-hint">
-        Salla doesn&apos;t report progress for queued operations. Refresh the
-        products to see changes once Salla finishes.
+        لا تعرض سلة تقدّم العمليات الموضوعة في قائمة الانتظار. حدّث المنتجات
+        لرؤية التغييرات بعد أن تنتهي سلة منها.
       </p>
       <ul className="bulk-ops-list">
         {operations.map((entry) => {
@@ -49,10 +49,10 @@ export default function BulkOperationsPanel({ onRefreshProducts }) {
                 <strong>{entry.label}</strong>
                 <span className="bulk-ops-summary">{entry.summary}</span>
                 <span className="bulk-ops-meta">
-                  {entry.productCount} products · {formatTime(entry.createdAt)}
+                  {entry.productCount} منتج · {formatTime(entry.createdAt)}
                 </span>
                 {entry.operations.map((op) => (
-                  <code key={op.operation_id} className="bulk-ops-id">
+                  <code key={op.operation_id} className="bulk-ops-id" dir="ltr">
                     {op.operation_id}
                   </code>
                 ))}

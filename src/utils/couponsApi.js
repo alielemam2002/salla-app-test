@@ -23,7 +23,7 @@ async function callCouponsApi(payload) {
         success: false,
         status: response.status,
         code: "bad_response",
-        error: `Server returned non-JSON (status ${response.status})`,
+        error: `استجابة غير صالحة من الخادم (الحالة ${response.status})`,
       };
     }
   } catch (error) {

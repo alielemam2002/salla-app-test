@@ -40,7 +40,7 @@ export async function executeBulkProductAction({
         success: false,
         status: response.status,
         code: "bad_response",
-        error: `Server returned non-JSON (status ${response.status})`,
+        error: `تعذّر قراءة استجابة الخادم (الحالة ${response.status})`,
       };
     }
   } catch (err) {
