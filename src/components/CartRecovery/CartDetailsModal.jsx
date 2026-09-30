@@ -190,6 +190,7 @@ export default function CartDetailsModal({
                 mode={api.mode}
                 text={api.mode === "text" ? messageFor(cart) : ""}
                 onResult={api.onResult}
+                onConfirmResend={api.onConfirmResend}
                 disabledReason={purchased ? "أكمل العميل الطلب بالفعل" : null}
               />
             )}

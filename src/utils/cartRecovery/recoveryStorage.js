@@ -54,6 +54,25 @@ export function recentlySent(sends, cartId, now = Date.now()) {
   return Number.isFinite(at) && now - at < API_RESEND_GAP_MS;
 }
 
+// { [cartId]: ISO time } — carts hidden from the list in this browser.
+// Salla has no API to delete an abandoned cart; hiding only affects this app.
+export const hiddenStore = createLocalStore(
+  "salla_cart_recovery_hidden_v1",
+  {},
+);
+
+export function hideCart(cartId) {
+  hiddenStore.set((prev) => ({ ...prev, [cartId]: new Date().toISOString() }));
+}
+
+export function unhideCart(cartId) {
+  hiddenStore.set((prev) => {
+    const next = { ...prev };
+    delete next[cartId];
+    return next;
+  });
+}
+
 export function recordContact(cartId) {
   contactsStore.set((prev) => ({
     ...prev,

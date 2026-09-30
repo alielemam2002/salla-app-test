@@ -421,3 +421,13 @@
 .cart-send-mode .form-hint {
   margin: 0;
 }
+
+/* Selection column and carts hidden from the list */
+.cart-select {
+  inline-size: 36px;
+  text-align: center;
+}
+
+.cart-row--hidden td {
+  opacity: 0.6;
+}

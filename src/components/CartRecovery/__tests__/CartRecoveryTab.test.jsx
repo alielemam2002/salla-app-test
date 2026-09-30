@@ -23,6 +23,7 @@ import {
 import {
   apiSendsStore,
   contactsStore,
+  hiddenStore,
   settingsStore,
 } from "../../../utils/cartRecovery/recoveryStorage.js";
 
@@ -139,6 +140,7 @@ describe("CartRecoveryTab", () => {
     settingsStore.reset();
     contactsStore.reset();
     apiSendsStore.reset();
+    hiddenStore.reset();
     fetchWhatsAppStatus.mockResolvedValue(NOT_CONFIGURED);
     fetchAllAbandonedCarts.mockResolvedValue({
       success: true,
@@ -351,10 +353,24 @@ describe("CartRecoveryTab", () => {
       "قبلت Meta الرسالة الموجهة إلى Ahmed Ali",
       "success",
     );
-    // No second message to the same cart within 24 hours.
-    expect(
+    // A second message within 24 hours asks first.
+    fireEvent.click(
       screen.getByRole("button", { name: "إرسال عبر واتساب إلى Ahmed Ali" }),
-    ).toBeDisabled();
+    );
+    const ask = await screen.findByRole("dialog");
+    expect(within(ask).getByText("إرسال رسالة أخرى؟")).toBeInTheDocument();
+    fireEvent.click(within(ask).getByRole("button", { name: "إلغاء" }));
+    expect(sendCartWhatsApp).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "إرسال عبر واتساب إلى Ahmed Ali" }),
+    );
+    fireEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "إرسال مرة أخرى",
+      }),
+    );
+    await waitFor(() => expect(sendCartWhatsApp).toHaveBeenCalledTimes(2));
   });
 
   it("sends the written message as normal text when chosen", async () => {
@@ -402,7 +418,7 @@ describe("CartRecoveryTab", () => {
     expect(screen.queryByText(/Sent via API/)).toBeNull();
   });
 
-  it("bulk-sends one at a time, skipping carts it can't message", async () => {
+  it("sends only to the carts the merchant selects, one at a time", async () => {
     fetchWhatsAppStatus.mockResolvedValue(CONFIGURED);
     let inFlight = 0;
     let maxInFlight = 0;
@@ -415,9 +431,23 @@ describe("CartRecoveryTab", () => {
     });
     renderTab();
     fireEvent.click(await screen.findByLabelText("إظهار السلات الحديثة"));
-    // Ahmed (eligible, has number); Sara has no number; Fresh Cart is recent.
+    // Nothing is selected yet.
+    expect(
+      await screen.findByRole("button", { name: "إرسال إلى المحدد (0)" }),
+    ).toBeDisabled();
+    // Sara has no mobile number, so she can't be picked.
+    expect(screen.getByLabelText("تحديد سلة Sara")).toBeDisabled();
+
+    // Select all that can be messaged (Ahmed + Fresh Cart), then untick one.
     fireEvent.click(
-      await screen.findByRole("button", { name: "إرسال إلى 1 سلة معروضة" }),
+      screen.getByLabelText("تحديد كل السلات المعروضة التي يمكن مراسلتها"),
+    );
+    expect(
+      screen.getByRole("button", { name: "إرسال إلى المحدد (2)" }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("تحديد سلة Fresh Cart"));
+    fireEvent.click(
+      screen.getByRole("button", { name: "إرسال إلى المحدد (1)" }),
     );
     fireEvent.click(screen.getByRole("button", { name: "إرسال إلى 1" }));
     await waitFor(() =>
@@ -426,6 +456,29 @@ describe("CartRecoveryTab", () => {
     expect(sendCartWhatsApp).toHaveBeenCalledTimes(1);
     expect(sendCartWhatsApp).toHaveBeenCalledWith("tok", 11, "", undefined);
     expect(maxInFlight).toBe(1);
+  });
+
+  it("hides a cart from the list and brings it back", async () => {
+    const { showToast } = renderTab();
+    await screen.findByText("Ahmed Ali");
+    fireEvent.click(
+      screen.getByRole("button", { name: "إخفاء سلة Ahmed Ali من القائمة" }),
+    );
+    expect(screen.queryByText("Ahmed Ali")).toBeNull();
+    expect(showToast).toHaveBeenCalledWith(
+      expect.stringMatching(/تم إخفاء السلة/),
+      "info",
+    );
+
+    fireEvent.click(screen.getByLabelText("إظهار المخفية (1)"));
+    const row = screen.getByText("Ahmed Ali").closest("tr");
+    expect(within(row).getByText("مخفية")).toBeInTheDocument();
+    fireEvent.click(
+      within(row).getByRole("button", {
+        name: "إظهار سلة Ahmed Ali في القائمة",
+      }),
+    );
+    expect(within(row).queryByText("مخفية")).toBeNull();
   });
 
   it("lets the merchant connect their own WhatsApp account", async () => {

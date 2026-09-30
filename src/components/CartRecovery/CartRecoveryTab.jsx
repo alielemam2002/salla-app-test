@@ -17,6 +17,7 @@ import {
   useAbandonedCarts,
   useApiSends,
   useCartContacts,
+  useHiddenCarts,
   useRecoverySettings,
   useWhatsAppSender,
   useWhatsAppSettingsMutations,
@@ -28,6 +29,7 @@ import {
   describeCartsError,
   isEligible,
   summarizeCarts,
+  timeAgo,
 } from "../../utils/cartRecovery/cartModel.js";
 import {
   DEFAULT_TEMPLATES,
@@ -78,8 +80,20 @@ export default function CartRecoveryTab({ embedded, showToast }) {
   const [search, setSearch] = useState("");
   const [includeRecent, setIncludeRecent] = useState(false);
   const [openCartId, setOpenCartId] = useState(null);
+  const { hidden, hideCart, unhideCart } = useHiddenCarts();
+  const [showHidden, setShowHidden] = useState(false);
+  // Carts ticked for "send to selected" (ids).
+  const [selected, setSelected] = useState(() => new Set());
+  // { cart, sentAt, send } while asking to message a cart again within 24 h.
+  const [resend, setResend] = useState(null);
 
-  const carts = query.data?.carts || EMPTY;
+  const allCarts = query.data?.carts || EMPTY;
+  // Hidden carts are left out of the numbers too: the merchant set them aside.
+  const carts = useMemo(
+    () => allCarts.filter((cart) => !hidden[cart.id]),
+    [allCarts, hidden],
+  );
+  const hiddenCount = allCarts.length - carts.length;
   const { abandonedAfter, locale } = settings;
   const thresholdLabel =
     ABANDONED_AFTER_OPTIONS.find((o) => o.value === abandonedAfter)?.label ||
@@ -92,14 +106,15 @@ export default function CartRecoveryTab({ embedded, showToast }) {
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return carts.filter((cart) => {
+    const list = showHidden ? allCarts : carts;
+    return list.filter((cart) => {
       if (!includeRecent && !isEligible(cart, abandonedAfter)) return false;
       if (!q) return true;
       return [cart.customer?.name, cart.customer?.mobile, cart.customer?.email]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
     });
-  }, [carts, search, includeRecent, abandonedAfter]);
+  }, [allCarts, carts, showHidden, search, includeRecent, abandonedAfter]);
 
   const contactedCount = carts.filter(
     (cart) => isEligible(cart, abandonedAfter) && contacts[cart.id],
@@ -153,22 +168,55 @@ export default function CartRecoveryTab({ embedded, showToast }) {
         couponCode,
         mode: sendMode,
         onResult: onApiResult,
+        onConfirmResend: (cart, sentAt, send) =>
+          setResend({ cart, sentAt, send }),
       }
     : null;
 
-  // Carts the bulk send would actually message.
-  const bulkTargets = visible.filter(
+  // Why a cart can't be picked for "send to selected" (null = it can).
+  const reasonFor = useCallback(
     (cart) =>
-      isEligible(cart, abandonedAfter) &&
-      whatsappNumber(cart.customer?.mobile) &&
-      !recentlySent(apiSends, cart.id),
+      !whatsappNumber(cart.customer?.mobile)
+        ? "لا يوجد رقم جوال دولي لهذا العميل"
+        : recentlySent(apiSends, cart.id)
+          ? "أُرسلت لهذا العميل رسالة خلال آخر 24 ساعة"
+          : null,
+    [apiSends],
   );
+  const selectable = visible.filter((cart) => !reasonFor(cart));
+  const bulkTargets = selectable.filter((cart) => selected.has(cart.id));
+  const selection = apiEnabled
+    ? {
+        isSelected: (id) => selected.has(id),
+        toggle: (id) =>
+          setSelected((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+          }),
+        reasonFor,
+        allSelected:
+          selectable.length > 0 &&
+          selectable.every((cart) => selected.has(cart.id)),
+        toggleAll: () =>
+          setSelected((prev) =>
+            selectable.length > 0 &&
+            selectable.every((cart) => prev.has(cart.id))
+              ? new Set()
+              : new Set(selectable.map((cart) => cart.id)),
+          ),
+        locked: Boolean(sender.batch?.running),
+      }
+    : null;
+
   const startBulk = async () => {
     setConfirmBulk(false);
     const result = await sender.sendMany(bulkTargets, couponCode, {
       mode: sendMode,
       textFor: messageFor,
     });
+    setSelected(new Set());
     showToast?.(
       `قبلت Meta ${result.sent} من ${result.total} رسالة${result.failed ? `، وفشل إرسال ${result.failed}` : ""}.`,
       result.failed ? "warning" : "success",
@@ -223,6 +271,21 @@ export default function CartRecoveryTab({ embedded, showToast }) {
         onCopyLink={copyLink}
         onContacted={recordContact}
         api={api}
+        selection={selection}
+        hidden={hidden}
+        onHide={(id) => {
+          hideCart(id);
+          setSelected((prev) => {
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+          });
+          showToast?.(
+            "تم إخفاء السلة من القائمة. يمكنك إظهارها من «إظهار المخفية».",
+            "info",
+          );
+        }}
+        onUnhide={unhideCart}
       />
     );
   }
@@ -311,6 +374,13 @@ export default function CartRecoveryTab({ embedded, showToast }) {
               checked={includeRecent}
               onChange={setIncludeRecent}
             />
+            {hiddenCount > 0 && (
+              <Checkbox
+                label={`إظهار المخفية (${hiddenCount})`}
+                checked={showHidden}
+                onChange={setShowHidden}
+              />
+            )}
             <TextInput
               type="search"
               aria-label="بحث في السلات"
@@ -365,10 +435,10 @@ export default function CartRecoveryTab({ embedded, showToast }) {
                   title={
                     bulkTargets.length
                       ? undefined
-                      : "لا توجد سلة معروضة يمكن مراسلتها: إما بلا رقم دولي أو تمت مراسلتها خلال آخر 24 ساعة"
+                      : "حدّد السلات التي تريد مراسلتها من الجدول"
                   }
                 >
-                  إرسال إلى {bulkTargets.length} سلة معروضة
+                  إرسال إلى المحدد ({bulkTargets.length})
                 </Button>
               )}
               {sender.batch && !sender.batch.running && (
@@ -407,8 +477,6 @@ export default function CartRecoveryTab({ embedded, showToast }) {
               {bulkTargets.length} عميل، واحدًا تلو الآخر.
             </>
           )}{" "}
-          تُتخطى السلات التي بلا رقم جوال دولي أو التي تمت مراسلتها من التطبيق
-          خلال آخر 24 ساعة.
         </p>
       </ConfirmDialog>
 
@@ -438,6 +506,29 @@ export default function CartRecoveryTab({ embedded, showToast }) {
           api={api}
         />
       )}
+
+      {/* After the details modal so it shows on top of it. */}
+      <ConfirmDialog
+        isOpen={Boolean(resend)}
+        onClose={() => setResend(null)}
+        onConfirm={() => {
+          const { send } = resend;
+          setResend(null);
+          send();
+        }}
+        tone="default"
+        title="إرسال رسالة أخرى؟"
+        confirmText="إرسال مرة أخرى"
+        cancelText="إلغاء"
+      >
+        <p>
+          أُرسلت إلى {resend?.cart.customer?.name || "هذا العميل"} رسالة من
+          التطبيق{" "}
+          {resend?.sentAt ? timeAgo(Date.parse(resend.sentAt)) : "مؤخرًا"}.
+          الرسائل المتكررة في وقت قصير قد تزعج العميل وتجعل واتساب يعتبرها
+          مزعجة.
+        </p>
+      </ConfirmDialog>
     </div>
   );
 }

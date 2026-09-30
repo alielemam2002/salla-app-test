@@ -7,6 +7,9 @@ import {
 import {
   apiSendsStore,
   contactsStore,
+  hiddenStore,
+  hideCart,
+  unhideCart,
   recentlySent,
   recordApiSend,
   recordContact,
@@ -122,6 +125,16 @@ export function useWhatsAppStatus(getToken) {
     retry: false,
     staleTime: 10 * 60 * 1000,
   });
+}
+
+/** Carts hidden from the list in this browser, and how to hide/show them. */
+export function useHiddenCarts() {
+  const hidden = useSyncExternalStore(
+    hiddenStore.subscribe,
+    hiddenStore.get,
+    hiddenStore.get,
+  );
+  return { hidden, hideCart, unhideCart };
 }
 
 /** Messages Meta accepted per cart (this browser). */
