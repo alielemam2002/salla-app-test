@@ -119,3 +119,25 @@ export async function merchantApi(path, options = {}) {
 
   return { status: response.status, body: responseBody };
 }
+
+/**
+ * Id of the store SALLA_ACCESS_TOKEN belongs to (GET /store/info, scope
+ * offline_access). Code that runs for a store without a merchant session
+ * (webhooks) uses it to read only that store's data with this token.
+ * @returns {Promise<{ ok: true, id: string } | { ok: false, error: string }>}
+ */
+export async function tokenStoreId() {
+  try {
+    const { status, body } = await merchantApi("/store/info");
+    if (body?.success && body.data?.id) {
+      return { ok: true, id: String(body.data.id) };
+    }
+    return {
+      ok: false,
+      error:
+        body?.error?.message || `تعذّر قراءة بيانات المتجر (الحالة ${status})`,
+    };
+  } catch (error) {
+    return { ok: false, error: error.message };
+  }
+}

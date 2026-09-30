@@ -1,4 +1,5 @@
 import {
+  Bell,
   Megaphone,
   Package,
   Puzzle,
@@ -12,6 +13,7 @@ import {
  */
 export const APP_TABS = [
   { id: "products", label: "المنتجات", icon: Package },
+  { id: "alerts", label: "التنبيهات", icon: Bell },
   { id: "coupons", label: "الكوبونات", icon: TicketPercent },
   { id: "cart-recovery", label: "السلات المتروكة", icon: ShoppingCart },
   { id: "campaigns", label: "حملات واتساب", icon: Megaphone },

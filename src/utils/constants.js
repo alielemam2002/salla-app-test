@@ -16,6 +16,9 @@ export const CARTS_FUNCTION_URL = "/api/carts";
 // Cart reminders through the WhatsApp Cloud API (api/whatsapp.js)
 export const WHATSAPP_FUNCTION_URL = "/api/whatsapp";
 
+// Stock alerts for the merchant: order alerts + stock scan (api/stock-alerts.js)
+export const STOCK_ALERTS_FUNCTION_URL = "/api/stock-alerts";
+
 // Store customers + groups for WhatsApp campaigns (api/customers.js)
 export const CUSTOMERS_FUNCTION_URL = "/api/customers";
 

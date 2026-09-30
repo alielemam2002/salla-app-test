@@ -69,3 +69,28 @@ export async function kvSetJson(key, value) {
 export async function kvDel(key) {
   await command(["DEL", key]);
 }
+
+/** SET NX with an expiry: true only for the first caller (dedupe/lock). */
+export async function kvSetIfAbsent(key, value, ex) {
+  const result = await command(["SET", key, value, "NX", "EX", String(ex)]);
+  return result === "OK";
+}
+
+/** LPUSH JSON values (in order, newest last) and keep the newest `max`. */
+export async function kvListPushJson(key, values, max) {
+  if (!values.length) return;
+  await command(["LPUSH", key, ...values.map((v) => JSON.stringify(v))]);
+  await command(["LTRIM", key, "0", String(max - 1)]);
+}
+
+/** Items `start`..`stop` (newest first), parsed; bad JSON is skipped. */
+export async function kvListRangeJson(key, start, stop) {
+  const raw = await command(["LRANGE", key, String(start), String(stop)]);
+  return (Array.isArray(raw) ? raw : []).flatMap((item) => {
+    try {
+      return [JSON.parse(item)];
+    } catch {
+      return [];
+    }
+  });
+}

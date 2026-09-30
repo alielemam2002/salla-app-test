@@ -1,0 +1,99 @@
+/* ---------- Alerts (stock alerts for the merchant) ---------- */
+
+.alerts-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.alerts-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg) var(--space-lg);
+}
+
+.alerts-steps {
+  margin: var(--space-xs) 0 0;
+  padding-inline-start: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.alerts-steps code {
+  word-break: break-all;
+}
+
+.alerts-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.alerts-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.alerts-item + .alerts-item {
+  border-block-start: 1px solid var(--border-color);
+}
+
+.alerts-item.is-unread {
+  background: var(--accent-warning-soft);
+}
+
+.alerts-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.alerts-item-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.alerts-sku,
+.alerts-item-meta,
+.alerts-item-time {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.alerts-item-side {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  white-space: nowrap;
+}
+
+.alerts-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .alerts-item {
+    flex-wrap: wrap;
+  }
+
+  .alerts-item-side {
+    inline-size: 100%;
+  }
+}
