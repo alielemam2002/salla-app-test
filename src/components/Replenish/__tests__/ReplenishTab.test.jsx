@@ -239,4 +239,43 @@ describe("ReplenishTab", () => {
       ),
     );
   });
+
+  it("switches between direct text mode and template mode in settings", async () => {
+    renderTab();
+    const textTab = await screen.findByRole("tab", {
+      name: /رسالة نصية مباشرة/,
+    });
+    fireEvent.click(textTab);
+    expect(
+      screen.getByLabelText(/نص رسالة الواتساب المباشرة/),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText(/اسم القالب المعتمد/)).toBeNull();
+
+    const templateTab = await screen.findByRole("tab", {
+      name: /قالب رسمي معتمد/,
+    });
+    fireEvent.click(templateTab);
+    expect(screen.getByLabelText(/اسم القالب المعتمد/)).toBeInTheDocument();
+  });
+
+  it("switches to customer orders history and opens custom reminder modal", async () => {
+    renderTab();
+    const ordersTab = await screen.findByRole("tab", {
+      name: /سجل مبيعات وطلبات العملاء/,
+    });
+    fireEvent.click(ordersTab);
+
+    expect(
+      await screen.findByText("مبيعات وطلبات العملاء (سجل إعادة الشراء)"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("العملاء في السجل")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "تذكير عميل محدد" }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "تذكير عميل محدد" }));
+    expect(
+      await screen.findByText("إرسال تذكير إعادة شراء لعميل محدد"),
+    ).toBeInTheDocument();
+  });
 });

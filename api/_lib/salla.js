@@ -127,3 +127,28 @@ async function request(accessToken, path, options = {}) {
 
   return { status: response.status, body: responseBody };
 }
+
+const USER_INFO_URL = "https://accounts.salla.sa/oauth2/user/info";
+
+/**
+ * The user and merchant behind a store's token (accounts.salla.sa). Resolves
+ * to { ok, data } or { ok: false, status, error }; never returns the token.
+ */
+export async function sallaUserInfo(merchantId) {
+  const token = await getAccessToken(String(merchantId));
+  const response = await fetch(USER_INFO_URL, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+  });
+  const body = parseJson(await response.text(), response.status, "User Info");
+  if (!response.ok || body.success === false) {
+    return {
+      ok: false,
+      status: response.status,
+      error:
+        body.error?.message ||
+        `تعذّر قراءة بيانات الحساب (الحالة ${response.status})`,
+    };
+  }
+  // Documented with a `data` envelope; accept the bare shape too.
+  return { ok: true, data: body.data ?? body };
+}

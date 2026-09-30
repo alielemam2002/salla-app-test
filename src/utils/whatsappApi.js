@@ -94,3 +94,22 @@ export function sendCampaignMessage(token, { to, customerName, campaign }) {
     params: campaign.params,
   });
 }
+
+/**
+ * Settings page: save the account only ({ phoneNumberId, wabaId,
+ * accessToken }; leave the token empty to keep it). The server checks it
+ * with Meta, then reads the templates (`templates`, or `templatesError`).
+ */
+export function saveWhatsAppAccount(token, account) {
+  return callWhatsAppApi({ action: "account_save", token, account });
+}
+
+/** Read the templates again from Meta: { syncedAt, templates }. */
+export function syncWhatsAppTemplates(token) {
+  return callWhatsAppApi({ action: "templates_sync", token });
+}
+
+/** The last templates read from Meta (no Meta call). */
+export function fetchWhatsAppTemplates(token) {
+  return callWhatsAppApi({ action: "templates_list", token });
+}

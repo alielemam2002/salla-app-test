@@ -12,7 +12,12 @@
  * - settings_get     the merchant's settings, token masked
  * - settings_save    validate, check with Meta (phone number profile), save
  * - settings_enable  turn sending from the app on/off ({ enabled })
- * - settings_delete  forget the merchant's settings
+ * - settings_delete  forget the merchant's settings (and templates)
+ * - account_save     Settings page: Phone Number ID + WABA ID + token only
+ *                    (checked with Meta), then reads the templates
+ * - templates_sync   read the templates again from Meta
+ *                    (GET /{waba-id}/message_templates) and keep a snapshot
+ * - templates_list   the last snapshot (no Meta call)
  * - send_test        send the template with sample values to a number
  * - send             send the template for one abandoned cart; the cart is
  *                    read from Salla (GET /admin/v2/carts/abandoned/{id}).
@@ -32,6 +37,7 @@ import {
   buildTextMessage,
   cleanParam,
   fetchPhoneProfile,
+  fetchTemplates,
   metaFailure,
   sendTemplate,
 } from "./_lib/whatsappGraph.js";
@@ -39,13 +45,17 @@ import {
   deleteSettings,
   graphVersion,
   loadStored,
+  loadTemplates,
   publicSettings,
   resolveConfig,
+  saveAccount,
   saveSettings,
+  saveTemplates,
   setEnabled,
   storageReady,
   LANGUAGE_RE,
   TEMPLATE_NAME_RE,
+  validateAccountInput,
   validateSettingsInput,
 } from "./_lib/whatsappSettings.js";
 import {
@@ -157,6 +167,70 @@ async function post(config, messageBody) {
   });
 }
 
+const noStorage = () =>
+  fail(
+    503,
+    "storage_not_configured",
+    "تخزين الإعدادات غير مفعّل على الخادم (Upstash Redis و WA_SETTINGS_KEY).",
+  );
+
+/**
+ * Check the Phone Number ID + token with Meta before saving anything. A
+ * blank token means "keep the saved one". Resolves to { token, profile }
+ * or { response } (the error to return).
+ */
+async function checkWithMeta(values, stored) {
+  let token = values.accessToken;
+  if (!token) {
+    try {
+      token = open(stored.token);
+    } catch {
+      return {
+        response: fail(422, "validation_failed", "أدخل رمز الوصول مرة أخرى", {
+          fields: {
+            accessToken: ["تعذّرت قراءة الرمز المحفوظ. أدخله مرة أخرى."],
+          },
+        }),
+      };
+    }
+  }
+  const check = await fetchPhoneProfile({
+    token,
+    phoneNumberId: values.phoneNumberId,
+    version: graphVersion(),
+  });
+  if (!check.ok) {
+    return {
+      response: fail(check.httpStatus, "meta_error", check.error, {
+        metaCode: check.metaCode,
+        detail: check.detail,
+      }),
+    };
+  }
+  return { token, profile: check.profile };
+}
+
+// Reading templates needs other rights than sending: explain those errors.
+const TEMPLATE_ERRORS = {
+  10: "رمز الوصول لا يملك صلاحية whatsapp_business_management لقراءة القوالب. أضفها للرمز من Meta.",
+  200: "رمز الوصول لا يملك صلاحية whatsapp_business_management لقراءة القوالب. أضفها للرمز من Meta.",
+  100: "تحقق من معرّف حساب واتساب للأعمال (WABA ID): رفضته Meta.",
+};
+
+/** Read the templates from Meta and keep a snapshot for the app. */
+async function syncTemplates(merchantId, config, wabaId) {
+  const result = await fetchTemplates(config, wabaId);
+  if (!result.ok) {
+    return {
+      error: TEMPLATE_ERRORS[result.metaCode] || result.error,
+      metaCode: result.metaCode,
+      detail: result.detail,
+      status: result.httpStatus,
+    };
+  }
+  return { snapshot: await saveTemplates(merchantId, result.templates) };
+}
+
 export async function POST(request) {
   let body;
   try {
@@ -228,31 +302,8 @@ export async function POST(request) {
             fields,
           });
         }
-        // Check the id + token with Meta before saving anything.
-        let savedToken = null;
-        if (!values.accessToken) {
-          try {
-            savedToken = open(stored.token);
-          } catch {
-            return fail(422, "validation_failed", "أدخل رمز الوصول مرة أخرى", {
-              fields: {
-                accessToken: ["تعذّرت قراءة الرمز المحفوظ. أدخله مرة أخرى."],
-              },
-            });
-          }
-        }
-        const probe = {
-          token: values.accessToken || savedToken,
-          phoneNumberId: values.phoneNumberId,
-          version: graphVersion(),
-        };
-        const check = await fetchPhoneProfile(probe);
-        if (!check.ok) {
-          return fail(check.httpStatus, "meta_error", check.error, {
-            metaCode: check.metaCode,
-            detail: check.detail,
-          });
-        }
+        const check = await checkWithMeta(values, stored);
+        if (check.response) return check.response;
         const record = await saveSettings(merchantId, values, {
           stored: stored || {},
           profile: check.profile,
@@ -260,6 +311,69 @@ export async function POST(request) {
         return Response.json({
           success: true,
           settings: publicSettings(record),
+        });
+      }
+
+      case "account_save": {
+        // Settings page: the account only; the cart template is kept.
+        if (!storageReady()) return noStorage();
+        const stored = await loadStored(merchantId);
+        const { values, fields } = validateAccountInput(body.account, {
+          hasSavedToken: Boolean(stored?.token),
+        });
+        if (fields) {
+          return fail(422, "validation_failed", "بعض البيانات غير صحيحة", {
+            fields,
+          });
+        }
+        const check = await checkWithMeta(values, stored);
+        if (check.response) return check.response;
+        const record = await saveAccount(merchantId, values, {
+          stored: stored || {},
+          profile: check.profile,
+        });
+        // Read the templates right away; the account is saved either way.
+        const sync = await syncTemplates(
+          merchantId,
+          { token: check.token, version: graphVersion() },
+          values.wabaId,
+        );
+        return Response.json({
+          success: true,
+          settings: publicSettings(record),
+          templates: sync.snapshot || null,
+          templatesError: sync.error || null,
+        });
+      }
+
+      case "templates_sync": {
+        const { config, stored, unreadable } = await resolveConfig(merchantId);
+        if (!config) return notConnected(unreadable);
+        if (!stored.wabaId) {
+          return fail(
+            422,
+            "no_waba",
+            "أضف معرّف حساب واتساب للأعمال (WABA ID) في الإعدادات لعرض قوالبك.",
+          );
+        }
+        const sync = await syncTemplates(merchantId, config, stored.wabaId);
+        if (sync.error) {
+          return fail(sync.status || 422, "meta_error", sync.error, {
+            metaCode: sync.metaCode,
+            detail: sync.detail,
+          });
+        }
+        return Response.json({ success: true, ...sync.snapshot });
+      }
+
+      case "templates_list": {
+        const snapshot = storageReady()
+          ? await loadTemplates(merchantId)
+          : null;
+        return Response.json({
+          success: true,
+          syncedAt: snapshot?.syncedAt || null,
+          templates: snapshot?.templates || [],
         });
       }
 
@@ -341,6 +455,13 @@ export async function POST(request) {
         // wrote to the store in the last 24 hours. The number still comes
         // from Salla's cart, never from the browser.
         if (body.mode === "text") return deliverText(config, to, body.text);
+        if (!config.template) {
+          return fail(
+            422,
+            "no_template",
+            "اختر قالب تذكير السلة من «إعدادات واتساب» في صفحة السلات المتروكة أولًا.",
+          );
+        }
         const couponCode = /^[\w-]{1,40}$/.test(String(body.couponCode || ""))
           ? body.couponCode
           : "";

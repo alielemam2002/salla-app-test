@@ -25,32 +25,25 @@ export function graphVersion(env = process.env) {
 }
 
 /**
- * Validate what the merchant typed. The token is optional when one is
- * already saved (leave it blank to keep it).
- * Returns { values } or { fields: { name: [message] } }.
+ * The account part: Phone Number ID, WABA ID and token. The token is
+ * optional when one is already saved (leave it blank to keep it).
  */
-export function validateSettingsInput(
-  input = {},
-  { hasSavedToken = false } = {},
-) {
+function checkAccount(input, { hasSavedToken, requireWaba }) {
   const fields = {};
   const phoneNumberId = String(input.phoneNumberId || "").trim();
   const wabaId = String(input.wabaId || "").trim();
   const accessToken = String(input.accessToken || "")
     .trim()
     .replace(/^Bearer\s+/i, "");
-  const template = String(input.template || "").trim();
-  const language = String(input.language || "").trim();
-  const params = Array.isArray(input.params)
-    ? input.params.map((p) => String(p).trim()).filter(Boolean)
-    : [];
-
   if (!ID_RE.test(phoneNumberId))
     fields.phoneNumberId = [
       "استخدم معرّف رقم الهاتف (أرقام فقط) من إعداد واجهة البرمجة",
     ];
-  if (wabaId && !ID_RE.test(wabaId))
+  if (requireWaba && !wabaId) {
+    fields.wabaId = ["معرّف حساب واتساب للأعمال مطلوب لعرض قوالبك"];
+  } else if (wabaId && !ID_RE.test(wabaId)) {
     fields.wabaId = ["استخدم معرّف حساب واتساب للأعمال (أرقام فقط)"];
+  }
   if (accessToken) {
     if (accessToken.length < 20 || /\s/.test(accessToken)) {
       fields.accessToken = ["لا يبدو هذا رمز وصول صالحًا من Meta"];
@@ -58,6 +51,41 @@ export function validateSettingsInput(
   } else if (!hasSavedToken) {
     fields.accessToken = ["رمز الوصول مطلوب"];
   }
+  return { fields, values: { phoneNumberId, wabaId, accessToken } };
+}
+
+/**
+ * Settings page: the account only (Returns { values } or { fields }).
+ * Templates come from Meta, not from typing.
+ */
+export function validateAccountInput(
+  input = {},
+  { hasSavedToken = false } = {},
+) {
+  const { fields, values } = checkAccount(input, {
+    hasSavedToken,
+    requireWaba: true,
+  });
+  return Object.keys(fields).length ? { fields } : { values };
+}
+
+/**
+ * Validate what the merchant typed (account + cart reminder template).
+ * Returns { values } or { fields: { name: [message] } }.
+ */
+export function validateSettingsInput(
+  input = {},
+  { hasSavedToken = false } = {},
+) {
+  const account = checkAccount(input, { hasSavedToken, requireWaba: false });
+  const fields = { ...account.fields };
+  const { phoneNumberId, wabaId, accessToken } = account.values;
+  const template = String(input.template || "").trim();
+  const language = String(input.language || "").trim();
+  const params = Array.isArray(input.params)
+    ? input.params.map((p) => String(p).trim()).filter(Boolean)
+    : [];
+
   if (!TEMPLATE_NAME_RE.test(template)) {
     fields.template = [
       "اسم القالب يتكون من أحرف إنجليزية صغيرة وأرقام و _ فقط",
@@ -103,6 +131,40 @@ export async function saveSettings(merchantId, values, { stored, profile }) {
   return record;
 }
 
+/**
+ * Save the account from the Settings page. The cart reminder template (if
+ * any) is kept; features pick templates separately.
+ */
+export async function saveAccount(merchantId, values, { stored, profile }) {
+  const record = {
+    ...(stored || {}),
+    phoneNumberId: values.phoneNumberId,
+    wabaId: values.wabaId,
+    token: values.accessToken ? seal(values.accessToken) : stored.token,
+    tokenLast4: values.accessToken
+      ? values.accessToken.slice(-4)
+      : stored.tokenLast4,
+    profile: profile || null,
+    enabled: stored?.enabled ?? true,
+    updatedAt: new Date().toISOString(),
+  };
+  await kvSetJson(keyFor(merchantId), record);
+  return record;
+}
+
+// The merchant's templates as last read from Meta (Settings → Templates).
+const templatesKey = (merchantId) => `wa:templates:${merchantId}`;
+
+export function loadTemplates(merchantId) {
+  return kvGetJson(templatesKey(merchantId));
+}
+
+export async function saveTemplates(merchantId, templates) {
+  const snapshot = { syncedAt: new Date().toISOString(), templates };
+  await kvSetJson(templatesKey(merchantId), snapshot);
+  return snapshot;
+}
+
 /** Turn sending from the app on or off, keeping everything else. */
 export async function setEnabled(merchantId, stored, enabled) {
   const record = {
@@ -116,6 +178,7 @@ export async function setEnabled(merchantId, stored, enabled) {
 
 export async function deleteSettings(merchantId) {
   await kvDel(keyFor(merchantId));
+  await kvDel(templatesKey(merchantId));
 }
 
 /** What the browser may see: never the token, only its last 4 characters. */

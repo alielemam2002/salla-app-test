@@ -4,6 +4,7 @@ import {
   Package,
   Puzzle,
   Repeat,
+  Settings,
   ShoppingCart,
   TicketPercent,
 } from "lucide-react";
@@ -20,6 +21,7 @@ export const APP_TABS = [
   { id: "campaigns", label: "حملات واتساب", icon: Megaphone },
   { id: "replenish", label: "إعادة الشراء", icon: Repeat },
   { id: "addons", label: "الإضافات", icon: Puzzle },
+  { id: "settings", label: "الإعدادات", icon: Settings },
 ];
 
 export const DEFAULT_TAB = APP_TABS[0].id;

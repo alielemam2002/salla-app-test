@@ -1,5 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
-import { Alert, Button, ConfirmDialog, Skeleton } from "../ui/index.js";
+import { BellRing, Users } from "lucide-react";
+import {
+  Alert,
+  Button,
+  ConfirmDialog,
+  SegmentedTabs,
+  Skeleton,
+} from "../ui/index.js";
 import { useClipboard } from "../../hooks/ui/useClipboard.js";
 import { useCouponsQuery } from "../../hooks/coupons/useCoupons.js";
 import {
@@ -14,7 +21,9 @@ import {
 import ReplenishSettingsCard from "./ReplenishSettingsCard.jsx";
 import ProductCyclesCard from "./ProductCyclesCard.jsx";
 import RemindersCard from "./RemindersCard.jsx";
+import CustomerOrdersCard from "./CustomerOrdersCard.jsx";
 import ReplenishMessageModal from "./ReplenishMessageModal.jsx";
+import ManualReminderModal from "./ManualReminderModal.jsx";
 
 /**
  * Smart replenishment: consumption days per product, reminders scheduled
@@ -35,6 +44,8 @@ export default function ReplenishTab({ embedded, showToast }) {
   const { copy } = useClipboard();
   const [toCancel, setToCancel] = useState(null);
   const [selectedForMessage, setSelectedForMessage] = useState(null);
+  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("reminders");
 
   const activeCoupons = useMemo(
     () =>
@@ -90,6 +101,61 @@ export default function ReplenishTab({ embedded, showToast }) {
         }}
       />
 
+      <div style={{ margin: "4px 0" }}>
+        <SegmentedTabs
+          tabs={[
+            {
+              id: "reminders",
+              label: "التذكيرات المجدولة",
+              icon: BellRing,
+              badge:
+                reminders.filter((r) => r.status === "scheduled").length ||
+                undefined,
+            },
+            {
+              id: "orders",
+              label: "سجل مبيعات وطلبات العملاء",
+              icon: Users,
+              badge: reminders.length || undefined,
+            },
+          ]}
+          activeTab={activeSection}
+          onTabChange={setActiveSection}
+          variant="pill"
+          ariaLabel="أقسام التذكيرات والطلبات"
+        />
+      </div>
+
+      {activeSection === "orders" ? (
+        <CustomerOrdersCard
+          reminders={reminders}
+          cycles={cycles}
+          customMessageTemplate={query.data?.settings?.customMessage}
+          couponCode={query.data?.settings?.couponCode}
+          onOpenMessage={setSelectedForMessage}
+          onNewManualReminder={() => setIsManualModalOpen(true)}
+        />
+      ) : (
+        <RemindersCard
+          reminders={reminders}
+          busy={sendNow.isPending ? sendNow.variables : null}
+          customMessageTemplate={query.data?.settings?.customMessage}
+          couponCode={query.data?.settings?.couponCode}
+          onOpenMessage={setSelectedForMessage}
+          onSendNow={(reminder) =>
+            sendNow.mutate(reminder.id, {
+              onSuccess: () =>
+                showToast?.(
+                  `قبلت Meta التذكير الموجّه إلى ${reminder.customerName || "العميل"}`,
+                  "success",
+                ),
+              onError,
+            })
+          }
+          onCancel={setToCancel}
+        />
+      )}
+
       <ProductCyclesCard
         cycles={cycles}
         productsQuery={products}
@@ -117,25 +183,6 @@ export default function ReplenishTab({ embedded, showToast }) {
         }
       />
 
-      <RemindersCard
-        reminders={reminders}
-        busy={sendNow.isPending ? sendNow.variables : null}
-        customMessageTemplate={query.data?.settings?.customMessage}
-        couponCode={query.data?.settings?.couponCode}
-        onOpenMessage={setSelectedForMessage}
-        onSendNow={(reminder) =>
-          sendNow.mutate(reminder.id, {
-            onSuccess: () =>
-              showToast?.(
-                `قبلت Meta التذكير الموجّه إلى ${reminder.customerName || "العميل"}`,
-                "success",
-              ),
-            onError,
-          })
-        }
-        onCancel={setToCancel}
-      />
-
       <ReplenishMessageModal
         isOpen={Boolean(selectedForMessage)}
         onClose={() => setSelectedForMessage(null)}
@@ -143,6 +190,22 @@ export default function ReplenishTab({ embedded, showToast }) {
         defaultTemplate={query.data?.settings?.customMessage}
         couponCode={query.data?.settings?.couponCode}
         showToast={showToast}
+      />
+
+      <ManualReminderModal
+        isOpen={isManualModalOpen}
+        onClose={() => setIsManualModalOpen(false)}
+        products={products.data?.products || []}
+        cycles={cycles}
+        defaultTemplate={query.data?.settings?.customMessage}
+        couponCode={query.data?.settings?.couponCode}
+        showToast={showToast}
+        onSent={(rem) => {
+          showToast?.(
+            `تم تجهيز تذكير ${rem.customerName || "العميل"} وإرساله عبر واتساب`,
+            "success",
+          );
+        }}
       />
 
       <ConfirmDialog

@@ -22,6 +22,9 @@ export const STOCK_ALERTS_FUNCTION_URL = "/api/stock-alerts";
 // Smart replenishment reminders (api/replenish.js)
 export const REPLENISH_FUNCTION_URL = "/api/replenish";
 
+// The merchant's store details for the Settings tab (api/store.js)
+export const STORE_FUNCTION_URL = "/api/store";
+
 // Store customers + groups for WhatsApp campaigns (api/customers.js)
 export const CUSTOMERS_FUNCTION_URL = "/api/customers";
 

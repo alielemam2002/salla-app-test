@@ -169,3 +169,76 @@ export function sendTemplate(config, message) {
     { method: "POST", body: message },
   );
 }
+
+/** Variables in a template text, in order: "{{1}}", "{{name}}" → ["1", "name"]. */
+export function templateVariables(text) {
+  const names = [];
+  for (const match of String(text || "").matchAll(/\{\{\s*([\w]+)\s*\}\}/g)) {
+    if (!names.includes(match[1])) names.push(match[1]);
+  }
+  return names;
+}
+
+/** A Meta template → what the app shows and (later) fills. No secrets. */
+export function normalizeTemplate(template) {
+  const components = Array.isArray(template.components)
+    ? template.components
+    : [];
+  const part = (type) =>
+    components.find((c) => String(c.type).toUpperCase() === type);
+  const header = part("HEADER");
+  const body = part("BODY")?.text || "";
+  const buttons = (part("BUTTONS")?.buttons || []).map((b) => ({
+    type: b.type,
+    text: b.text || "",
+    url: b.url || null,
+    phone: b.phone_number || null,
+  }));
+  return {
+    id: String(template.id),
+    name: template.name,
+    language: template.language,
+    status: template.status,
+    category: template.category,
+    parameterFormat: template.parameter_format || "POSITIONAL",
+    header: header
+      ? { format: header.format || "TEXT", text: header.text || null }
+      : null,
+    body,
+    footer: part("FOOTER")?.text || null,
+    buttons,
+    variables: {
+      header: templateVariables(header?.text),
+      body: templateVariables(body),
+      // A URL button with {{1}} takes one value (e.g. the product link).
+      buttons: buttons.filter((b) => b.type === "URL" && /\{\{/.test(b.url))
+        .length,
+    },
+  };
+}
+
+const TEMPLATE_FIELDS =
+  "id,name,language,status,category,parameter_format,components";
+
+/**
+ * Every message template of a WhatsApp Business Account
+ * (GET /{waba-id}/message_templates, up to maxPages × 100). Needs the
+ * whatsapp_business_management permission on the token.
+ * Resolves to { ok, templates } or { ok: false, … metaFailure }.
+ */
+export async function fetchTemplates(config, wabaId, { maxPages = 5 } = {}) {
+  const base = `${encodeURIComponent(wabaId)}/message_templates?fields=${TEMPLATE_FIELDS}&limit=100`;
+  const templates = [];
+  let path = base;
+  for (let page = 0; page < maxPages && path; page += 1) {
+    const result = await graphRequest(config, path);
+    if (!result.ok) return { ok: false, ...metaFailure(result) };
+    templates.push(...(result.json.data || []).map(normalizeTemplate));
+    const after = result.json.paging?.cursors?.after;
+    path =
+      result.json.paging?.next && after
+        ? `${base}&after=${encodeURIComponent(after)}`
+        : null;
+  }
+  return { ok: true, templates };
+}
