@@ -7,41 +7,10 @@ import {
 } from "../../../../api/salla-webhook.js";
 import { POST as alertsApi } from "../../../../api/stock-alerts.js";
 import { stockLevel } from "../stockModel.js";
+import { fakeRedis } from "../../../test/fakeRedis.js";
 
 const KV_URL = "https://kv.example.upstash.io";
 const SECRET = "webhook-secret-value";
-
-/** In-memory Redis for the commands the alerts use. */
-function fakeRedis() {
-  const store = new Map();
-  const run = ([cmd, key, ...args]) => {
-    switch (cmd) {
-      case "GET":
-        return store.get(key) ?? null;
-      case "SET":
-        if (args.includes("NX") && store.has(key)) return null;
-        store.set(key, args[0]);
-        return "OK";
-      case "DEL":
-        store.delete(key);
-        return 1;
-      case "LPUSH":
-        store.set(key, [...args.reverse(), ...(store.get(key) || [])]);
-        return store.get(key).length;
-      case "LTRIM":
-        store.set(key, (store.get(key) || []).slice(0, Number(args[1]) + 1));
-        return "OK";
-      case "LRANGE":
-        return (store.get(key) || []).slice(
-          Number(args[0]),
-          Number(args[1]) + 1,
-        );
-      default:
-        throw new Error(`unexpected redis command ${cmd}`);
-    }
-  };
-  return { store, run };
-}
 
 /** Salla (introspect, store info, products) + Upstash; records calls. */
 function mockNetwork({
@@ -192,6 +161,7 @@ describe("api/salla-webhook", () => {
       success: true,
       handled: true,
       alerts: 2,
+      reminders: 0,
     });
 
     const alerts = redis.store.get("alerts:1").map((a) => JSON.parse(a));

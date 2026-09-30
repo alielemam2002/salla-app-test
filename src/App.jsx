@@ -11,6 +11,7 @@ import CouponsTab from "./components/Coupons/CouponsTab.jsx";
 import CartRecoveryTab from "./components/CartRecovery/CartRecoveryTab.jsx";
 import CampaignsTab from "./components/Campaigns/CampaignsTab.jsx";
 import AlertsTab from "./components/Alerts/AlertsTab.jsx";
+import ReplenishTab from "./components/Replenish/ReplenishTab.jsx";
 
 function AppContent() {
   const { sdk, connection, messageLog, activeTab, setActiveTab, showToast } =
@@ -39,6 +40,9 @@ function AppContent() {
       )}
       {activeTab === "campaigns" && (
         <CampaignsTab embedded={embedded} showToast={showToast} />
+      )}
+      {activeTab === "replenish" && (
+        <ReplenishTab embedded={embedded} showToast={showToast} />
       )}
       {activeTab === "addons" && (
         <AddonsTab

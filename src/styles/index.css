@@ -19,4 +19,5 @@
 @import "./features/coupons.css";
 @import "./features/cart-recovery.css";
 @import "./features/alerts.css";
+@import "./features/replenish.css";
 @import "./ui/kit.css";

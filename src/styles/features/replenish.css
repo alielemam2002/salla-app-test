@@ -1,0 +1,100 @@
+/* ---------- Replenish (smart replenishment reminders) ---------- */
+
+.replenish-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.replenish-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg) var(--space-lg);
+}
+
+.replenish-body .form-row {
+  margin: 0;
+}
+
+.replenish-list {
+  margin: 0;
+  padding-inline-start: 1.1rem;
+}
+
+.replenish-sample summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.replenish-sample-box {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  margin-block: var(--space-sm);
+}
+
+.replenish-sample-box pre {
+  flex: 1;
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+  font-family: inherit;
+  white-space: pre-wrap;
+}
+
+.replenish-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-sm) var(--space-md);
+}
+
+.replenish-actions,
+.replenish-test,
+.replenish-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+}
+
+.replenish-test .form-input,
+.replenish-search .ui-input-affix,
+.replenish-search .form-input {
+  flex: 1 1 220px;
+  max-inline-size: 360px;
+}
+
+.replenish-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.replenish-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 2px var(--space-xs) 2px var(--space-sm);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+}
+
+.replenish-days {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.replenish-days .form-input {
+  inline-size: 90px;
+}

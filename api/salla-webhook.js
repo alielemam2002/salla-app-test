@@ -12,8 +12,11 @@
  * Both are compared timing-safe, over the raw bytes as received.
  *
  * Handled events:
- * - order.created → stock alerts for products at or under the merchant's
- *   threshold (api/_lib/stockAlerts.js)
+ * - order.created → replenishment reminders for products with a cycle
+ *   (api/_lib/replenish.js; no Salla API call), then stock alerts for
+ *   products at or under the merchant's threshold (api/_lib/stockAlerts.js)
+ * - order.cancelled / order.refunded / order.deleted → that order's
+ *   replenishment reminders are cancelled
  * Every other event (including app events, which can carry OAuth tokens) is
  * acknowledged and ignored; request bodies are never logged.
  */
@@ -22,6 +25,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { kvConfigured } from "./_lib/kv.js";
 import { tokenStoreId } from "./_lib/salla.js";
 import { recordOrderAlerts } from "./_lib/stockAlerts.js";
+import { cancelOrderReminders, scheduleFromOrder } from "./_lib/replenish.js";
 
 const ok = (extra = {}) => Response.json({ success: true, ...extra });
 const fail = (status, error) =>
@@ -66,6 +70,12 @@ export const resetStoreCache = () => {
   storeCache = { at: 0, value: null };
 };
 
+const CANCEL_EVENTS = new Set([
+  "order.cancelled",
+  "order.refunded",
+  "order.deleted",
+]);
+
 // Retrying won't help until someone replaces the token or adds the scope.
 const PERMANENT = new Set([
   "token_expired",
@@ -90,20 +100,44 @@ export async function POST(request) {
 
   const event = String(payload?.event || "");
   const merchantId = String(payload?.merchant ?? "");
-  if (event !== "order.created") return ok({ handled: false });
+  if (event !== "order.created" && !CANCEL_EVENTS.has(event)) {
+    return ok({ handled: false });
+  }
   if (!merchantId || !kvConfigured()) {
     return ok({ handled: false, reason: "storage_not_configured" });
+  }
+
+  if (CANCEL_EVENTS.has(event)) {
+    try {
+      const cancelled = await cancelOrderReminders(
+        merchantId,
+        payload.data?.id,
+      );
+      return ok({ handled: true, cancelled });
+    } catch (error) {
+      console.error(`Webhook ${event} failed:`, error.code || error.message);
+      return fail(500, "Temporary failure");
+    }
+  }
+
+  // Replenishment first: it only uses the payload and storage.
+  let reminders = 0;
+  try {
+    reminders = await scheduleFromOrder(merchantId, payload.data);
+  } catch (error) {
+    console.error("Webhook replenish failed:", error.code || error.message);
+    return fail(500, "Temporary failure");
   }
 
   // One SALLA_ACCESS_TOKEN: only its own store's products can be read.
   const store = await cachedStoreId();
   if (!store.ok || store.id !== merchantId) {
-    return ok({ handled: false, reason: "other_store" });
+    return ok({ handled: false, reason: "other_store", reminders });
   }
 
   try {
     const alerts = await recordOrderAlerts(merchantId, payload.data);
-    return ok({ handled: true, alerts });
+    return ok({ handled: true, alerts, reminders });
   } catch (error) {
     console.error("Webhook order.created failed:", error.code || error.message);
     if (PERMANENT.has(error.code)) {

@@ -8,8 +8,8 @@
  * Otherwise they can still send manually (wa.me).
  */
 
-import { kvDel, kvGetJson, kvSetJson } from "./kv.js";
-import { open, seal } from "./secretBox.js";
+import { kvConfigured, kvDel, kvGetJson, kvSetJson } from "./kv.js";
+import { encryptionConfigured, open, seal } from "./secretBox.js";
 import { ALLOWED_PARAMS, DEFAULT_GRAPH_VERSION } from "./whatsappGraph.js";
 
 const keyFor = (merchantId) => `wa:settings:${merchantId}`;
@@ -145,4 +145,24 @@ export function recordToConfig(record, env = process.env) {
     invalidParams: (record.params || []).filter((p) => !ALLOWED_PARAMS.has(p)),
     version: graphVersion(env),
   };
+}
+
+/** Upstash Redis and WA_SETTINGS_KEY are both set up on the server. */
+export const storageReady = () => kvConfigured() && encryptionConfigured();
+
+/**
+ * The merchant's own WhatsApp setup; there is no shared fallback.
+ * `unreadable`: saved with a different WA_SETTINGS_KEY, so the token must
+ * be entered again.
+ */
+export async function resolveConfig(merchantId) {
+  if (!storageReady()) return { stored: null, config: null, enabled: false };
+  const stored = await loadStored(merchantId);
+  if (!stored) return { stored: null, config: null, enabled: false };
+  const enabled = stored.enabled !== false;
+  try {
+    return { stored, enabled, config: recordToConfig(stored) };
+  } catch {
+    return { stored, enabled, config: null, unreadable: true };
+  }
 }

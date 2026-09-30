@@ -26,8 +26,7 @@
  */
 
 import { introspectEmbeddedToken, merchantApi } from "./_lib/salla.js";
-import { kvConfigured } from "./_lib/kv.js";
-import { encryptionConfigured, open } from "./_lib/secretBox.js";
+import { open } from "./_lib/secretBox.js";
 import {
   buildTemplateMessage,
   buildTextMessage,
@@ -41,9 +40,10 @@ import {
   graphVersion,
   loadStored,
   publicSettings,
-  recordToConfig,
+  resolveConfig,
   saveSettings,
   setEnabled,
+  storageReady,
   LANGUAGE_RE,
   TEMPLATE_NAME_RE,
   validateSettingsInput,
@@ -62,22 +62,6 @@ const ERROR_STATUS = {
 
 const fail = (status, code, error, extra = {}) =>
   Response.json({ success: false, status, code, error, ...extra }, { status });
-
-const storageReady = () => kvConfigured() && encryptionConfigured();
-
-/** The merchant's own WhatsApp setup; there is no shared fallback. */
-async function resolveConfig(merchantId) {
-  if (!storageReady()) return { stored: null, config: null, enabled: false };
-  const stored = await loadStored(merchantId);
-  if (!stored) return { stored: null, config: null, enabled: false };
-  const enabled = stored.enabled !== false;
-  try {
-    return { stored, enabled, config: recordToConfig(stored) };
-  } catch {
-    // Saved with a different WA_SETTINGS_KEY: the token must be re-entered.
-    return { stored, enabled, config: null, unreadable: true };
-  }
-}
 
 const notConnected = (unreadable) =>
   fail(

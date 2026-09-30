@@ -19,6 +19,9 @@ export const WHATSAPP_FUNCTION_URL = "/api/whatsapp";
 // Stock alerts for the merchant: order alerts + stock scan (api/stock-alerts.js)
 export const STOCK_ALERTS_FUNCTION_URL = "/api/stock-alerts";
 
+// Smart replenishment reminders (api/replenish.js)
+export const REPLENISH_FUNCTION_URL = "/api/replenish";
+
 // Store customers + groups for WhatsApp campaigns (api/customers.js)
 export const CUSTOMERS_FUNCTION_URL = "/api/customers";
 

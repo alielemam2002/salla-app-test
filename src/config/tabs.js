@@ -3,6 +3,7 @@ import {
   Megaphone,
   Package,
   Puzzle,
+  Repeat,
   ShoppingCart,
   TicketPercent,
 } from "lucide-react";
@@ -17,6 +18,7 @@ export const APP_TABS = [
   { id: "coupons", label: "الكوبونات", icon: TicketPercent },
   { id: "cart-recovery", label: "السلات المتروكة", icon: ShoppingCart },
   { id: "campaigns", label: "حملات واتساب", icon: Megaphone },
+  { id: "replenish", label: "إعادة الشراء", icon: Repeat },
   { id: "addons", label: "الإضافات", icon: Puzzle },
 ];
 
