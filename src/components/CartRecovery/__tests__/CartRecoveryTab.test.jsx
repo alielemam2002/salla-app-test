@@ -342,7 +342,7 @@ describe("CartRecoveryTab", () => {
       }),
     );
     await waitFor(() =>
-      expect(sendCartWhatsApp).toHaveBeenCalledWith("tok", 11, ""),
+      expect(sendCartWhatsApp).toHaveBeenCalledWith("tok", 11, "", undefined),
     );
     expect(
       await screen.findByText(/أُرسلت من التطبيق الآن/),
@@ -355,6 +355,31 @@ describe("CartRecoveryTab", () => {
     expect(
       screen.getByRole("button", { name: "إرسال عبر واتساب إلى Ahmed Ali" }),
     ).toBeDisabled();
+  });
+
+  it("sends the written message as normal text when chosen", async () => {
+    fetchWhatsAppStatus.mockResolvedValue(CONFIGURED);
+    sendCartWhatsApp.mockResolvedValue({ success: true, messageId: "wamid.2" });
+    renderTab();
+    fireEvent.click(await screen.findByRole("tab", { name: "رسالة نصية" }));
+    expect(
+      screen.getByText(/راسلك العميل خلال آخر 24 ساعة/),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "إرسال عبر واتساب إلى Ahmed Ali",
+      }),
+    );
+    await waitFor(() => expect(sendCartWhatsApp).toHaveBeenCalledTimes(1));
+    const [token, cartId, , options] = sendCartWhatsApp.mock.calls[0];
+    expect([token, cartId]).toEqual(["tok", 11]);
+    expect(options.mode).toBe("text");
+    // The editor's message, filled in for this cart.
+    expect(options.text).toContain("Ahmed");
+    expect(options.text).toContain("SAR 420");
+    expect(options.text).toContain("https://salla.sa/store/checkout/11");
+    expect(options.text).not.toContain("{{");
   });
 
   it("shows why Meta rejected a message on the cart's row", async () => {
@@ -399,7 +424,7 @@ describe("CartRecoveryTab", () => {
       expect(screen.getByText(/آخر عملية: 1 قبلتها Meta/)).toBeInTheDocument(),
     );
     expect(sendCartWhatsApp).toHaveBeenCalledTimes(1);
-    expect(sendCartWhatsApp).toHaveBeenCalledWith("tok", 11, "");
+    expect(sendCartWhatsApp).toHaveBeenCalledWith("tok", 11, "", undefined);
     expect(maxInFlight).toBe(1);
   });
 

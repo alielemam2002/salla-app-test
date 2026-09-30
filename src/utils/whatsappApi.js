@@ -39,8 +39,17 @@ export function fetchWhatsAppStatus(token) {
 }
 
 /** Send the reminder template for one cart (the server reads the cart). */
-export function sendCartWhatsApp(token, cartId, couponCode) {
-  return callWhatsAppApi({ action: "send", token, cartId, couponCode });
+export function sendCartWhatsApp(token, cartId, couponCode, options = {}) {
+  // mode "text" sends `text` as a normal message (24-hour window only).
+  const extra =
+    options.mode === "text" ? { mode: "text", text: options.text } : {};
+  return callWhatsAppApi({
+    action: "send",
+    token,
+    cartId,
+    couponCode,
+    ...extra,
+  });
 }
 
 /** The merchant's saved WhatsApp settings (token masked) + storage state. */

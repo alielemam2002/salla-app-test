@@ -409,3 +409,15 @@
     padding-inline-start: 0;
   }
 }
+
+/* Message type for in-app sending (approved template / normal text) */
+.cart-send-mode {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  align-items: flex-start;
+}
+
+.cart-send-mode .form-hint {
+  margin: 0;
+}

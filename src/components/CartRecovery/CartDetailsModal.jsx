@@ -187,6 +187,8 @@ export default function CartDetailsModal({
                 sender={api.sender}
                 apiSends={api.sends}
                 couponCode={api.couponCode}
+                mode={api.mode}
+                text={api.mode === "text" ? messageFor(cart) : ""}
                 onResult={api.onResult}
                 disabledReason={purchased ? "أكمل العميل الطلب بالفعل" : null}
               />

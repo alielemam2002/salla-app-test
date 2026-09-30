@@ -156,11 +156,11 @@ export function useWhatsAppSender(getToken) {
     });
 
   const send = useCallback(
-    async (cartId, couponCode) => {
+    async (cartId, couponCode, options) => {
       const token = getToken();
       mark(cartId, true);
       const result = token
-        ? await sendCartWhatsApp(token, cartId, couponCode)
+        ? await sendCartWhatsApp(token, cartId, couponCode, options)
         : noToken;
       mark(cartId, false);
       if (result.success) {
@@ -179,7 +179,7 @@ export function useWhatsAppSender(getToken) {
   );
 
   const sendMany = useCallback(
-    async (carts, couponCode) => {
+    async (carts, couponCode, { mode, textFor } = {}) => {
       const sends = apiSendsStore.get();
       const targets = carts.filter(
         (cart) =>
@@ -202,7 +202,11 @@ export function useWhatsAppSender(getToken) {
           tally.stopped = true;
           break;
         }
-        const result = await send(cart.id, couponCode);
+        const result = await send(
+          cart.id,
+          couponCode,
+          mode === "text" ? { mode, text: textFor(cart) } : undefined,
+        );
         tally.done += 1;
         if (result.success) tally.sent += 1;
         else tally.failed += 1;

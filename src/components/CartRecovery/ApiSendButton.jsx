@@ -12,6 +12,8 @@ export default function ApiSendButton({
   sender,
   apiSends,
   couponCode,
+  mode = "template",
+  text = "",
   onResult,
   disabledReason,
 }) {
@@ -34,7 +36,11 @@ export default function ApiSendButton({
       loading={busy}
       aria-label={`إرسال عبر واتساب إلى ${cart.customer?.name || "العميل"}`}
       onClick={async () => {
-        const result = await sender.send(cart.id, couponCode);
+        const result = await sender.send(
+          cart.id,
+          couponCode,
+          mode === "text" ? { mode, text } : undefined,
+        );
         onResult?.(cart, result);
       }}
     >

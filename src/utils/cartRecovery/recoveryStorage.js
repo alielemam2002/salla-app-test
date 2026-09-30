@@ -15,6 +15,9 @@ export const DEFAULT_SETTINGS = {
   locale: "ar",
   templates: DEFAULT_TEMPLATES,
   couponCode: "",
+  // What the in-app "Send" buttons send: "template" (approved template) or
+  // "text" (the message below as a normal message, 24-hour window only).
+  sendMode: "template",
 };
 
 export const settingsStore = createLocalStore(

@@ -15,7 +15,9 @@
  * - settings_delete  forget the merchant's settings
  * - send_test        send the template with sample values to a number
  * - send             send the template for one abandoned cart; the cart is
- *                    read from Salla (GET /admin/v2/carts/abandoned/{id})
+ *                    read from Salla (GET /admin/v2/carts/abandoned/{id}).
+ *                    With mode "text", sends the merchant's text instead
+ *                    (WhatsApp delivers it only inside the 24-hour window)
  * - send_campaign    send a campaign template to one customer (the browser
  *                    sends a campaign one customer at a time)
  *
@@ -28,6 +30,7 @@ import { kvConfigured } from "./_lib/kv.js";
 import { encryptionConfigured, open } from "./_lib/secretBox.js";
 import {
   buildTemplateMessage,
+  buildTextMessage,
   cleanParam,
   fetchPhoneProfile,
   metaFailure,
@@ -140,8 +143,19 @@ async function deliver(config, to, values) {
   }
   const message = buildTemplateMessage(config, to, values);
   if (message.error) return fail(422, "missing_value", message.error);
+  return post(config, message.body);
+}
 
-  const result = await sendTemplate(config, message.body);
+/** Send a free-form text message (24-hour window only); returns a Response. */
+async function deliverText(config, to, text) {
+  const message = buildTextMessage(to, text);
+  if (message.error) return fail(422, "missing_value", message.error);
+  return post(config, message.body);
+}
+
+/** POST a built message to Meta and turn the answer into a Response. */
+async function post(config, messageBody) {
+  const result = await sendTemplate(config, messageBody);
   if (!result.ok) {
     const failure = metaFailure(result);
     console.error("WhatsApp send failed:", failure.metaCode);
@@ -337,6 +351,10 @@ export async function POST(request) {
             "لا يوجد رقم جوال دولي لهذا العميل في سلة.",
           );
         }
+        // "text": the merchant's own message, delivered only if the customer
+        // wrote to the store in the last 24 hours. The number still comes
+        // from Salla's cart, never from the browser.
+        if (body.mode === "text") return deliverText(config, to, body.text);
         const couponCode = /^[\w-]{1,40}$/.test(String(body.couponCode || ""))
           ? body.couponCode
           : "";

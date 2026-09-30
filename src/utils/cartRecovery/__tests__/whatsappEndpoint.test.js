@@ -341,6 +341,75 @@ describe("api/whatsapp", () => {
     });
   });
 
+  it("sends a normal text message to the cart's customer", async () => {
+    const { calls } = mockNetwork();
+    await connect();
+    const res = await call({
+      action: "send",
+      cartId: 77,
+      mode: "text",
+      text: "مرحبًا أحمد\nأكمل طلبك: https://salla.sa/store/checkout/77",
+      // A number from the browser is ignored: Salla's cart decides.
+      to: "+201111111111",
+    });
+    expect((await res.json()).success).toBe(true);
+    const send = calls.find((c) => c.url.endsWith("/messages"));
+    expect(send.body).toEqual({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: "966560000001",
+      type: "text",
+      text: {
+        preview_url: true,
+        body: "مرحبًا أحمد\nأكمل طلبك: https://salla.sa/store/checkout/77",
+      },
+    });
+  });
+
+  it("explains the 24-hour rule when Meta refuses a text message", async () => {
+    mockNetwork({
+      meta: ({ url }) =>
+        url.endsWith("/messages")
+          ? {
+              status: 400,
+              body: {
+                error: { code: 131047, message: "Re-engagement message" },
+              },
+            }
+          : null,
+    });
+    await connect();
+    const res = await call({
+      action: "send",
+      cartId: 77,
+      mode: "text",
+      text: "hi",
+    });
+    expect(res.status).toBe(422);
+    expect((await res.json()).error).toMatch(/آخر 24 ساعة/);
+  });
+
+  it("won't send an empty text or skip the switch", async () => {
+    const { calls } = mockNetwork();
+    await connect();
+    const empty = await call({
+      action: "send",
+      cartId: 77,
+      mode: "text",
+      text: "  ",
+    });
+    expect(empty.status).toBe(422);
+    await call({ action: "settings_enable", enabled: false });
+    const off = await call({
+      action: "send",
+      cartId: 77,
+      mode: "text",
+      text: "hi",
+    });
+    expect(off.status).toBe(403);
+    expect(calls.some((c) => c.url.endsWith("/messages"))).toBe(false);
+  });
+
   it("sends a test with sample data to a given number", async () => {
     const { calls } = mockNetwork();
     await connect();

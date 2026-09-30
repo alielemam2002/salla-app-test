@@ -7,6 +7,7 @@ import {
   Checkbox,
   ConfirmDialog,
   EmptyState,
+  SegmentedTabs,
   Select,
   Skeleton,
   TextInput,
@@ -144,8 +145,15 @@ export default function CartRecoveryTab({ embedded, showToast }) {
       ),
     [showToast],
   );
+  const sendMode = settings.sendMode === "text" ? "text" : "template";
   const api = apiEnabled
-    ? { sender, sends: apiSends, couponCode, onResult: onApiResult }
+    ? {
+        sender,
+        sends: apiSends,
+        couponCode,
+        mode: sendMode,
+        onResult: onApiResult,
+      }
     : null;
 
   // Carts the bulk send would actually message.
@@ -157,7 +165,10 @@ export default function CartRecoveryTab({ embedded, showToast }) {
   );
   const startBulk = async () => {
     setConfirmBulk(false);
-    const result = await sender.sendMany(bulkTargets, couponCode);
+    const result = await sender.sendMany(bulkTargets, couponCode, {
+      mode: sendMode,
+      textFor: messageFor,
+    });
     showToast?.(
       `قبلت Meta ${result.sent} من ${result.total} رسالة${result.failed ? `، وفشل إرسال ${result.failed}` : ""}.`,
       result.failed ? "warning" : "success",
@@ -310,6 +321,29 @@ export default function CartRecoveryTab({ embedded, showToast }) {
             />
           </div>
 
+          {apiEnabled && (
+            <div className="cart-send-mode">
+              <span className="form-label">
+                نوع الرسالة عند الإرسال من التطبيق
+              </span>
+              <SegmentedTabs
+                variant="pill"
+                ariaLabel="نوع الرسالة"
+                tabs={[
+                  { id: "template", label: "قالب معتمد" },
+                  { id: "text", label: "رسالة نصية" },
+                ]}
+                activeTab={sendMode}
+                onTabChange={(mode) => updateSettings({ sendMode: mode })}
+              />
+              <p className="form-hint">
+                {sendMode === "text"
+                  ? "تُرسل الرسالة المكتوبة في «رسالة واتساب» بالأسفل كنص عادي. تصل فقط إذا راسلك العميل خلال آخر 24 ساعة؛ غير ذلك سيرفضها واتساب ويظهر السبب بجانب السلة."
+                  : `يُرسل القالب المعتمد «${waStatus.data?.template || ""}». يصل لأي عميل في أي وقت.`}
+              </p>
+            </div>
+          )}
+
           {apiEnabled && !query.isPending && !query.isError && (
             <div className="cart-bulk">
               {sender.batch?.running ? (
@@ -361,9 +395,20 @@ export default function CartRecoveryTab({ embedded, showToast }) {
         cancelText="إلغاء"
       >
         <p>
-          سيتم إرسال القالب <strong dir="ltr">{waStatus.data?.template}</strong>{" "}
-          إلى {bulkTargets.length} عميل، واحدًا تلو الآخر. تُتخطى السلات التي
-          بلا رقم جوال دولي أو التي تمت مراسلتها من التطبيق خلال آخر 24 ساعة.
+          {sendMode === "text" ? (
+            <>
+              سيتم إرسال رسالتك كنص عادي إلى {bulkTargets.length} عميل، واحدًا
+              تلو الآخر. تصل فقط للعملاء الذين راسلوك خلال آخر 24 ساعة.
+            </>
+          ) : (
+            <>
+              سيتم إرسال القالب{" "}
+              <strong dir="ltr">{waStatus.data?.template}</strong> إلى{" "}
+              {bulkTargets.length} عميل، واحدًا تلو الآخر.
+            </>
+          )}{" "}
+          تُتخطى السلات التي بلا رقم جوال دولي أو التي تمت مراسلتها من التطبيق
+          خلال آخر 24 ساعة.
         </p>
       </ConfirmDialog>
 

@@ -66,7 +66,7 @@ export default function WhatsAppTemplateCard({
       <Card.Header
         icon={MessageSquareText}
         title="رسالة واتساب"
-        subtitle="تُستخدم مع كل أزرار واتساب اليدوية. تُحفظ في هذا المتصفح."
+        subtitle="تُستخدم مع زر واتساب اليدوي، ومع زر «إرسال» عند اختيار «رسالة نصية». تُحفظ في هذا المتصفح."
       />
       <div className="cart-template-body">
         <SegmentedTabs

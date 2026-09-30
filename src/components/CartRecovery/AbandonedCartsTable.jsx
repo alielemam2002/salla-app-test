@@ -78,6 +78,8 @@ const CartRow = memo(function CartRow({
               sender={api.sender}
               apiSends={api.sends}
               couponCode={api.couponCode}
+              mode={api.mode}
+              text={api.mode === "text" ? message : ""}
               onResult={api.onResult}
             />
           )}

@@ -24,7 +24,8 @@ const META_REASONS = {
     "رقم الاختبار من Meta يرسل فقط إلى المستلمين الذين أضفتهم في إعداد واجهة البرمجة.",
   131031: "حساب واتساب للأعمال مقيّد.",
   131042: "هناك مشكلة في الدفع على حساب واتساب للأعمال.",
-  131047: "انتهت نافذة الـ 24 ساعة؛ يمكن إرسال قالب معتمد فقط.",
+  131047:
+    "العميل لم يراسلك خلال آخر 24 ساعة، لذلك لا يسمح واتساب بالرسالة النصية. استخدم القالب المعتمد أو الإرسال اليدوي.",
   131049:
     "أوقفت Meta هذه الرسالة التسويقية للحد من عدد الرسائل لكل عميل. حاول بعد 24 ساعة.",
   131056: "عدد الرسائل إلى هذا العميل كبير في وقت قصير.",
@@ -133,6 +134,34 @@ export function buildTemplateMessage(config, to, values) {
   };
 }
 
+export const MAX_TEXT_LENGTH = 4096;
+
+/**
+ * Free-form text message. WhatsApp only delivers it inside the 24-hour
+ * window after the customer's last message to the business; otherwise
+ * Meta answers 131047. Returns { body } or { error }.
+ */
+export function buildTextMessage(to, text) {
+  const body = String(text ?? "")
+    .replace(/\r\n/g, "\n")
+    .trim();
+  if (!body) return { error: "اكتب نص الرسالة أولًا." };
+  if (body.length > MAX_TEXT_LENGTH) {
+    return { error: `الرسالة أطول من ${MAX_TEXT_LENGTH} حرف.` };
+  }
+  return {
+    body: {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "text",
+      // Shows a preview of the checkout link.
+      text: { preview_url: true, body },
+    },
+  };
+}
+
+/** POST any message body (template or text) to the sending number. */
 export function sendTemplate(config, message) {
   return graphRequest(
     config,
