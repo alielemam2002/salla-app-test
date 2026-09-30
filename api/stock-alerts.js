@@ -13,7 +13,7 @@
  * Env: Upstash (KV_REST_API_URL / KV_REST_API_TOKEN), SALLA_WEBHOOK_SECRET.
  */
 
-import { introspectEmbeddedToken } from "./_lib/salla.js";
+import { introspectEmbeddedToken, sallaApiFor } from "./_lib/salla.js";
 import { kvConfigured } from "./_lib/kv.js";
 import {
   clearAlerts,
@@ -31,7 +31,7 @@ import {
 } from "../src/utils/alerts/stockModel.js";
 
 const ERROR_STATUS = {
-  token_not_configured: 500,
+  store_not_authorized: 403,
   token_expired: 401,
   missing_scope: 403,
 };
@@ -108,7 +108,7 @@ export async function POST(request) {
         const { threshold } = storage
           ? await loadAlertSettings(merchantId)
           : { threshold: DEFAULT_THRESHOLD };
-        const result = await scanStock(threshold);
+        const result = await scanStock(sallaApiFor(merchantId), threshold);
         if (result.error) {
           return fail(
             result.status >= 400 ? result.status : 502,

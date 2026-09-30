@@ -14,6 +14,7 @@ import {
 import ReplenishSettingsCard from "./ReplenishSettingsCard.jsx";
 import ProductCyclesCard from "./ProductCyclesCard.jsx";
 import RemindersCard from "./RemindersCard.jsx";
+import ReplenishMessageModal from "./ReplenishMessageModal.jsx";
 
 /**
  * Smart replenishment: consumption days per product, reminders scheduled
@@ -33,6 +34,7 @@ export default function ReplenishTab({ embedded, showToast }) {
     useReplenishMutations(getToken);
   const { copy } = useClipboard();
   const [toCancel, setToCancel] = useState(null);
+  const [selectedForMessage, setSelectedForMessage] = useState(null);
 
   const activeCoupons = useMemo(
     () =>
@@ -118,6 +120,9 @@ export default function ReplenishTab({ embedded, showToast }) {
       <RemindersCard
         reminders={reminders}
         busy={sendNow.isPending ? sendNow.variables : null}
+        customMessageTemplate={query.data?.settings?.customMessage}
+        couponCode={query.data?.settings?.couponCode}
+        onOpenMessage={setSelectedForMessage}
         onSendNow={(reminder) =>
           sendNow.mutate(reminder.id, {
             onSuccess: () =>
@@ -129,6 +134,15 @@ export default function ReplenishTab({ embedded, showToast }) {
           })
         }
         onCancel={setToCancel}
+      />
+
+      <ReplenishMessageModal
+        isOpen={Boolean(selectedForMessage)}
+        onClose={() => setSelectedForMessage(null)}
+        reminder={selectedForMessage}
+        defaultTemplate={query.data?.settings?.customMessage}
+        couponCode={query.data?.settings?.couponCode}
+        showToast={showToast}
       />
 
       <ConfirmDialog

@@ -168,7 +168,7 @@ describe("AlertsTab", () => {
     });
     renderTab();
     expect(
-      await screen.findByText(/لا يملك صلاحية المنتجات/),
+      await screen.findByText(/يحتاج التطبيق إلى صلاحية المنتجات/),
     ).toBeInTheDocument();
   });
 });

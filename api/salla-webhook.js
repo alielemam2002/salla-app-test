@@ -1,9 +1,10 @@
 /**
- * Vercel Serverless Function - Salla webhooks (store events).
+ * Vercel Serverless Function - Salla webhooks (app + store events).
  *
- * Register this URL (https://<your-domain>/api/salla-webhook) in the
- * Partners Portal: My Apps → the app → Webhooks/Notifications, and add the
- * `order.created` event. Put the app's webhook secret in SALLA_WEBHOOK_SECRET.
+ * This is the app's webhook_url (Partners Portal / salla_apps connect, with
+ * webhook_security_strategy "signature"). App events (app.*) arrive here
+ * automatically; store events (order.*) need a subscription. Put the app's
+ * current webhook secret in SALLA_WEBHOOK_SECRET.
  * docs: https://docs.salla.dev/webhooks.md
  *
  * Security (X-Salla-Security-Strategy):
@@ -12,18 +13,27 @@
  * Both are compared timing-safe, over the raw bytes as received.
  *
  * Handled events:
+ * - app.store.authorize → save this store's OAuth tokens (Easy Mode: the
+ *   only way the app gets them; encrypted, api/_lib/merchantTokens.js)
+ * - app.uninstalled → forget this store's tokens
  * - order.created → replenishment reminders for products with a cycle
  *   (api/_lib/replenish.js; no Salla API call), then stock alerts for
  *   products at or under the merchant's threshold (api/_lib/stockAlerts.js)
  * - order.cancelled / order.refunded / order.deleted → that order's
  *   replenishment reminders are cancelled
- * Every other event (including app events, which can carry OAuth tokens) is
- * acknowledged and ignored; request bodies are never logged.
+ * Every other event is acknowledged and ignored. Request bodies are never
+ * logged: app.store.authorize carries the tokens.
  */
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { kvConfigured } from "./_lib/kv.js";
-import { tokenStoreId } from "./_lib/salla.js";
+import { encryptionConfigured } from "./_lib/secretBox.js";
+import { sallaApiFor } from "./_lib/salla.js";
+import {
+  deleteTokens,
+  parseAuthorize,
+  saveTokens,
+} from "./_lib/merchantTokens.js";
 import { recordOrderAlerts } from "./_lib/stockAlerts.js";
 import { cancelOrderReminders, scheduleFromOrder } from "./_lib/replenish.js";
 
@@ -55,21 +65,6 @@ export function verifySallaWebhook(headers, raw, secret) {
   return safeEqual(signature, expected);
 }
 
-// Which store SALLA_ACCESS_TOKEN belongs to, cached for a few minutes.
-const STORE_TTL_MS = 10 * 60 * 1000;
-let storeCache = { at: 0, value: null };
-async function cachedStoreId() {
-  if (storeCache.value?.ok && Date.now() - storeCache.at < STORE_TTL_MS) {
-    return storeCache.value;
-  }
-  const value = await tokenStoreId();
-  storeCache = { at: Date.now(), value };
-  return value;
-}
-export const resetStoreCache = () => {
-  storeCache = { at: 0, value: null };
-};
-
 const CANCEL_EVENTS = new Set([
   "order.cancelled",
   "order.refunded",
@@ -78,10 +73,41 @@ const CANCEL_EVENTS = new Set([
 
 // Retrying won't help until someone replaces the token or adds the scope.
 const PERMANENT = new Set([
+  "store_not_authorized",
   "token_expired",
   "missing_scope",
-  "token_not_configured",
+  "oauth_not_configured",
 ]);
+
+/** app.store.authorize / app.uninstalled for `merchantId`. */
+async function handleAppEvent(event, merchantId, data) {
+  if (!merchantId) return fail(400, "Missing merchant");
+  // Storage down: 503 so Salla retries (tokens are sent only once).
+  if (!kvConfigured() || !encryptionConfigured()) {
+    console.error("Webhook app event: storage or WA_SETTINGS_KEY missing");
+    return fail(503, "Storage is not configured");
+  }
+  if (event === "app.uninstalled") {
+    await deleteTokens(merchantId);
+    return ok({ handled: true });
+  }
+  const tokens = parseAuthorize(data);
+  if (!tokens) {
+    // Log the shape only, never the values.
+    console.error(
+      "app.store.authorize: malformed data",
+      Object.keys(data || {}),
+    );
+    return fail(400, "Malformed app.store.authorize payload");
+  }
+  await saveTokens(merchantId, tokens);
+  if (!tokens.scope.split(/\s+/).includes("offline_access")) {
+    console.warn(
+      `Store ${merchantId} authorized without offline_access: no refresh.`,
+    );
+  }
+  return ok({ handled: true });
+}
 
 export async function POST(request) {
   const secret = process.env.SALLA_WEBHOOK_SECRET;
@@ -100,6 +126,14 @@ export async function POST(request) {
 
   const event = String(payload?.event || "");
   const merchantId = String(payload?.merchant ?? "");
+  if (event === "app.store.authorize" || event === "app.uninstalled") {
+    try {
+      return await handleAppEvent(event, merchantId, payload.data);
+    } catch (error) {
+      console.error(`Webhook ${event} failed:`, error.code || error.message);
+      return fail(500, "Temporary failure");
+    }
+  }
   if (event !== "order.created" && !CANCEL_EVENTS.has(event)) {
     return ok({ handled: false });
   }
@@ -129,19 +163,18 @@ export async function POST(request) {
     return fail(500, "Temporary failure");
   }
 
-  // One SALLA_ACCESS_TOKEN: only its own store's products can be read.
-  const store = await cachedStoreId();
-  if (!store.ok || store.id !== merchantId) {
-    return ok({ handled: false, reason: "other_store", reminders });
-  }
-
   try {
-    const alerts = await recordOrderAlerts(merchantId, payload.data);
+    // The store's own token: the signed payload names the store.
+    const alerts = await recordOrderAlerts(
+      sallaApiFor(merchantId),
+      merchantId,
+      payload.data,
+    );
     return ok({ handled: true, alerts, reminders });
   } catch (error) {
     console.error("Webhook order.created failed:", error.code || error.message);
     if (PERMANENT.has(error.code)) {
-      return ok({ handled: false, reason: error.code });
+      return ok({ handled: false, reason: error.code, reminders });
     }
     // Salla retries failed deliveries (about every 5 minutes, 3 times).
     return fail(500, "Temporary failure");

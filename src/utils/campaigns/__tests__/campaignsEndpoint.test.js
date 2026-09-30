@@ -9,6 +9,19 @@ import {
 import { POST as whatsappPost } from "../../../../api/whatsapp.js";
 import { cleanParam } from "../../../../api/_lib/whatsappGraph.js";
 
+// Easy Mode: each store's OAuth token comes from storage (app.store.authorize).
+// Here store 999 never authorized the app; every other store has "access".
+vi.mock("../../../../api/_lib/merchantTokens.js", async (importOriginal) => ({
+  ...(await importOriginal()),
+  getAccessToken: vi.fn(async (merchantId) => {
+    if (String(merchantId) !== "999") return "access";
+    const error = new Error("not authorized");
+    error.code = "store_not_authorized";
+    error.status = 403;
+    throw error;
+  }),
+}));
+
 const KV_URL = "https://kv.example.upstash.io";
 
 function mockNetwork({ routes = {}, meta } = {}) {

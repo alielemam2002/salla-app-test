@@ -1,12 +1,15 @@
 /**
  * Salla helpers shared by the serverless functions:
  * - embedded token introspection (who is the merchant?)
- * - authenticated Merchant API calls using the store's access token
+ * - Merchant API calls for one store with THAT store's OAuth token
  *
- * There is no token storage: the Merchant API access token comes from the
- * SALLA_ACCESS_TOKEN env var (one store). It expires after 14 days and must
- * then be replaced by hand.
+ * Easy Mode: there is no access token in env. Salla sends each store's
+ * tokens in the app.store.authorize webhook (install / app update); they are
+ * stored encrypted and refreshed by api/_lib/merchantTokens.js. A store
+ * whose tokens never arrived gets 403 store_not_authorized ("reinstall").
  */
+
+import { getAccessToken } from "./merchantTokens.js";
 
 const INTROSPECT_URL = "https://api.salla.dev/exchange-authority/v1/introspect";
 const MERCHANT_API_BASE = "https://api.salla.dev/admin/v2";
@@ -55,25 +58,27 @@ export async function introspectEmbeddedToken(token, appId) {
 // ============================================
 
 /**
- * Call the Merchant API with the access token from SALLA_ACCESS_TOKEN.
+ * The Merchant API for one store: `(path, options) => { status, body }`.
+ * `merchantId` must come from a verified source (introspect, or a signed
+ * webhook), never from the request. The token is read (and refreshed if
+ * needed) on the first call.
+ */
+export function sallaApiFor(merchantId) {
+  let accessToken = null;
+  return async (path, options = {}) => {
+    accessToken = accessToken || (await getAccessToken(String(merchantId)));
+    return request(accessToken, path, options);
+  };
+}
+
+/**
+ * One Merchant API request.
+ * @param {string} accessToken - the store's OAuth access token
  * @param {string} path - API endpoint path (e.g. '/products')
  * @param {object} [options] - fetch options (method, body, headers)
  * @returns {Promise<{ status: number, body: any }>}
  */
-export async function merchantApi(path, options = {}) {
-  // Tolerate common copy/paste mistakes: whitespace, quotes, "Bearer " prefix
-  const accessToken = (process.env.SALLA_ACCESS_TOKEN || "")
-    .trim()
-    .replace(/^["']|["']$/g, "")
-    .replace(/^Bearer\s+/i, "");
-  if (!accessToken) {
-    const error = new Error(
-      "لم يتم إعداد رمز الوصول لواجهة سلة (SALLA_ACCESS_TOKEN) على الخادم.",
-    );
-    error.code = "token_not_configured";
-    throw error;
-  }
-
+async function request(accessToken, path, options = {}) {
   const method = (options.method || "GET").toUpperCase();
   const hasBody = options.body !== undefined && options.body !== null;
   // FormData goes out as multipart/form-data; fetch sets the boundary header.
@@ -105,39 +110,20 @@ export async function merchantApi(path, options = {}) {
   );
 
   if (response.status === 401 || response.status === 403) {
-    // Surface Salla's own reason (invalid token, missing scope, inactive user…)
+    // Surface Salla's own reason (revoked token, missing scope, inactive user…)
     const reason = responseBody.error?.message || "بدون سبب";
+    const scope = /scope/i.test(reason);
     // Never put any part of the token in a message: it reaches the browser.
     const error = new Error(
-      `رفضت سلة رمز الوصول (SALLA_ACCESS_TOKEN): ${reason}`,
+      scope
+        ? `ينقص التطبيق صلاحية على متجرك: ${reason}`
+        : `رفضت سلة صلاحية التطبيق على متجرك (${reason}). أعد تثبيت التطبيق من لوحة تحكم سلة.`,
     );
-    error.code = /scope/i.test(reason) ? "missing_scope" : "token_expired";
+    error.code = scope ? "missing_scope" : "token_expired";
     error.status = response.status;
     error.details = responseBody;
     throw error;
   }
 
   return { status: response.status, body: responseBody };
-}
-
-/**
- * Id of the store SALLA_ACCESS_TOKEN belongs to (GET /store/info, scope
- * offline_access). Code that runs for a store without a merchant session
- * (webhooks) uses it to read only that store's data with this token.
- * @returns {Promise<{ ok: true, id: string } | { ok: false, error: string }>}
- */
-export async function tokenStoreId() {
-  try {
-    const { status, body } = await merchantApi("/store/info");
-    if (body?.success && body.data?.id) {
-      return { ok: true, id: String(body.data.id) };
-    }
-    return {
-      ok: false,
-      error:
-        body?.error?.message || `تعذّر قراءة بيانات المتجر (الحالة ${status})`,
-    };
-  } catch (error) {
-    return { ok: false, error: error.message };
-  }
 }

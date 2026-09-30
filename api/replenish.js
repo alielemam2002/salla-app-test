@@ -15,7 +15,7 @@
  *
  * Reminders are scheduled by api/salla-webhook.js from order.created (and
  * cancelled on order.cancelled / refunded / deleted). No Merchant API call
- * is made here: SALLA_ACCESS_TOKEN isn't used.
+ * is made here.
  * The logic is in api/_lib/replenish.js.
  */
 

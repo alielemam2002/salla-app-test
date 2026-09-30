@@ -93,18 +93,18 @@ describe("ProductsTab", () => {
     expect(embedded.auth.refresh).toHaveBeenCalled();
   });
 
-  it("shows the setup hint when the access token is not configured", async () => {
+  it("asks to reinstall when the store's tokens never arrived", async () => {
     fetchProductsPage.mockResolvedValue({
       success: false,
-      code: "token_not_configured",
-      error: "SALLA_ACCESS_TOKEN is not set",
+      code: "store_not_authorized",
+      error: "not authorized",
     });
 
     render(<ProductsTab embedded={makeEmbedded()} showToast={vi.fn()} />);
 
     await waitFor(() =>
       expect(
-        screen.getByText(/لم يتم ربط التطبيق بالمتجر بعد/),
+        screen.getByText(/لم يستلم التطبيق صلاحية الوصول لمتجرك/),
       ).toBeInTheDocument(),
     );
   });

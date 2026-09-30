@@ -1,3 +1,5 @@
+import { missingScopeMessage, storeAccessMessage } from "../sallaAccess.js";
+
 /**
  * Turn a failed coupons API result into text a merchant can act on.
  * Never exposes stack traces or the raw token diagnostics from the server.
@@ -36,14 +38,12 @@ function reasonFor(result) {
   if (code === "session_invalid") {
     return "انتهت جلسة سلة. حدّث الجلسة ثم أعد المحاولة.";
   }
-  if (code === "token_not_configured") {
-    return "لم يتم إعداد رمز الوصول لواجهة سلة (SALLA_ACCESS_TOKEN) على الخادم. تواصل مع مسؤول التطبيق.";
-  }
+  const access = storeAccessMessage(code);
+  if (access) return access;
   if (code === "missing_scope") {
-    return "ليس لدى التطبيق صلاحية إدارة الكوبونات. يحتاج إلى صلاحية marketing.read_write.";
-  }
-  if (code === "token_expired") {
-    return "رمز الوصول لواجهة سلة غير صالح أو منتهي. يجب استبدال SALLA_ACCESS_TOKEN.";
+    return missingScopeMessage(
+      "التسويق (marketing.read_write) لإدارة الكوبونات",
+    );
   }
   switch (status) {
     case 400:

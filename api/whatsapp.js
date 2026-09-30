@@ -25,7 +25,7 @@
  * KV_REST_API_TOKEN), optional META_GRAPH_VERSION.
  */
 
-import { introspectEmbeddedToken, merchantApi } from "./_lib/salla.js";
+import { introspectEmbeddedToken, sallaApiFor } from "./_lib/salla.js";
 import { open } from "./_lib/secretBox.js";
 import {
   buildTemplateMessage,
@@ -55,7 +55,7 @@ import {
 } from "../src/utils/cartRecovery/whatsappMessage.js";
 
 const ERROR_STATUS = {
-  token_not_configured: 500,
+  store_not_authorized: 403,
   token_expired: 401,
   missing_scope: 403,
 };
@@ -176,6 +176,8 @@ export async function POST(request) {
     if (!session.ok) {
       return fail(session.status, "session_invalid", session.error);
     }
+    // This store's own OAuth token (Easy Mode), for the verified merchant.
+    const merchantApi = sallaApiFor(session.data.merchant_id);
     const merchantId = String(session.data.merchant_id);
 
     switch (action) {

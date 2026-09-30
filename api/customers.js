@@ -12,13 +12,13 @@
  *
  * Authentication:
  * 1. Verifies the embedded session token via Salla introspect
- * 2. Uses the store's OAuth access token from SALLA_ACCESS_TOKEN
+ * 2. Uses that store's own OAuth token (Easy Mode, api/_lib/merchantTokens.js)
  */
 
-import { introspectEmbeddedToken, merchantApi } from "./_lib/salla.js";
+import { introspectEmbeddedToken, sallaApiFor } from "./_lib/salla.js";
 
 const ERROR_STATUS = {
-  token_not_configured: 500,
+  store_not_authorized: 403,
   token_expired: 401,
   missing_scope: 403,
 };
@@ -86,6 +86,8 @@ export async function POST(request) {
     if (!session.ok) {
       return fail(session.status, "session_invalid", session.error);
     }
+    // This store's own OAuth token (Easy Mode), for the verified merchant.
+    const merchantApi = sallaApiFor(session.data.merchant_id);
 
     switch (action) {
       case "list": {

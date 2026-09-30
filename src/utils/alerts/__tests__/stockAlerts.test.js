@@ -1,13 +1,23 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHmac } from "node:crypto";
-import {
-  POST as webhook,
-  resetStoreCache,
-} from "../../../../api/salla-webhook.js";
+import { POST as webhook } from "../../../../api/salla-webhook.js";
 import { POST as alertsApi } from "../../../../api/stock-alerts.js";
 import { stockLevel } from "../stockModel.js";
 import { fakeRedis } from "../../../test/fakeRedis.js";
+
+// Easy Mode: each store's OAuth token comes from storage (app.store.authorize).
+// Here store 999 never authorized the app; every other store has "access".
+vi.mock("../../../../api/_lib/merchantTokens.js", async (importOriginal) => ({
+  ...(await importOriginal()),
+  getAccessToken: vi.fn(async (merchantId) => {
+    if (String(merchantId) !== "999") return "access";
+    const error = new Error("not authorized");
+    error.code = "store_not_authorized";
+    error.status = 403;
+    throw error;
+  }),
+}));
 
 const KV_URL = "https://kv.example.upstash.io";
 const SECRET = "webhook-secret-value";
@@ -124,7 +134,6 @@ describe("stock levels", () => {
 
 describe("api/salla-webhook", () => {
   beforeEach(() => {
-    resetStoreCache();
     process.env.SALLA_ACCESS_TOKEN = "access";
     process.env.KV_REST_API_URL = KV_URL;
     process.env.KV_REST_API_TOKEN = "kv-token";
@@ -186,20 +195,20 @@ describe("api/salla-webhook", () => {
   it("ignores other events without reading anything", async () => {
     const { sallaCalls } = mockNetwork({ products: PRODUCTS });
     const res = await deliver({
-      event: "app.store.authorize",
+      event: "product.created",
       merchant: 1,
-      data: { access_token: "secret-token" },
+      data: { id: 7 },
     });
     expect(await res.json()).toEqual({ success: true, handled: false });
     expect(sallaCalls()).toHaveLength(0);
   });
 
-  it("doesn't read another store's products with this store's token", async () => {
-    const { sallaCalls } = mockNetwork({ storeId: 999, products: PRODUCTS });
-    const res = await deliver(ORDER);
+  it("skips a store that never authorized the app, without reading Salla", async () => {
+    const { sallaCalls } = mockNetwork({ products: PRODUCTS });
+    const res = await deliver({ ...ORDER, merchant: 999 });
     expect(await res.json()).toMatchObject({
       handled: false,
-      reason: "other_store",
+      reason: "store_not_authorized",
     });
     expect(sallaCalls().filter((u) => u.includes("/products"))).toHaveLength(0);
   });
@@ -225,7 +234,6 @@ describe("api/stock-alerts", () => {
     process.env.KV_REST_API_URL = KV_URL;
     process.env.KV_REST_API_TOKEN = "kv-token";
     process.env.SALLA_WEBHOOK_SECRET = SECRET;
-    resetStoreCache();
   });
   afterEach(() => {
     process.env = { ...saved };

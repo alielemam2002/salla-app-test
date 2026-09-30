@@ -32,6 +32,7 @@ import {
   COUPON_STATUS,
   getCouponStatus,
 } from "../../utils/coupons/couponModel.js";
+import { missingScopeMessage } from "../../utils/sallaAccess.js";
 import CampaignForm from "./CampaignForm.jsx";
 import RecipientsTable from "./RecipientsTable.jsx";
 
@@ -199,9 +200,8 @@ export default function CampaignsTab({ embedded, showToast }) {
           </Button>
         }
       >
-        {customersQuery.error.result?.code === "missing_scope" ||
-        customersQuery.error.result?.status === 403
-          ? "يحتاج التطبيق إلى صلاحية customers.read (قراءة العملاء). أضفها من بوابة الشركاء، ثم أعد تثبيت التطبيق وحدّث SALLA_ACCESS_TOKEN."
+        {customersQuery.error.result?.code === "missing_scope"
+          ? missingScopeMessage("customers.read (قراءة العملاء)")
           : describeCartsError(customersQuery.error.result)}
       </Alert>
     );

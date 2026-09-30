@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Copy, Repeat, Send } from "lucide-react";
+import { Copy, MessageCircle, Repeat, RotateCcw, Send } from "lucide-react";
 import {
   Alert,
   Badge,
@@ -12,9 +12,11 @@ import {
   Select,
   Switch,
   TextInput,
+  Textarea,
 } from "../ui/index.js";
 import {
   DAILY_LIMIT_OPTIONS,
+  DEFAULT_REPLENISH_TEXT,
   LEAD_OPTIONS,
   REPLENISH_VARIABLES,
   SAMPLE_TEMPLATE_AR,
@@ -31,6 +33,7 @@ const draftOf = (s) => ({
   leadDays: s.leadDays,
   dailyLimit: s.dailyLimit,
   couponCode: s.couponCode || "",
+  customMessage: s.customMessage || "",
 });
 
 const toOptions = (options) =>
@@ -94,8 +97,16 @@ export default function ReplenishSettingsCard({
       setError("أكّد أولًا أن عملاءك وافقوا على استلام رسائل واتساب من متجرك.");
       return;
     }
+    const payload = {
+      ...values,
+      enabled,
+      ...(consent ? { consent: true } : {}),
+    };
+    if (!payload.customMessage?.trim()) {
+      delete payload.customMessage;
+    }
     save.mutate(
-      { ...values, enabled, ...(consent ? { consent: true } : {}) },
+      payload,
       {
         onSuccess: () => {
           setDraft(null);
@@ -230,6 +241,19 @@ export default function ReplenishSettingsCard({
             />
           </Field>
         </FormRow>
+
+        <Field
+          label="نص رسالة الواتساب المباشرة (اختياري - بدون الحاجة لقالب)"
+          hint="يمكنك تخصيص نص الرسالة التي تُرسل عند الضغط على زر واتساب لمراسلة العميل برابط المنتج. استخدم المتغيرات: {{customer_name}}، {{product_name}}، {{product_url}}، {{coupon_code}}."
+          error={fieldErrors.customMessage?.[0]}
+        >
+          <Textarea
+            rows={3}
+            value={values.customMessage}
+            placeholder={DEFAULT_REPLENISH_TEXT}
+            onChange={(e) => set("customMessage", e.target.value)}
+          />
+        </Field>
 
         {needsConsent ? (
           <Checkbox

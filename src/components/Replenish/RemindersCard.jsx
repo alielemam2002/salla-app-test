@@ -1,9 +1,11 @@
-import { BellRing, Send, X } from "lucide-react";
+import { BellRing, Edit3, ExternalLink, MessageCircle, Send, X } from "lucide-react";
 import { Badge, Button, Card, EmptyState, IconButton } from "../ui/index.js";
 import {
   STATUS_LABELS,
   dueLabel,
   formatDay,
+  renderReplenishMessage,
+  replenishWhatsappUrl,
 } from "../../utils/replenish/replenishModel.js";
 import { timeAgo } from "../../utils/cartRecovery/cartModel.js";
 
@@ -16,10 +18,24 @@ const STATUS_TONES = {
   skipped: "warning",
 };
 
-function ReminderRow({ reminder, onSendNow, onCancel, busy }) {
+function ReminderRow({
+  reminder,
+  onSendNow,
+  onCancel,
+  onOpenMessage,
+  customMessageTemplate,
+  couponCode,
+  busy,
+}) {
   const scheduled = reminder.status === "scheduled";
   const dueMs = Date.parse(reminder.dueAt);
   const name = reminder.customerName || "العميل";
+
+  const waUrl = replenishWhatsappUrl(
+    reminder.mobile,
+    renderReplenishMessage(customMessageTemplate, reminder, { couponCode }),
+  );
+
   return (
     <tr>
       <td>
@@ -31,8 +47,24 @@ function ReminderRow({ reminder, onSendNow, onCancel, busy }) {
         </div>
       </td>
       <td>
-        {reminder.productName || `منتج ${reminder.productId}`}
-        {reminder.quantity > 1 && ` × ${reminder.quantity}`}
+        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+          <span>
+            {reminder.productName || `منتج ${reminder.productId}`}
+            {reminder.quantity > 1 && ` × ${reminder.quantity}`}
+          </span>
+          {reminder.productUrl && (
+            <a
+              href={reminder.productUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="form-hint"
+              style={{ display: "inline-flex", alignItems: "center", gap: "3px" }}
+            >
+              <span>رابط المنتج</span>
+              <ExternalLink size={10} aria-hidden="true" />
+            </a>
+          )}
+        </div>
       </td>
       <td>
         {scheduled ? (
@@ -57,6 +89,33 @@ function ReminderRow({ reminder, onSendNow, onCancel, busy }) {
       <td>
         {scheduled && (
           <div className="cart-actions">
+            <a
+              className="btn btn-success btn-small"
+              href={waUrl || "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`مراسلة ${name} عبر واتساب`}
+              onClick={(e) => {
+                if (!waUrl) {
+                  e.preventDefault();
+                  onOpenMessage?.(reminder);
+                }
+              }}
+              title="مراسلة العميل برابط المنتج مباشرة عبر واتساب"
+            >
+              <MessageCircle size={14} aria-hidden="true" />
+              واتساب
+            </a>
+            <Button
+              size="small"
+              variant="secondary"
+              icon={Edit3}
+              aria-label={`كتابة رسالة إلى ${name}`}
+              onClick={() => onOpenMessage?.(reminder)}
+              title="كتابة نص الرسالة وتخصيصه باليد"
+            >
+              كتابة رسالة
+            </Button>
             <Button
               size="small"
               variant="primary"
@@ -81,11 +140,13 @@ function ReminderRow({ reminder, onSendNow, onCancel, busy }) {
   );
 }
 
-/** Scheduled reminders (soonest first), then what was sent or dropped. */
 export default function RemindersCard({
   reminders,
   onSendNow,
   onCancel,
+  onOpenMessage,
+  customMessageTemplate,
+  couponCode,
   busy,
 }) {
   const scheduled = reminders.filter((r) => r.status === "scheduled").length;
@@ -116,6 +177,9 @@ export default function RemindersCard({
                     reminder={reminder}
                     onSendNow={onSendNow}
                     onCancel={onCancel}
+                    onOpenMessage={onOpenMessage}
+                    customMessageTemplate={customMessageTemplate}
+                    couponCode={couponCode}
                     busy={busy}
                   />
                 ))}

@@ -4,6 +4,11 @@
  * (api/replenish.js, api/salla-webhook.js), which re-validates against it.
  */
 
+import {
+  whatsappNumber,
+  whatsappUrl,
+} from "../cartRecovery/whatsappMessage.js";
+
 // Template variables the server can fill for one reminder.
 export const REPLENISH_VARIABLES = [
   { key: "customer_name", label: "اسم العميل" },
@@ -38,6 +43,7 @@ export const REPLENISH_DEFAULTS = {
   language: "ar",
   params: ["customer_name", "product_name", "product_url"],
   couponCode: "",
+  customMessage: "",
 };
 
 // Body text to create in Meta (category: Marketing). {{n}} follow `params`.
@@ -97,4 +103,56 @@ export function dueLabel(ms, now = Date.now()) {
   if (days === 1) return "غدًا";
   if (days === 2) return "بعد يومين";
   return `بعد ${days} ${days <= 10 ? "أيام" : "يومًا"}`;
+}
+
+export const DEFAULT_REPLENISH_TEXT = [
+  "مرحبًا {{customer_name}} 👋",
+  "",
+  "منتجك \"{{product_name}}\" أوشك على النفاد عندك؟",
+  "تقدر تطلبه وتجدده مرة ثانية من هنا:",
+  "{{product_url}}",
+].join("\n");
+
+const REPLENISH_VAR_RE = /\{\{\s*([a-z0-9_]+)\s*\}\}/g;
+
+export function renderReplenishMessage(
+  template,
+  reminder,
+  { couponCode = "" } = {},
+) {
+  const values = {
+    customer_name: reminder?.customerName || "عميلنا العزيز",
+    product_name: reminder?.productName || "منتجك",
+    product_url: reminder?.productUrl || "",
+    coupon_code: couponCode || "",
+    1: reminder?.customerName || "عميلنا العزيز",
+    2: reminder?.productName || "منتجك",
+    3: reminder?.productUrl || "",
+    4: couponCode || "",
+  };
+
+  return String(template || DEFAULT_REPLENISH_TEXT)
+    .split("\n")
+    .filter((line) => {
+      for (const match of line.matchAll(REPLENISH_VAR_RE)) {
+        const key = match[1];
+        if ((key === "coupon_code" || key === "4") && !values[key]) return false;
+        if ((key === "product_url" || key === "3") && !values[key]) return false;
+      }
+      return true;
+    })
+    .map((line) =>
+      line.replace(REPLENISH_VAR_RE, (whole, key) =>
+        key in values ? String(values[key]) : whole,
+      ),
+    )
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+export function replenishWhatsappUrl(mobile, text) {
+  const number = whatsappNumber(mobile);
+  if (!number || !text) return null;
+  return whatsappUrl(number, text);
 }

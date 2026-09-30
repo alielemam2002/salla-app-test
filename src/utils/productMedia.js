@@ -1,3 +1,5 @@
+import { storeAccessMessage } from "./sallaAccess.js";
+
 /**
  * Product media rules and the bulk-upload queue (pure, no React).
  *
@@ -134,9 +136,8 @@ export function describeUploadError(result = {}) {
   if (code === "session_invalid") {
     return "انتهت جلسة سلة. حدّث الصفحة ثم حاول مرة أخرى.";
   }
-  if (code === "token_not_configured") {
-    return "مفتاح الوصول للمتجر (SALLA_ACCESS_TOKEN) غير مضبوط على الخادم.";
-  }
+  const access = storeAccessMessage(code);
+  if (access) return access;
   if (code === "missing_scope") {
     return "التطبيق لا يملك صلاحية تعديل المنتجات (products.read_write).";
   }

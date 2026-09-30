@@ -76,6 +76,17 @@ export async function kvSetIfAbsent(key, value, ex) {
   return result === "OK";
 }
 
+/** DEL only while the key still holds `value` (release a lock we own). */
+export async function kvDelIfValue(key, value) {
+  await command([
+    "EVAL",
+    'if redis.call("GET", KEYS[1]) == ARGV[1] then return redis.call("DEL", KEYS[1]) else return 0 end',
+    "1",
+    key,
+    String(value),
+  ]);
+}
+
 export async function kvGetNumber(key) {
   const n = Number(await command(["GET", key]));
   return Number.isFinite(n) ? n : 0;

@@ -115,6 +115,7 @@ export function validateSettings(input = {}) {
   const leadDays = Number(input.leadDays);
   const dailyLimit = Number(input.dailyLimit);
   const couponCode = String(input.couponCode || "").trim();
+  const customMessage = String(input.customMessage || "").slice(0, 2000);
 
   if (template && !TEMPLATE_NAME_RE.test(template)) {
     fields.template = [
@@ -150,6 +151,7 @@ export function validateSettings(input = {}) {
       leadDays,
       dailyLimit,
       couponCode,
+      customMessage,
     },
   };
 }

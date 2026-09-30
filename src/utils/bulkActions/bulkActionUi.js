@@ -1,3 +1,4 @@
+import { storeAccessMessage } from "../sallaAccess.js";
 import { applyFormula, findFormula } from "./bulkActionSpec.js";
 
 /**
@@ -239,9 +240,8 @@ export function describeBulkError(result = {}) {
     reason = "مشكلة في الاتصال. تحقق من الإنترنت وحاول مرة أخرى.";
   } else if (code === "session_invalid") {
     reason = "انتهت جلستك في سلة. حدّث الصفحة وحاول مرة أخرى.";
-  } else if (code === "token_not_configured") {
-    reason =
-      "لم يتم ربط التطبيق بالمتجر بعد (رمز SALLA_ACCESS_TOKEN غير مضبوط على الخادم).";
+  } else if (storeAccessMessage(code)) {
+    reason = storeAccessMessage(code);
   } else if (code === "missing_scope" || status === 403) {
     reason =
       "يحتاج التطبيق إلى صلاحية products.read_write لتنفيذ الإجراءات الجماعية.";

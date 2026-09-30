@@ -16,14 +16,14 @@
  * the "video_attach" action of api/products.js.
  */
 
-import { introspectEmbeddedToken, merchantApi } from "./_lib/salla.js";
+import { introspectEmbeddedToken, sallaApiFor } from "./_lib/salla.js";
 
 // Vercel rejects function requests over 4.5 MB (FUNCTION_PAYLOAD_TOO_LARGE).
 // Keep the file itself under that with room for the other form fields.
 export const MAX_UPLOAD_BYTES = 4_400_000;
 
 const ERROR_STATUS = {
-  token_not_configured: 500,
+  store_not_authorized: 403,
   token_expired: 401,
   missing_scope: 403,
 };
@@ -72,6 +72,8 @@ export async function POST(request) {
     if (!session.ok) {
       return fail(session.status, "session_invalid", session.error);
     }
+    // This store's own OAuth token (Easy Mode), for the verified merchant.
+    const merchantApi = sallaApiFor(session.data.merchant_id);
 
     const upstream = new FormData();
     upstream.append("photo", photo, photo.name || "image");

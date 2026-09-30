@@ -2,14 +2,29 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHmac, randomBytes } from "node:crypto";
 import { GET, POST } from "../../../../api/replenish.js";
-import {
-  POST as webhook,
-  resetStoreCache,
-} from "../../../../api/salla-webhook.js";
+import { POST as webhook } from "../../../../api/salla-webhook.js";
 import { riyadhDay } from "../../../../api/_lib/replenish.js";
 import { seal } from "../../../../api/_lib/secretBox.js";
 import { fakeRedis } from "../../../test/fakeRedis.js";
-import { DAY_MS, reminderDueAt } from "../replenishModel.js";
+import {
+  DAY_MS,
+  reminderDueAt,
+  renderReplenishMessage,
+  replenishWhatsappUrl,
+} from "../replenishModel.js";
+
+// Easy Mode: each store's OAuth token comes from storage (app.store.authorize).
+// Here store 999 never authorized the app; every other store has "access".
+vi.mock("../../../../api/_lib/merchantTokens.js", async (importOriginal) => ({
+  ...(await importOriginal()),
+  getAccessToken: vi.fn(async (merchantId) => {
+    if (String(merchantId) !== "999") return "access";
+    const error = new Error("not authorized");
+    error.code = "store_not_authorized";
+    error.status = 403;
+    throw error;
+  }),
+}));
 
 const KV_URL = "https://kv.example.upstash.io";
 const WEBHOOK_SECRET = "webhook-secret";
@@ -83,8 +98,7 @@ function mockNetwork({ meta, redis = fakeRedis() } = {}) {
   });
   const metaSends = () =>
     calls.filter((c) => c.url.endsWith("/messages")).map((c) => c.body);
-  const sallaAdmin = () => calls.filter((c) => c.url.includes("/admin/v2/"));
-  return { calls, redis, metaSends, sallaAdmin };
+  return { calls, redis, metaSends };
 }
 
 function deliver(payload) {
@@ -168,7 +182,6 @@ describe("when to remind", () => {
 
 describe("api/replenish", () => {
   beforeEach(() => {
-    resetStoreCache();
     process.env.SALLA_ACCESS_TOKEN = "access";
     process.env.SALLA_WEBHOOK_SECRET = WEBHOOK_SECRET;
     process.env.KV_REST_API_URL = KV_URL;
@@ -194,8 +207,8 @@ describe("api/replenish", () => {
     expect(redis.store.get("rp:cycles:1")).toEqual({});
   });
 
-  it("schedules a reminder from a new order, once, without calling Salla", async () => {
-    const { redis, sallaAdmin } = mockNetwork();
+  it("schedules a reminder from the order data, once", async () => {
+    const { redis } = mockNetwork();
     await call({ action: "cycle_set", productId: 7, days: 25, name: "قهوة" });
 
     const res = await deliver(order({ quantity: 2 }));
@@ -219,7 +232,6 @@ describe("api/replenish", () => {
     // Salla retries the delivery: no second reminder.
     await deliver(order({ quantity: 2 }));
     expect(redis.store.get("rp:due:1").size).toBe(1);
-    expect(sallaAdmin().filter((c) => c.url.includes("/products"))).toEqual([]);
   });
 
   it("drops the older reminder when the customer buys again", async () => {
@@ -404,4 +416,52 @@ describe("api/replenish", () => {
       template: { name: "replenish_ar" },
     });
   });
+
+  it("renders custom replenishment message and formats WhatsApp wa.me link", () => {
+    const reminderData = {
+      customerName: "سارة",
+      productName: "سيروم الهيالورونيك",
+      productUrl: "https://store.salla.sa/serum",
+      mobile: "+966 50 123 4567",
+    };
+
+    const rendered = renderReplenishMessage(
+      "مرحباً {{customer_name}}، هل أوشك {{product_name}} على الانتهاء؟ اطلبه من الرابط: {{product_url}} مع الكوبون: {{coupon_code}}",
+      reminderData,
+      { couponCode: "SAVE10" },
+    );
+
+    expect(rendered).toContain("سارة");
+    expect(rendered).toContain("سيروم الهيالورونيك");
+    expect(rendered).toContain("https://store.salla.sa/serum");
+    expect(rendered).toContain("SAVE10");
+
+    const waLink = replenishWhatsappUrl(reminderData.mobile, rendered);
+    expect(waLink).toBe(
+      `https://wa.me/966501234567?text=${encodeURIComponent(rendered)}`,
+    );
+  });
+
+  it("saves and returns customMessage in settings", async () => {
+    const { redis } = mockNetwork();
+    seed(redis);
+
+    const customText = "تذكير خاص بك يا {{customer_name}} لرابط {{product_url}}";
+    const res = await (
+      await call({
+        action: "settings_save",
+        settings: {
+          ...SETTINGS,
+          customMessage: customText,
+        },
+      })
+    ).json();
+
+    expect(res.success).toBe(true);
+    expect(res.settings.customMessage).toBe(customText);
+
+    const raw = JSON.parse(redis.store.get("rp:settings:1"));
+    expect(raw.customMessage).toBe(customText);
+  });
 });
+

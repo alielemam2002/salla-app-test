@@ -83,6 +83,16 @@ export function fakeRedis() {
           Number(args[0]),
           Number(args[1]) + 1,
         );
+      case "EVAL": {
+        // Only the compare-and-delete script from kvDelIfValue.
+        const [, lockKey, value] = args;
+        if (!key.includes('redis.call("DEL"')) {
+          throw new Error("fakeRedis: unexpected EVAL script");
+        }
+        if (store.get(lockKey) !== value) return 0;
+        store.delete(lockKey);
+        return 1;
+      }
       default:
         throw new Error(`fakeRedis: unexpected command ${cmd}`);
     }

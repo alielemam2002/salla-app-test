@@ -15,17 +15,17 @@
  *
  * Authentication:
  * 1. Verifies the embedded session token via Salla introspect
- * 2. Uses the store's OAuth access token from SALLA_ACCESS_TOKEN
+ * 2. Uses that store's own OAuth token (Easy Mode, api/_lib/merchantTokens.js)
  */
 
-import { introspectEmbeddedToken, merchantApi } from "./_lib/salla.js";
+import { introspectEmbeddedToken, sallaApiFor } from "./_lib/salla.js";
 
 const PER_PAGE = 60; // Salla's maximum for this endpoint
 const MAX_PRODUCT_LOOKUPS = 20;
 const LOOKUP_CONCURRENCY = 3;
 
 const ERROR_STATUS = {
-  token_not_configured: 500,
+  store_not_authorized: 403,
   token_expired: 401,
   missing_scope: 403,
 };
@@ -45,7 +45,7 @@ const sallaFail = (status, result, fallback) =>
   );
 
 /** Name + thumbnail for each product id, skipping any that fail. */
-async function lookupProducts(productIds) {
+async function lookupProducts(merchantApi, productIds) {
   const ids = [...new Set(productIds.map(String))].slice(
     0,
     MAX_PRODUCT_LOOKUPS,
@@ -97,6 +97,8 @@ export async function POST(request) {
     if (!session.ok) {
       return fail(session.status, "session_invalid", session.error);
     }
+    // This store's own OAuth token (Easy Mode), for the verified merchant.
+    const merchantApi = sallaApiFor(session.data.merchant_id);
 
     switch (action) {
       case "list": {
@@ -140,6 +142,7 @@ export async function POST(request) {
           ? result.data.items
           : [];
         const products = await lookupProducts(
+          merchantApi,
           items.map((item) => item.product_id).filter(Boolean),
         );
         return Response.json({ success: true, cart: result.data, products });

@@ -2,6 +2,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "../../../../api/products.js";
 
+// Easy Mode: each store's OAuth token comes from storage (app.store.authorize).
+// Here store 999 never authorized the app; every other store has "access".
+vi.mock("../../../../api/_lib/merchantTokens.js", async (importOriginal) => ({
+  ...(await importOriginal()),
+  getAccessToken: vi.fn(async (merchantId) => {
+    if (String(merchantId) !== "999") return "access";
+    const error = new Error("not authorized");
+    error.code = "store_not_authorized";
+    error.status = 403;
+    throw error;
+  }),
+}));
+
 const INTROSPECT_OK = {
   status: 200,
   body: { success: true, data: { merchant_id: 1, user_id: 2 } },

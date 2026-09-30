@@ -1,3 +1,5 @@
+import { missingScopeMessage, storeAccessMessage } from "../sallaAccess.js";
+
 /**
  * Pure helpers for Salla abandoned carts (GET /carts/abandoned).
  *
@@ -124,15 +126,12 @@ export function describeCartsError(result = {}) {
   if (code === "session_invalid") {
     return "انتهت جلسة سلة. حدّث الصفحة ثم حاول مرة أخرى.";
   }
-  if (code === "token_not_configured") {
-    return "لم يتم إعداد رمز الوصول لواجهة سلة (SALLA_ACCESS_TOKEN) على الخادم.";
-  }
+  const access = storeAccessMessage(code);
+  if (access) return access;
   if (code === "missing_scope" || status === 403) {
-    return "يحتاج التطبيق إلى صلاحية carts.read (قراءة السلات المتروكة). أضفها من بوابة الشركاء، ثم أعد تثبيت التطبيق وضع رمز الوصول الجديد في SALLA_ACCESS_TOKEN.";
+    return missingScopeMessage("carts.read (قراءة السلات المتروكة)");
   }
-  if (code === "token_expired" || status === 401) {
-    return "رمز الوصول لواجهة سلة غير صالح أو منتهي. استبدل قيمة SALLA_ACCESS_TOKEN.";
-  }
+  if (status === 401) return storeAccessMessage("token_expired");
   if (status === 404) return "هذه السلة لم تعد موجودة.";
   if (status === 429) {
     return "عدد الطلبات إلى سلة كبير جدًا. انتظر دقيقة ثم حاول مرة أخرى.";

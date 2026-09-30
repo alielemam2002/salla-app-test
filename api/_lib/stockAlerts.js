@@ -9,6 +9,9 @@
  * An alert is written when an order.created webhook arrives and a product
  * in it is at or under the merchant's threshold (read from Salla right
  * after the order). The Alerts tab also scans the products list directly.
+ *
+ * Salla calls take `merchantApi` = sallaApiFor(merchantId) from the caller:
+ * the store's own OAuth token.
  */
 
 import {
@@ -19,7 +22,6 @@ import {
   kvSetIfAbsent,
   kvSetJson,
 } from "./kv.js";
-import { merchantApi } from "./salla.js";
 import {
   DEFAULT_THRESHOLD,
   isThreshold,
@@ -107,7 +109,7 @@ function orderedProducts(order) {
  * product's stock is read from Salla (the order doesn't carry it). Throws
  * when Salla fails, so the webhook can ask Salla to retry.
  */
-export async function alertsForOrder(order, threshold, at) {
+export async function alertsForOrder(merchantApi, order, threshold, at) {
   const alerts = [];
   for (const [productId, line] of orderedProducts(order)) {
     const { status, body } = await merchantApi(
@@ -144,7 +146,7 @@ export async function alertsForOrder(order, threshold, at) {
  * order is handled once; on failure the dedupe key is released for the
  * retry. Returns how many alerts were written.
  */
-export async function recordOrderAlerts(merchantId, order) {
+export async function recordOrderAlerts(merchantApi, merchantId, order) {
   const orderId = String(order?.id ?? "");
   if (!orderId) return 0;
   const dedupe = orderKey(merchantId, orderId);
@@ -152,7 +154,7 @@ export async function recordOrderAlerts(merchantId, order) {
   try {
     const at = new Date().toISOString();
     const { threshold } = await loadAlertSettings(merchantId);
-    const alerts = await alertsForOrder(order, threshold, at);
+    const alerts = await alertsForOrder(merchantApi, order, threshold, at);
     // LPUSH puts the last value first: reverse to keep the order's lines.
     await kvListPushJson(
       alertsKey(merchantId),
@@ -181,7 +183,7 @@ const pickProduct = (product, kind) => ({
  * Products out of stock or at/under `threshold`, from GET /products (up to
  * MAX_PAGES pages). Returns { out, low, scanned, truncated } or { error }.
  */
-export async function scanStock(threshold) {
+export async function scanStock(merchantApi, threshold) {
   const out = [];
   const low = [];
   let scanned = 0;

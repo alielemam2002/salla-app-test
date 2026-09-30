@@ -1,15 +1,19 @@
 // Static configuration for the Products tab and product form.
 
+import { missingScopeMessage, storeAccessMessage } from "./sallaAccess.js";
+
 export const PRODUCTS_PER_PAGE = 30;
 
 // Setup hints shown for errors the merchant/developer can fix
 export const PRODUCT_ERROR_HINTS = {
-  token_not_configured:
-    "لم يتم ربط التطبيق بالمتجر بعد. أضف رمز الوصول إلى واجهة سلة (Merchant API) في Vercel باسم SALLA_ACCESS_TOKEN، ثم أعد النشر.",
-  missing_scope:
-    "الرمز يعمل لكنه لا يملك صلاحية المنتجات. فعّل صلاحية «المنتجات: قراءة وكتابة» (products.read_write) في بوابة الشركاء، وأعد تثبيت التطبيق على المتجر، ثم ضع access_token الجديد في SALLA_ACCESS_TOKEN وأعد النشر.",
-  token_expired:
-    "تم رفض رمز SALLA_ACCESS_TOKEN. تنتهي صلاحية رموز الوصول بعد 14 يومًا: ضع رمزًا جديدًا في Vercel وأعد النشر، وتأكد من تفعيل صلاحية المنتجات للتطبيق.",
+  store_not_authorized: storeAccessMessage("store_not_authorized"),
+  token_expired: storeAccessMessage("token_expired"),
+  token_refreshing: storeAccessMessage("token_refreshing"),
+  token_refresh_failed: storeAccessMessage("token_refresh_failed"),
+  oauth_not_configured: storeAccessMessage("oauth_not_configured"),
+  missing_scope: missingScopeMessage(
+    "المنتجات: قراءة وكتابة (products.read_write)",
+  ),
   session_invalid:
     "انتهت صلاحية جلسة التطبيق أو أنها غير صالحة. اضغط «تحديث الجلسة» للحصول على جلسة جديدة.",
 };
