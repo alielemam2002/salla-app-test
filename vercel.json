@@ -3,6 +3,12 @@
   "framework": "vite",
   "buildCommand": "pnpm build",
   "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/api/meta-webhook",
+      "destination": "/api/salla-webhook"
+    }
+  ],
   "crons": [
     {
       "path": "/api/replenish",

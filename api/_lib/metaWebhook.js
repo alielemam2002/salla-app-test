@@ -1,5 +1,8 @@
 /**
- * Vercel Serverless Function - the Meta app's webhook (WhatsApp).
+ * The Meta app's webhook (WhatsApp), served by api/salla-webhook.js: the
+ * Hobby plan allows 12 functions, so /api/meta-webhook is a rewrite to it
+ * (vercel.json). Meta's deliveries are told apart by X-Hub-Signature-256,
+ * which Salla never sends; Salla never sends GET.
  *
  * Callback URL in the Meta app dashboard (WhatsApp → Configuration):
  * https://<domain>/api/meta-webhook, verify token = META_WEBHOOK_VERIFY_TOKEN.
@@ -11,8 +14,8 @@
  *   must match; answer hub.challenge as plain text).
  * - POST: X-Hub-Signature-256 = "sha256=" + HMAC-SHA256(raw body,
  *   META_APP_SECRET), compared timing-safe. Deliveries are acknowledged
- *   only for now (stage 1: no delivery/read statuses yet). Bodies carry
- *   customers' numbers and messages: never log them.
+ *   only for now (no delivery/read statuses yet). Bodies carry customers'
+ *   numbers and messages: never log them.
  */
 
 import { createHmac, timingSafeEqual } from "node:crypto";
@@ -25,6 +28,9 @@ function safeEqual(given, expected) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+/** A Meta delivery (signed with the app secret), not a Salla one. */
+export const isMetaDelivery = (headers) => headers.has("x-hub-signature-256");
+
 /** Is this delivery really from Meta? `raw` = the body bytes (Buffer). */
 export function verifyMetaSignature(header, raw, appSecret) {
   if (!appSecret) return false;
@@ -35,7 +41,8 @@ export function verifyMetaSignature(header, raw, appSecret) {
   return safeEqual(given, expected);
 }
 
-export async function GET(request) {
+/** GET: Meta's verification handshake. */
+export function metaVerification(request) {
   const params = new URL(request.url).searchParams;
   const expected = env("META_WEBHOOK_VERIFY_TOKEN");
   if (
@@ -50,8 +57,8 @@ export async function GET(request) {
   return new Response("Forbidden", { status: 403 });
 }
 
-export async function POST(request) {
-  const raw = Buffer.from(await request.arrayBuffer());
+/** POST: check the signature, then acknowledge. */
+export function metaDelivery(headers, raw) {
   const secret = env("META_APP_SECRET");
   if (!secret) {
     return Response.json(
@@ -59,13 +66,7 @@ export async function POST(request) {
       { status: 503 },
     );
   }
-  if (
-    !verifyMetaSignature(
-      request.headers.get("x-hub-signature-256"),
-      raw,
-      secret,
-    )
-  ) {
+  if (!verifyMetaSignature(headers.get("x-hub-signature-256"), raw, secret)) {
     return Response.json(
       { success: false, error: "invalid signature" },
       { status: 401 },

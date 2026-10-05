@@ -23,6 +23,10 @@
  *   replenishment reminders are cancelled
  * Every other event is acknowledged and ignored. Request bodies are never
  * logged: app.store.authorize carries the tokens.
+ *
+ * It also serves the Meta app's webhook (/api/meta-webhook is a rewrite to
+ * this function, see api/_lib/metaWebhook.js): GET is Meta's handshake, and
+ * a POST with X-Hub-Signature-256 is a Meta delivery.
  */
 
 import { createHmac, timingSafeEqual } from "node:crypto";
@@ -36,6 +40,11 @@ import {
 } from "./_lib/merchantTokens.js";
 import { recordOrderAlerts } from "./_lib/stockAlerts.js";
 import { cancelOrderReminders, scheduleFromOrder } from "./_lib/replenish.js";
+import {
+  isMetaDelivery,
+  metaDelivery,
+  metaVerification,
+} from "./_lib/metaWebhook.js";
 
 const ok = (extra = {}) => Response.json({ success: true, ...extra });
 const fail = (status, error) =>
@@ -109,11 +118,19 @@ async function handleAppEvent(event, merchantId, data) {
   return ok({ handled: true });
 }
 
+// Salla never sends GET: this is the Meta webhook's handshake.
+export function GET(request) {
+  return metaVerification(request);
+}
+
 export async function POST(request) {
+  const raw = Buffer.from(await request.arrayBuffer());
+  if (isMetaDelivery(request.headers)) {
+    return metaDelivery(request.headers, raw);
+  }
+
   const secret = process.env.SALLA_WEBHOOK_SECRET;
   if (!secret) return fail(503, "SALLA_WEBHOOK_SECRET is not set");
-
-  const raw = Buffer.from(await request.arrayBuffer());
   if (!verifySallaWebhook(request.headers, raw, secret)) {
     return fail(401, "Invalid webhook signature");
   }

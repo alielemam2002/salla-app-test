@@ -5,7 +5,7 @@ import { POST as whatsapp } from "../../../../api/whatsapp.js";
 import {
   GET as metaWebhookGet,
   POST as metaWebhookPost,
-} from "../../../../api/meta-webhook.js";
+} from "../../../../api/salla-webhook.js";
 import { open, seal } from "../../../../api/_lib/secretBox.js";
 import { fakeRedis } from "../../../test/fakeRedis.js";
 
@@ -286,7 +286,7 @@ describe("Embedded Signup (api/whatsapp.js)", () => {
   });
 });
 
-describe("Meta webhook (api/meta-webhook.js)", () => {
+describe("Meta webhook (/api/meta-webhook → api/salla-webhook.js)", () => {
   beforeEach(() => {
     process.env.META_APP_SECRET = APP_SECRET;
     process.env.META_WEBHOOK_VERIFY_TOKEN = "verify-me";
