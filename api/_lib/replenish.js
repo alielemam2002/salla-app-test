@@ -40,6 +40,7 @@ import {
   kvZRem,
 } from "./kv.js";
 import {
+  buildBoundMessage,
   buildTemplateMessage,
   cleanParam,
   metaFailure,
@@ -48,6 +49,7 @@ import {
 import {
   LANGUAGE_RE,
   TEMPLATE_NAME_RE,
+  loadBindings,
   resolveConfig,
 } from "./whatsappSettings.js";
 import { customerMobile } from "../customers.js";
@@ -104,8 +106,11 @@ export async function loadSettings(merchantId) {
 
 const inOptions = (options, value) => options.some((o) => o.value === value);
 
-/** Returns { values } or { fields: { name: [message] } }. */
-export function validateSettings(input = {}) {
+/**
+ * Returns { values } or { fields: { name: [message] } }. `hasBinding`: a
+ * template was picked from the library (then no typed name is needed).
+ */
+export function validateSettings(input = {}, { hasBinding = false } = {}) {
   const fields = {};
   const template = String(input.template || "").trim();
   const language = String(input.language || "").trim();
@@ -138,7 +143,7 @@ export function validateSettings(input = {}) {
   if (couponCode && !/^[\w-]{1,40}$/.test(couponCode)) {
     fields.couponCode = ["كود الكوبون غير صالح"];
   }
-  if (input.enabled === true && !template) {
+  if (input.enabled === true && !template && !hasBinding) {
     fields.template = ["اكتب اسم القالب المعتمد قبل التفعيل"];
   }
   if (Object.keys(fields).length) return { fields };
@@ -350,8 +355,12 @@ export async function listReminders(merchantId, limit = 100) {
 const FALLBACK_NAME = { ar: "عميلنا العزيز", en: "there" };
 
 /** Template values for one reminder (or sample values for a test). */
-export function reminderValues(reminder, settings) {
-  const locale = String(settings.language).startsWith("ar") ? "ar" : "en";
+export function reminderValues(
+  reminder,
+  settings,
+  language = settings.language,
+) {
+  const locale = String(language).startsWith("ar") ? "ar" : "en";
   return {
     customer_name: cleanParam(
       reminder.customerName || FALLBACK_NAME[locale],
@@ -363,14 +372,18 @@ export function reminderValues(reminder, settings) {
   };
 }
 
-/** The merchant's account + the replenish template. */
-export function templateConfig(account, settings) {
+/**
+ * The merchant's account + the replenish template: the one picked from the
+ * library (`binding`), else the typed name/params.
+ */
+export function templateConfig(account, settings, binding = null) {
   return {
     ...account,
     template: settings.template,
     language: settings.language,
     params: settings.params,
     invalidParams: [],
+    binding,
   };
 }
 
@@ -379,7 +392,9 @@ export function templateConfig(account, settings) {
  * { ok: false, error, metaCode?, stop? } (stop: the next ones would fail too).
  */
 export async function sendMessage(config, to, values) {
-  const message = buildTemplateMessage(config, to, values);
+  const message = config.binding
+    ? buildBoundMessage(config.binding, to, values)
+    : buildTemplateMessage(config, to, values);
   if (message.error) return { ok: false, error: message.error, stop: true };
   const result = await sendTemplate(config, message.body);
   if (result.ok) {
@@ -407,7 +422,11 @@ async function deliver(merchantId, reminder, config, settings) {
   const result = await sendMessage(
     config,
     to,
-    reminderValues(reminder, settings),
+    reminderValues(
+      reminder,
+      settings,
+      config.binding?.language || settings.language,
+    ),
   );
   const now = Date.now();
   if (result.ok) {
@@ -469,10 +488,14 @@ export async function sendingBlocker(merchantId, settings) {
       error: "مفتاح «الإرسال من التطبيق» في صفحة السلات المتروكة متوقف.",
     };
   }
-  if (!settings.template) {
-    return { code: "no_template", error: "اكتب اسم القالب المعتمد أولًا." };
+  const binding = (await loadBindings(merchantId)).replenish || null;
+  if (!binding && !settings.template) {
+    return {
+      code: "no_template",
+      error: "اختر القالب المعتمد للتذكير من قوالبك أولًا.",
+    };
   }
-  return { config };
+  return { config, binding };
 }
 
 /** "Send now" for one reminder, from the app. */
@@ -491,7 +514,7 @@ export async function sendNow(merchantId, id) {
   return deliver(
     merchantId,
     reminder,
-    templateConfig(ready.config, settings),
+    templateConfig(ready.config, settings, ready.binding),
     settings,
   );
 }
@@ -520,7 +543,7 @@ export async function runDue(
     } else if (allowance <= 0) {
       tally.stopped = stop("daily_limit", "تم الوصول إلى الحد اليومي للرسائل.");
     } else {
-      const config = templateConfig(ready.config, settings);
+      const config = templateConfig(ready.config, settings, ready.binding);
       const ids = await kvZRangeByScore(
         key.due(merchantId),
         0,

@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
-import { FileText, RefreshCw, Search } from "lucide-react";
+import { Check, Copy, FileText, RefreshCw, Search } from "lucide-react";
 import {
   Alert,
   Badge,
   Button,
   Card,
   EmptyState,
+  IconButton,
   SegmentedTabs,
   Skeleton,
   TextInput,
@@ -16,14 +17,32 @@ import {
 } from "../../utils/settings/settingsLabels.js";
 import { timeAgo } from "../../utils/cartRecovery/cartModel.js";
 
-function TemplateItem({ template }) {
+function TemplateItem({ template, onCopy }) {
+  const [copied, setCopied] = useState(false);
   const status = TEMPLATE_STATUS[template.status];
   const { header, body, buttons } = template.variables;
-  const count = header.length + body.length + buttons;
+  const count = header.length + body.length + buttons.length;
+
+  const handleCopy = async () => {
+    if (onCopy) {
+      const ok = await onCopy(template.name);
+      if (ok) {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }
+    }
+  };
+
   return (
     <li className="settings-template">
       <div className="settings-template-head">
         <code dir="ltr">{template.name}</code>
+        <IconButton
+          icon={copied ? Check : Copy}
+          label={copied ? "تم النسخ" : `نسخ اسم القالب ${template.name}`}
+          size={14}
+          onClick={handleCopy}
+        />
         <span className="form-hint" dir="ltr">
           {template.language}
         </span>
@@ -66,7 +85,7 @@ function TemplateItem({ template }) {
       )}
       <p className="form-hint">
         {count
-          ? `يحتاج ${count} ${count === 1 ? "قيمة" : "قيم"} عند الإرسال${buttons ? " (منها رابط الزر)" : ""}.`
+          ? `يحتاج ${count} ${count === 1 ? "قيمة" : "قيم"} عند الإرسال${buttons.length ? " (منها رابط الزر)" : ""}.`
           : "بلا متغيرات."}
       </p>
     </li>
@@ -75,12 +94,28 @@ function TemplateItem({ template }) {
 
 /**
  * The merchant's templates, read from Meta (not typed by hand). Features
- * will pick from this list (stage 2).
+ * pick from this list directly.
  */
-export default function WhatsAppTemplatesCard({ query, sync, account }) {
+export default function WhatsAppTemplatesCard({
+  query,
+  sync,
+  account,
+  showToast,
+}) {
   const [filter, setFilter] = useState("approved");
   const [search, setSearch] = useState("");
   const templates = query.data?.templates;
+
+  const handleCopy = async (name) => {
+    try {
+      await navigator.clipboard.writeText(name);
+      showToast?.(`تم نسخ اسم القالب «${name}»`, "success");
+      return true;
+    } catch {
+      showToast?.("تعذّر النسخ إلى الحافظة", "error");
+      return false;
+    }
+  };
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -135,7 +170,11 @@ export default function WhatsAppTemplatesCard({ query, sync, account }) {
         {visible.length ? (
           <ul className="settings-templates">
             {visible.map((template) => (
-              <TemplateItem key={template.id} template={template} />
+              <TemplateItem
+                key={template.id}
+                template={template}
+                onCopy={handleCopy}
+              />
             ))}
           </ul>
         ) : (
@@ -153,9 +192,9 @@ export default function WhatsAppTemplatesCard({ query, sync, account }) {
         )}
         <p className="form-hint">
           {query.data.syncedAt
-            ? `آخر تحديث ${timeAgo(Date.parse(query.data.syncedAt))}. `
+            ? `آخر مزامنة ${timeAgo(Date.parse(query.data.syncedAt))}. `
             : ""}
-          قريبًا: تختار من هذه القوالب داخل كل ميزة بدل كتابة اسمها.
+          القوالب المعتمدة متاحة للاختيار المباشر في مزايا التطبيق (تذكير السلات وإعادة الشراء).
         </p>
       </>
     );

@@ -14,6 +14,7 @@ import {
 } from "../../../utils/customersApi.js";
 import {
   fetchWhatsAppStatus,
+  fetchWhatsAppTemplates,
   sendCampaignMessage,
 } from "../../../utils/whatsappApi.js";
 import { fetchAllCoupons } from "../../../utils/couponsApi.js";
@@ -25,8 +26,29 @@ vi.mock("../../../utils/customersApi.js", () => ({
 }));
 vi.mock("../../../utils/whatsappApi.js", () => ({
   fetchWhatsAppStatus: vi.fn(),
+  fetchWhatsAppTemplates: vi.fn(),
   sendCampaignMessage: vi.fn(),
 }));
+
+// The merchant's library (Settings → read from Meta).
+const OFFER = {
+  id: "t1",
+  name: "offer_ar",
+  language: "ar",
+  status: "APPROVED",
+  category: "MARKETING",
+  parameterFormat: "POSITIONAL",
+  header: null,
+  body: "أهلاً {{1}}، استخدم الكود {{2}}",
+  footer: null,
+  buttons: [],
+  variables: { header: [], body: ["1", "2"], buttons: [] },
+};
+const TEMPLATES = {
+  success: true,
+  syncedAt: "2026-09-30T00:00:00Z",
+  templates: [OFFER, { ...OFFER, id: "t2", name: "draft", status: "PENDING" }],
+};
 vi.mock("../../../utils/couponsApi.js", () => ({
   fetchAllCoupons: vi.fn(),
 }));
@@ -96,19 +118,17 @@ function renderTab() {
   return { showToast };
 }
 
-const fillCampaign = () => {
+const fillCampaign = async () => {
   fireEvent.change(screen.getByLabelText(/اسم الحملة/), {
     target: { value: "Weekend offer" },
   });
-  fireEvent.change(screen.getByLabelText(/اسم القالب/), {
-    target: { value: "offer_ar" },
+  // Picking the template fills {{1}} = name, {{2}} = the campaign coupon.
+  fireEvent.change(await screen.findByLabelText(/قالب الحملة/), {
+    target: { value: "t1" },
   });
-  // {{1}} is the customer's name by default; add {{2}} = coupon.
-  fireEvent.click(screen.getByRole("button", { name: "إضافة متغير" }));
-  fireEvent.change(screen.getByLabelText("نوع المتغير {{2}}"), {
-    target: { value: "coupon_code" },
-  });
-  fireEvent.change(screen.getByLabelText("كوبون المتغير {{2}}"), {
+  expect(screen.getByLabelText("{{1}} في النص")).toHaveValue("customer_name");
+  expect(screen.getByLabelText("{{2}} في النص")).toHaveValue("coupon_code");
+  fireEvent.change(screen.getByLabelText(/كوبون الحملة/), {
     target: { value: "SAVE20" },
   });
 };
@@ -128,6 +148,7 @@ describe("CampaignsTab", () => {
       groups: [{ id: 7, name: "VIP" }],
     });
     fetchWhatsAppStatus.mockResolvedValue(CONNECTED);
+    fetchWhatsAppTemplates.mockResolvedValue(TEMPLATES);
     fetchAllCoupons.mockResolvedValue({
       success: true,
       coupons: [
@@ -180,14 +201,16 @@ describe("CampaignsTab", () => {
     });
     const { showToast } = renderTab();
     await screen.findByText("Ahmed Ali");
-    fillCampaign();
+    await fillCampaign();
     fireEvent.click(screen.getByRole("button", { name: "تحديد الكل (2)" }));
     fireEvent.click(
       screen.getByRole("button", { name: "مراجعة وإرسال إلى 2" }),
     );
 
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("{{2}} = SAVE20")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("{{2}} في النص = SAVE20"),
+    ).toBeInTheDocument();
     const confirm = within(dialog).getByRole("button", { name: "إرسال إلى 2" });
     expect(confirm).toBeDisabled();
     fireEvent.click(within(dialog).getByLabelText(/وافق هؤلاء العملاء/));
@@ -202,12 +225,15 @@ describe("CampaignsTab", () => {
       customerName: "Ahmed",
       campaign: {
         name: "Weekend offer",
-        template: "offer_ar",
-        language: "ar",
-        params: [
-          { source: "customer_name", value: "" },
-          { source: "coupon_code", value: "SAVE20" },
-        ],
+        couponCode: "SAVE20",
+        binding: expect.objectContaining({
+          templateId: "t1",
+          name: "offer_ar",
+          slots: [
+            expect.objectContaining({ name: "1", source: "customer_name" }),
+            expect.objectContaining({ name: "2", source: "coupon_code" }),
+          ],
+        }),
       },
     });
     expect(maxInFlight).toBe(1);
@@ -230,7 +256,7 @@ describe("CampaignsTab", () => {
     });
     renderTab();
     await screen.findByText("Ahmed Ali");
-    fillCampaign();
+    await fillCampaign();
     fireEvent.click(screen.getByRole("button", { name: "تحديد الكل (2)" }));
     fireEvent.click(
       screen.getByRole("button", { name: "مراجعة وإرسال إلى 2" }),
@@ -266,15 +292,59 @@ describe("CampaignsTab", () => {
     renderTab();
     await screen.findByText("Ahmed Ali");
     fireEvent.click(screen.getByRole("button", { name: "تحديد الكل (2)" }));
-    fireEvent.click(screen.getByRole("button", { name: "إضافة متغير" }));
-    fireEvent.change(screen.getByLabelText("نوع المتغير {{2}}"), {
+    const review = screen.getByRole("button", { name: "مراجعة وإرسال إلى 2" });
+    fireEvent.click(review);
+    expect(await screen.findByText("اكتب اسمًا للحملة")).toBeInTheDocument();
+    expect(screen.getByText("اختر قالبًا من قوالبك")).toBeInTheDocument();
+
+    // Only approved templates are offered.
+    const picker = screen.getByLabelText(/قالب الحملة/);
+    expect(within(picker).queryByText(/draft/)).toBeNull();
+
+    // Fixed text needs its text; the coupon needs a coupon.
+    fireEvent.change(screen.getByLabelText(/اسم الحملة/), {
+      target: { value: "Offer" },
+    });
+    fireEvent.change(picker, { target: { value: "t1" } });
+    fireEvent.change(screen.getByLabelText("{{1}} في النص"), {
       target: { value: "custom" },
     });
-    fireEvent.click(
-      screen.getByRole("button", { name: "مراجعة وإرسال إلى 2" }),
-    );
-    expect(await screen.findByText("اكتب اسمًا للحملة")).toBeInTheDocument();
-    expect(screen.getByText("اكتب النص")).toBeInTheDocument();
+    fireEvent.click(review);
+    expect(
+      await screen.findByText("اكتب النص الثابت لـ {{1}} في النص."),
+    ).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("نص {{1}} في النص"), {
+      target: { value: "عميلنا" },
+    });
+    fireEvent.click(review);
+    expect(await screen.findByText("اختر كوبون الحملة")).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("sends to Settings when there are no approved templates", async () => {
+    fetchWhatsAppTemplates.mockResolvedValue({
+      success: true,
+      syncedAt: null,
+      templates: [],
+    });
+    const onNavigate = vi.fn();
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <CampaignsTab
+          embedded={{ auth: { getToken: () => "tok" } }}
+          showToast={vi.fn()}
+          onNavigate={onNavigate}
+        />
+      </QueryClientProvider>,
+    );
+    expect(
+      await screen.findByText("لا توجد قوالب معتمدة بعد"),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "الإعدادات" }));
+    expect(onNavigate).toHaveBeenCalledWith("settings");
   });
 });

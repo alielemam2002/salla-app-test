@@ -175,14 +175,20 @@ describe("Settings: WhatsApp account and templates", () => {
         status: "APPROVED",
         category: "MARKETING",
         body: "أهلاً {{1}}، سلتك بانتظارك بقيمة {{2}}",
-        variables: { header: [], body: ["1", "2"], buttons: 1 },
+        variables: {
+          header: [],
+          body: ["1", "2"],
+          buttons: [
+            { index: 0, text: "أكمل الطلب", url: "https://salla.sa/{{1}}" },
+          ],
+        },
       }),
       expect.objectContaining({
         name: "promo_named",
         parameterFormat: "NAMED",
         header: { format: "TEXT", text: "Hi {{first_name}}" },
         footer: "Reply STOP to opt out",
-        variables: { header: ["first_name"], body: ["code"], buttons: 0 },
+        variables: { header: ["first_name"], body: ["code"], buttons: [] },
       }),
     ]);
 

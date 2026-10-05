@@ -1,27 +1,31 @@
-import { Controller, useFieldArray, useWatch } from "react-hook-form";
-import { Plus, X } from "lucide-react";
-import {
-  Button,
-  Field,
-  FormRow,
-  IconButton,
-  Select,
-  TextInput,
-} from "../ui/index.js";
-import { VARIABLE_SOURCES } from "../../utils/campaigns/campaignModel.js";
+import { Controller, useWatch } from "react-hook-form";
+import { Field, Select, TextInput } from "../ui/index.js";
+import TemplatePicker from "../whatsapp/TemplatePicker.jsx";
+import { BINDING_SOURCES } from "../../utils/whatsapp/templateBinding.js";
+import { usesCoupon } from "../../utils/campaigns/campaignModel.js";
 
 /**
- * The campaign: an approved WhatsApp template and what goes into each of
- * its {{1}}, {{2}}… (customer name, a coupon code, or custom text).
+ * The campaign: a name, one of the merchant's approved templates (Settings
+ * → library read from Meta) with what fills each variable, and the coupon
+ * when the template shows one.
  */
-export default function CampaignForm({ form, coupons, disabled }) {
+export default function CampaignForm({
+  form,
+  coupons,
+  templates,
+  onOpenSettings,
+  disabled,
+}) {
   const {
     register,
     control,
     formState: { errors },
   } = form;
-  const params = useFieldArray({ control, name: "params" });
-  const sources = useWatch({ control, name: "params" }) || [];
+  const binding = useWatch({ control, name: "binding" });
+  const needsCoupon = usesCoupon(binding?.slots || []);
+  // "Pick a template" (schema) or the library check (setError on binding).
+  const bindingError =
+    errors.binding?.message || errors.binding?.templateId?.message;
 
   return (
     <fieldset className="campaign-form" disabled={disabled}>
@@ -29,100 +33,43 @@ export default function CampaignForm({ form, coupons, disabled }) {
         <TextInput placeholder="عرض نهاية الأسبوع" {...register("name")} />
       </Field>
 
-      <FormRow>
+      <Controller
+        control={control}
+        name="binding"
+        render={({ field }) => (
+          <TemplatePicker
+            label="قالب الحملة (تسويقي معتمد)"
+            templates={templates}
+            value={field.value}
+            onChange={field.onChange}
+            sources={BINDING_SOURCES.campaign}
+            onOpenSettings={onOpenSettings}
+            disabled={disabled}
+          />
+        )}
+      />
+      {bindingError && (
+        <span className="form-error-msg" role="alert">
+          {bindingError}
+        </span>
+      )}
+
+      {needsCoupon && (
         <Field
-          label="اسم القالب"
+          label="كوبون الحملة"
           required
-          hint="قالب تسويقي (Marketing) معتمد في مدير واتساب (WhatsApp Manager)"
-          error={errors.template?.message}
+          hint="يظهر في مكان «كود كوبون الحملة» في القالب."
+          error={errors.couponCode?.message}
         >
-          <TextInput
-            dir="ltr"
-            placeholder="offer_ar"
-            {...register("template")}
+          <Select
+            placeholder={
+              coupons.length ? "اختر كوبونًا" : "لا توجد كوبونات نشطة"
+            }
+            options={coupons.map((c) => ({ value: c.code, label: c.code }))}
+            {...register("couponCode")}
           />
         </Field>
-        <Field label="لغة القالب" required error={errors.language?.message}>
-          <TextInput dir="ltr" placeholder="ar" {...register("language")} />
-        </Field>
-      </FormRow>
-
-      <div className="campaign-vars">
-        <span className="form-label">متغيرات القالب بالترتيب</span>
-        <p className="form-hint">
-          طابق قالبك: <span dir="ltr">{"{{1}}"}</span> هو المتغير الأول،{" "}
-          <span dir="ltr">{"{{2}}"}</span> الثاني… اتركها فارغة إذا كان القالب
-          بلا متغيرات.
-        </p>
-        {params.fields.map((field, index) => {
-          const source = sources[index]?.source;
-          const rowError = errors.params?.[index]?.value?.message;
-          return (
-            <div key={field.id} className="campaign-var-row">
-              <span className="wa-param-slot">{`{{${index + 1}}}`}</span>
-              <Select
-                aria-label={`نوع المتغير {{${index + 1}}}`}
-                options={VARIABLE_SOURCES}
-                {...register(`params.${index}.source`)}
-              />
-              {source === "coupon_code" && (
-                <Select
-                  aria-label={`كوبون المتغير {{${index + 1}}}`}
-                  placeholder={
-                    coupons.length ? "اختر كوبونًا" : "لا توجد كوبونات نشطة"
-                  }
-                  options={coupons.map((c) => ({
-                    value: c.code,
-                    label: c.code,
-                  }))}
-                  invalid={Boolean(rowError)}
-                  {...register(`params.${index}.value`)}
-                />
-              )}
-              {source === "custom" && (
-                <Controller
-                  control={control}
-                  name={`params.${index}.value`}
-                  render={({ field: input }) => (
-                    <TextInput
-                      aria-label={`نص المتغير {{${index + 1}}}`}
-                      placeholder="مثال: خصم 20% على كل المنتجات"
-                      maxLength={1000}
-                      invalid={Boolean(rowError)}
-                      {...input}
-                    />
-                  )}
-                />
-              )}
-              {source === "customer_name" && (
-                <span className="campaign-var-note">
-                  يُعبّأ تلقائيًا لكل عميل
-                </span>
-              )}
-              <IconButton
-                icon={X}
-                label={`حذف المتغير {{${index + 1}}}`}
-                size={14}
-                onClick={() => params.remove(index)}
-              />
-              {rowError && (
-                <span className="form-error-msg campaign-var-error">
-                  {rowError}
-                </span>
-              )}
-            </div>
-          );
-        })}
-        <Button
-          size="small"
-          variant="ghost"
-          icon={Plus}
-          onClick={() => params.append({ source: "customer_name", value: "" })}
-          disabled={params.fields.length >= 10}
-        >
-          إضافة متغير
-        </Button>
-      </div>
+      )}
     </fieldset>
   );
 }

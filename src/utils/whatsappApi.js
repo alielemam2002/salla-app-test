@@ -80,8 +80,9 @@ export function setWhatsAppEnabled(token, enabled) {
 }
 
 /**
- * Send a campaign template to one customer.
- * `campaign` = { template, language, params: [{ source, value }] }.
+ * Send a campaign to one customer. `campaign` = { binding: { templateId,
+ * slots }, couponCode } (a template from the library, checked again on the
+ * server).
  */
 export function sendCampaignMessage(token, { to, customerName, campaign }) {
   return callWhatsAppApi({
@@ -89,9 +90,11 @@ export function sendCampaignMessage(token, { to, customerName, campaign }) {
     token,
     to,
     customerName,
-    template: campaign.template,
-    language: campaign.language,
-    params: campaign.params,
+    couponCode: campaign.couponCode,
+    binding: {
+      templateId: campaign.binding.templateId,
+      slots: campaign.binding.slots,
+    },
   });
 }
 
@@ -112,4 +115,37 @@ export function syncWhatsAppTemplates(token) {
 /** The last templates read from Meta (no Meta call). */
 export function fetchWhatsAppTemplates(token) {
   return callWhatsAppApi({ action: "templates_list", token });
+}
+
+/** Each feature's chosen template: { bindings: { cart?, replenish? } }. */
+export function fetchTemplateBindings(token) {
+  return callWhatsAppApi({ action: "binding_get", token });
+}
+
+/** Save a feature's template ({ templateId, slots }), or null to forget it. */
+export function saveTemplateBinding(token, { feature, binding }) {
+  return callWhatsAppApi({ action: "binding_save", token, feature, binding });
+}
+
+/**
+ * Embedded Signup ("connect with Facebook"): { available, appId, configId,
+ * version }. Only public values; the app secret stays on the server.
+ */
+export function fetchSignupConfig(token) {
+  return callWhatsAppApi({ action: "signup_config", token });
+}
+
+/**
+ * Finish Embedded Signup: the code from FB.login and the ids from Meta's
+ * popup ({ code, wabaId, phoneNumberId }). The server exchanges the code
+ * (valid ~30 s), saves the account and reads the templates.
+ */
+export function completeWhatsAppSignup(token, { code, wabaId, phoneNumberId }) {
+  return callWhatsAppApi({
+    action: "signup_complete",
+    token,
+    code,
+    wabaId,
+    phoneNumberId,
+  });
 }

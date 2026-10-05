@@ -7,6 +7,11 @@
  */
 
 import { TEMPLATE_VARIABLES } from "../../src/utils/cartRecovery/whatsappMessage.js";
+import {
+  CUSTOM_SOURCE,
+  slotLabel,
+  urlButtonValue,
+} from "../../src/utils/whatsapp/templateBinding.js";
 
 export const DEFAULT_GRAPH_VERSION = "v23.0";
 export const ALLOWED_PARAMS = new Set(TEMPLATE_VARIABLES.map((v) => v.key));
@@ -211,8 +216,9 @@ export function normalizeTemplate(template) {
       header: templateVariables(header?.text),
       body: templateVariables(body),
       // A URL button with {{1}} takes one value (e.g. the product link).
-      buttons: buttons.filter((b) => b.type === "URL" && /\{\{/.test(b.url))
-        .length,
+      buttons: buttons
+        .map((b, index) => ({ index, text: b.text, url: b.url }))
+        .filter((b) => /\{\{/.test(b.url || "")),
     },
   };
 }
@@ -241,4 +247,54 @@ export async function fetchTemplates(config, wabaId, { maxPages = 5 } = {}) {
         : null;
   }
   return { ok: true, templates };
+}
+
+/**
+ * A template message from a binding (templateBinding.js): header and body
+ * variables (positional, or named with `parameter_name`) and link-button
+ * suffixes. `values` holds the feature's values by source key. Returns
+ * { body } or { error } when a variable has no value.
+ */
+export function buildBoundMessage(binding, to, values) {
+  const named = binding.parameterFormat === "NAMED";
+  const header = [];
+  const body = [];
+  const components = [];
+  for (const slot of binding.slots) {
+    const raw =
+      slot.source === CUSTOM_SOURCE ? slot.value : values[slot.source];
+    const text =
+      slot.part === "button"
+        ? urlButtonValue(slot.url, cleanParam(raw, 2000))
+        : cleanParam(raw);
+    if (!text) return { error: `لا توجد قيمة لـ ${slotLabel(slot)}` };
+    if (slot.part === "button") {
+      components.push({
+        type: "button",
+        sub_type: "url",
+        index: String(slot.index),
+        parameters: [{ type: "text", text }],
+      });
+      continue;
+    }
+    const parameter = named
+      ? { type: "text", parameter_name: slot.name, text }
+      : { type: "text", text };
+    (slot.part === "header" ? header : body).push(parameter);
+  }
+  if (body.length) components.unshift({ type: "body", parameters: body });
+  if (header.length) components.unshift({ type: "header", parameters: header });
+  return {
+    body: {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "template",
+      template: {
+        name: binding.name,
+        language: { code: binding.language },
+        ...(components.length ? { components } : {}),
+      },
+    },
+  };
 }

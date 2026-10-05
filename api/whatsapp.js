@@ -18,6 +18,11 @@
  * - templates_sync   read the templates again from Meta
  *                    (GET /{waba-id}/message_templates) and keep a snapshot
  * - templates_list   the last snapshot (no Meta call)
+ * - binding_get      each feature's chosen template ({ cart, replenish })
+ * - binding_save     { feature, binding | null }: a template from the
+ *                    library + what fills each variable, checked against the
+ *                    library (send / send_test use the cart one; campaigns
+ *                    send `binding` with every send_campaign)
  * - send_test        send the template with sample values to a number
  * - send             send the template for one abandoned cart; the cart is
  *                    read from Salla (GET /admin/v2/carts/abandoned/{id}).
@@ -25,14 +30,28 @@
  *                    (WhatsApp delivers it only inside the 24-hour window)
  * - send_campaign    send a campaign template to one customer (the browser
  *                    sends a campaign one customer at a time)
+ * - signup_config    Embedded Signup ("connect with Facebook"): the public
+ *                    app ID + configuration ID, or available: false
+ * - signup_complete  { code, wabaId, phoneNumberId } from the popup: exchange
+ *                    the code, subscribe the WABA, register the number, save
+ *                    the account, read the templates (api/_lib/metaSignup.js)
  *
  * Env: WA_SETTINGS_KEY (32 bytes, base64), Upstash (KV_REST_API_URL /
- * KV_REST_API_TOKEN), optional META_GRAPH_VERSION.
+ * KV_REST_API_TOKEN), optional META_GRAPH_VERSION; Embedded Signup:
+ * META_APP_ID, META_APP_SECRET, META_ES_CONFIG_ID.
  */
 
 import { introspectEmbeddedToken, sallaApiFor } from "./_lib/salla.js";
 import { open } from "./_lib/secretBox.js";
 import {
+  exchangeSignupCode,
+  newPin,
+  registerPhone,
+  signupConfig,
+  subscribeApp,
+} from "./_lib/metaSignup.js";
+import {
+  buildBoundMessage,
   buildTemplateMessage,
   buildTextMessage,
   cleanParam,
@@ -44,11 +63,13 @@ import {
 import {
   deleteSettings,
   graphVersion,
+  loadBindings,
   loadStored,
   loadTemplates,
   publicSettings,
   resolveConfig,
   saveAccount,
+  saveBinding,
   saveSettings,
   saveTemplates,
   setEnabled,
@@ -63,6 +84,10 @@ import {
   cartMessageValues,
   whatsappNumber,
 } from "../src/utils/cartRecovery/whatsappMessage.js";
+import {
+  BINDING_SOURCES,
+  resolveBinding,
+} from "../src/utils/whatsapp/templateBinding.js";
 
 const ERROR_STATUS = {
   store_not_authorized: 403,
@@ -139,6 +164,23 @@ async function deliver(config, to, values) {
   if (message.error) return fail(422, "missing_value", message.error);
   return post(config, message.body);
 }
+
+/** Send a feature's chosen template (binding); returns a Response. */
+async function deliverBound(config, binding, to, values) {
+  const message = buildBoundMessage(binding, to, values);
+  if (message.error) return fail(422, "missing_value", message.error);
+  return post(config, message.body);
+}
+
+const bindingLocale = (binding) =>
+  String(binding.language).startsWith("ar") ? "ar" : "en";
+
+const couponOf = (body) =>
+  /^[\w-]{1,40}$/.test(String(body.couponCode || "")) ? body.couponCode : "";
+
+// Features whose template is saved on the server (campaigns send theirs
+// with every message).
+const SAVED_BINDING_FEATURES = new Set(["cart", "replenish"]);
 
 /** Send a free-form text message (24-hour window only); returns a Response. */
 async function deliverText(config, to, text) {
@@ -231,6 +273,96 @@ async function syncTemplates(merchantId, config, wabaId) {
   return { snapshot: await saveTemplates(merchantId, result.templates) };
 }
 
+const META_ID_RE = /^\d{5,25}$/;
+
+/**
+ * Embedded Signup finished in the merchant's browser. The code is valid
+ * for about 30 seconds, so it is exchanged first. Subscribing the WABA and
+ * registering the number can fail without losing the connection: they come
+ * back as warnings.
+ */
+async function completeSignup(merchantId, body) {
+  if (!signupConfig()) {
+    return fail(
+      503,
+      "signup_not_configured",
+      "الربط عبر فيسبوك غير مفعّل على الخادم بعد (META_APP_ID و META_APP_SECRET و META_ES_CONFIG_ID).",
+    );
+  }
+  if (!storageReady()) return noStorage();
+  const code = String(body.code || "").trim();
+  const wabaId = String(body.wabaId || "").trim();
+  const phoneNumberId = String(body.phoneNumberId || "").trim();
+  if (!code || code.length > 4096) {
+    return fail(400, "bad_request", "رمز الربط من فيسبوك مطلوب");
+  }
+  if (!META_ID_RE.test(wabaId) || !META_ID_RE.test(phoneNumberId)) {
+    return fail(
+      422,
+      "validation_failed",
+      "لم تصل معرّفات حساب واتساب والرقم من نافذة فيسبوك. أكمل خطوات الربط حتى النهاية.",
+    );
+  }
+
+  const version = graphVersion();
+  const exchange = await exchangeSignupCode(code, version);
+  if (!exchange.ok) {
+    return fail(422, "signup_code_rejected", exchange.error, {
+      detail: exchange.detail,
+    });
+  }
+  const config = { token: exchange.token, version };
+  const check = await fetchPhoneProfile({ ...config, phoneNumberId });
+  if (!check.ok) {
+    return fail(check.httpStatus, "meta_error", check.error, {
+      metaCode: check.metaCode,
+      detail: check.detail,
+    });
+  }
+
+  const warnings = [];
+  const subscribed = await subscribeApp(config, wabaId);
+  if (!subscribed.ok) {
+    warnings.push(`تعذّر ربط إشعارات Meta بحسابك: ${subscribed.error}`);
+  }
+  const stored = await loadStored(merchantId);
+  // The same number connecting again keeps its PIN: a new one would fail.
+  let pin = null;
+  if (stored?.pin && stored.phoneNumberId === phoneNumberId) {
+    try {
+      pin = open(stored.pin);
+    } catch {
+      pin = null;
+    }
+  }
+  pin = pin || newPin();
+  const registered = await registerPhone(config, phoneNumberId, pin);
+  if (!registered.ok) {
+    warnings.push(
+      `تعذّر تفعيل الرقم للإرسال عبر واجهة البرمجة: ${registered.error}`,
+    );
+  }
+
+  const record = await saveAccount(
+    merchantId,
+    { phoneNumberId, wabaId, accessToken: exchange.token },
+    {
+      stored: stored || {},
+      profile: check.profile,
+      source: "embedded_signup",
+      pin: registered.ok ? pin : null,
+    },
+  );
+  const sync = await syncTemplates(merchantId, config, wabaId);
+  return Response.json({
+    success: true,
+    settings: publicSettings(record),
+    templates: sync.snapshot || null,
+    templatesError: sync.error || null,
+    warnings,
+  });
+}
+
 export async function POST(request) {
   let body;
   try {
@@ -258,6 +390,9 @@ export async function POST(request) {
       case "status": {
         const { stored, config, enabled, unreadable } =
           await resolveConfig(merchantId);
+        const cartBinding = config
+          ? (await loadBindings(merchantId)).cart || null
+          : null;
         // Never return the token.
         return Response.json({
           success: true,
@@ -266,10 +401,14 @@ export async function POST(request) {
           // Sending from the app is possible right now.
           configured: Boolean(config) && enabled,
           storageReady: storageReady(),
-          template: config?.template || null,
-          language: config?.language || null,
-          params: config?.params || [],
-          invalidParams: config?.invalidParams || [],
+          // The cart template chosen from the library, else the typed one.
+          cartBinding,
+          template: cartBinding?.name || config?.template || null,
+          language: cartBinding?.language || config?.language || null,
+          params: cartBinding
+            ? cartBinding.slots.map((slot) => slot.source)
+            : config?.params || [],
+          invalidParams: cartBinding ? [] : config?.invalidParams || [],
           profile: stored?.profile || null,
           tokenUnreadable: Boolean(unreadable),
         });
@@ -346,6 +485,21 @@ export async function POST(request) {
         });
       }
 
+      case "signup_config": {
+        // Public values only: the app secret never leaves the server.
+        const signup = signupConfig();
+        return Response.json({
+          success: true,
+          available: Boolean(signup) && storageReady(),
+          appId: signup?.appId || null,
+          configId: signup?.configId || null,
+          version: graphVersion(),
+        });
+      }
+
+      case "signup_complete":
+        return completeSignup(merchantId, body);
+
       case "templates_sync": {
         const { config, stored, unreadable } = await resolveConfig(merchantId);
         if (!config) return notConnected(unreadable);
@@ -374,6 +528,44 @@ export async function POST(request) {
           success: true,
           syncedAt: snapshot?.syncedAt || null,
           templates: snapshot?.templates || [],
+        });
+      }
+
+      case "binding_get": {
+        const bindings = storageReady() ? await loadBindings(merchantId) : {};
+        return Response.json({ success: true, bindings });
+      }
+
+      case "binding_save": {
+        // A feature picks a template from the library; checked here against
+        // the library itself, never trusting the browser's template details.
+        if (!storageReady()) return noStorage();
+        const feature = String(body.feature || "");
+        if (!SAVED_BINDING_FEATURES.has(feature)) {
+          return fail(400, "bad_request", "ميزة غير معروفة");
+        }
+        if (body.binding === null) {
+          const bindings = await saveBinding(merchantId, feature, null);
+          return Response.json({ success: true, binding: null, bindings });
+        }
+        const snapshot = await loadTemplates(merchantId);
+        const resolved = resolveBinding(
+          body.binding,
+          snapshot?.templates,
+          BINDING_SOURCES[feature],
+        );
+        if (resolved.error) {
+          return fail(422, "validation_failed", resolved.error);
+        }
+        const bindings = await saveBinding(
+          merchantId,
+          feature,
+          resolved.binding,
+        );
+        return Response.json({
+          success: true,
+          binding: resolved.binding,
+          bindings,
         });
       }
 
@@ -406,6 +598,18 @@ export async function POST(request) {
             422,
             "bad_number",
             "أدخل رقمًا دوليًا كاملًا، مثل +966500000000.",
+          );
+        }
+        const cartBinding = (await loadBindings(merchantId)).cart;
+        if (cartBinding) {
+          return deliverBound(
+            config,
+            cartBinding,
+            to,
+            cartMessageValues(SAMPLE_CART, {
+              locale: bindingLocale(cartBinding),
+              couponCode: "SAVE10",
+            }),
           );
         }
         return deliver(
@@ -455,11 +659,23 @@ export async function POST(request) {
         // wrote to the store in the last 24 hours. The number still comes
         // from Salla's cart, never from the browser.
         if (body.mode === "text") return deliverText(config, to, body.text);
+        const cartBinding = (await loadBindings(merchantId)).cart;
+        if (cartBinding) {
+          return deliverBound(
+            config,
+            cartBinding,
+            to,
+            cartMessageValues(cart, {
+              locale: bindingLocale(cartBinding),
+              couponCode: couponOf(body),
+            }),
+          );
+        }
         if (!config.template) {
           return fail(
             422,
             "no_template",
-            "اختر قالب تذكير السلة من «إعدادات واتساب» في صفحة السلات المتروكة أولًا.",
+            "اختر قالب تذكير السلة من «قالب التذكير» في صفحة السلات المتروكة أولًا.",
           );
         }
         const couponCode = /^[\w-]{1,40}$/.test(String(body.couponCode || ""))
@@ -482,11 +698,37 @@ export async function POST(request) {
             "الإرسال من التطبيق متوقف. فعّله من صفحة السلات المتروكة.",
           );
         }
+        const to = whatsappNumber(body.to);
+        if (body.binding) {
+          const snapshot = await loadTemplates(merchantId);
+          const resolved = resolveBinding(
+            body.binding,
+            snapshot?.templates,
+            BINDING_SOURCES.campaign,
+          );
+          if (resolved.error) {
+            return fail(422, "validation_failed", resolved.error);
+          }
+          if (!to) {
+            return fail(
+              422,
+              "bad_number",
+              "لا يوجد رقم جوال دولي لهذا العميل.",
+            );
+          }
+          const locale = bindingLocale(resolved.binding);
+          const first = String(body.customerName || "")
+            .trim()
+            .split(/\s+/)[0];
+          return deliverBound(config, resolved.binding, to, {
+            customer_name: cleanParam(first || FALLBACK_NAME[locale], 60),
+            coupon_code: couponOf(body),
+          });
+        }
         const campaign = campaignConfig(config, body);
         if (campaign.error) {
           return fail(422, "validation_failed", campaign.error);
         }
-        const to = whatsappNumber(body.to);
         if (!to) {
           return fail(422, "bad_number", "لا يوجد رقم جوال دولي لهذا العميل.");
         }

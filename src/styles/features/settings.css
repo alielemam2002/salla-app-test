@@ -164,3 +164,50 @@
 .settings-template .form-hint {
   margin: 0;
 }
+
+/* Template picker (features choose a template from the library) */
+.wa-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.wa-picker .form-group {
+  margin: 0;
+}
+
+.wa-picker-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--accent-success-soft);
+  font-size: 0.85rem;
+}
+
+.wa-picker-preview p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.wa-picker-button {
+  align-self: flex-start;
+  padding: 2px var(--space-sm);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  background: var(--bg-primary);
+  font-size: 0.8rem;
+}
+
+.wa-picker-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-sm) var(--space-md);
+}
+
+.wa-picker-slot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}

@@ -21,7 +21,11 @@
 
 import { timingSafeEqual } from "node:crypto";
 import { introspectEmbeddedToken } from "./_lib/salla.js";
-import { resolveConfig, storageReady } from "./_lib/whatsappSettings.js";
+import {
+  loadBindings,
+  resolveConfig,
+  storageReady,
+} from "./_lib/whatsappSettings.js";
 import {
   RUN_BUDGET_MS,
   cancelReminder,
@@ -143,7 +147,10 @@ export async function POST(request) {
       }
 
       case "settings_save": {
-        const { values, fields } = validateSettings(body.settings);
+        const hasBinding = Boolean((await loadBindings(merchantId)).replenish);
+        const { values, fields } = validateSettings(body.settings, {
+          hasBinding,
+        });
         if (fields) {
           return fail(422, "validation_failed", "بعض الإعدادات غير صحيحة", {
             fields,
@@ -221,12 +228,13 @@ export async function POST(request) {
             "أدخل رقمًا دوليًا كاملًا، مثل +966500000000.",
           );
         }
-        const values = reminderValues(SAMPLE, {
-          ...settings,
-          couponCode: settings.couponCode || "LOYAL10",
-        });
+        const values = reminderValues(
+          SAMPLE,
+          { ...settings, couponCode: settings.couponCode || "LOYAL10" },
+          ready.binding?.language || settings.language,
+        );
         const result = await sendMessage(
-          templateConfig(ready.config, settings),
+          templateConfig(ready.config, settings, ready.binding),
           to,
           values,
         );

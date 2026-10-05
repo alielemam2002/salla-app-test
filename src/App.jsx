@@ -37,13 +37,25 @@ function AppContent() {
         <CouponsTab embedded={embedded} showToast={showToast} />
       )}
       {activeTab === "cart-recovery" && (
-        <CartRecoveryTab embedded={embedded} showToast={showToast} />
+        <CartRecoveryTab
+          embedded={embedded}
+          showToast={showToast}
+          onNavigate={setActiveTab}
+        />
       )}
       {activeTab === "campaigns" && (
-        <CampaignsTab embedded={embedded} showToast={showToast} />
+        <CampaignsTab
+          embedded={embedded}
+          showToast={showToast}
+          onNavigate={setActiveTab}
+        />
       )}
       {activeTab === "replenish" && (
-        <ReplenishTab embedded={embedded} showToast={showToast} />
+        <ReplenishTab
+          embedded={embedded}
+          showToast={showToast}
+          onNavigate={setActiveTab}
+        />
       )}
       {activeTab === "settings" && (
         <SettingsTab embedded={embedded} showToast={showToast} />

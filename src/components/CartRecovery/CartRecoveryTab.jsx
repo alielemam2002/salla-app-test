@@ -23,6 +23,7 @@ import {
   useWhatsAppStatus,
 } from "../../hooks/cartRecovery/useCartRecovery.js";
 import { useCouponsQuery } from "../../hooks/coupons/useCoupons.js";
+import { useEmbeddedSignup } from "../../hooks/whatsapp/useEmbeddedSignup.js";
 import {
   ABANDONED_AFTER_OPTIONS,
   describeCartsError,
@@ -45,7 +46,8 @@ import AbandonedCartsTable from "./AbandonedCartsTable.jsx";
 import CartDetailsModal from "./CartDetailsModal.jsx";
 import WhatsAppTemplateCard from "./WhatsAppTemplateCard.jsx";
 import WhatsAppApiStatus from "./WhatsAppApiStatus.jsx";
-import WhatsAppSettingsModal from "./WhatsAppSettingsModal.jsx";
+import CartTemplateModal from "./CartTemplateModal.jsx";
+import EmbeddedSignupNotice from "../whatsapp/EmbeddedSignupNotice.jsx";
 
 const EMPTY = [];
 
@@ -56,7 +58,7 @@ const EMPTY = [];
  * approved template instead (pressed by the merchant, one cart at a time).
  * Nothing is scheduled; automatic campaigns need a backend (stage 2).
  */
-export default function CartRecoveryTab({ embedded, showToast }) {
+export default function CartRecoveryTab({ embedded, showToast, onNavigate }) {
   const getToken = useCallback(
     () => embedded?.auth?.getToken?.() || null,
     [embedded],
@@ -70,6 +72,8 @@ export default function CartRecoveryTab({ embedded, showToast }) {
   const apiSends = useApiSends();
   const sender = useWhatsAppSender(getToken);
   const { toggle: toggleApi } = useWhatsAppSettingsMutations(getToken);
+  // "Connect WhatsApp with Facebook" (Meta Embedded Signup).
+  const signup = useEmbeddedSignup(getToken);
   // Connected to the merchant's own account AND switched on.
   const apiEnabled = Boolean(waStatus.data?.configured);
   const [confirmBulk, setConfirmBulk] = useState(false);
@@ -257,7 +261,9 @@ export default function CartRecoveryTab({ embedded, showToast }) {
 
           <WhatsAppApiStatus
             status={waStatus}
-            onOpenSettings={() => setSettingsOpen(true)}
+            signup={signup}
+            onOpenTemplate={() => setSettingsOpen(true)}
+            onOpenSettings={() => onNavigate?.("settings")}
             toggling={toggleApi.isPending}
             onToggle={(enabled) =>
               toggleApi.mutate(enabled, {
@@ -276,6 +282,7 @@ export default function CartRecoveryTab({ embedded, showToast }) {
               })
             }
           />
+          <EmbeddedSignupNotice signup={signup} />
 
           {!query.isPending && !query.isError && (
             <CartRecoveryStats
@@ -420,9 +427,13 @@ export default function CartRecoveryTab({ embedded, showToast }) {
       />
 
       {settingsOpen && (
-        <WhatsAppSettingsModal
+        <CartTemplateModal
           getToken={getToken}
           onClose={() => setSettingsOpen(false)}
+          onOpenSettings={() => {
+            setSettingsOpen(false);
+            onNavigate?.("settings");
+          }}
           showToast={showToast}
         />
       )}

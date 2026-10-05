@@ -18,6 +18,36 @@ import {
 } from "../../../utils/replenishApi.js";
 import { fetchProductsPage } from "../../../utils/productsApi.js";
 import { fetchAllCoupons } from "../../../utils/couponsApi.js";
+import {
+  fetchTemplateBindings,
+  fetchWhatsAppTemplates,
+  saveTemplateBinding,
+} from "../../../utils/whatsappApi.js";
+
+vi.mock("../../../utils/whatsappApi.js", () => ({
+  fetchWhatsAppTemplates: vi.fn(),
+  fetchTemplateBindings: vi.fn(),
+  saveTemplateBinding: vi.fn(),
+}));
+
+// The merchant's library (Settings → read from Meta).
+const REPLENISH_TEMPLATE = {
+  id: "t9",
+  name: "replenish_ar",
+  language: "ar",
+  status: "APPROVED",
+  category: "MARKETING",
+  parameterFormat: "POSITIONAL",
+  header: null,
+  body: "أهلاً {{1}}، {{2}} قرب يخلص؟",
+  footer: null,
+  buttons: [{ type: "URL", text: "اطلبه", url: "https://salla.sa/{{1}}" }],
+  variables: {
+    header: [],
+    body: ["1", "2"],
+    buttons: [{ index: 0, text: "اطلبه", url: "https://salla.sa/{{1}}" }],
+  },
+};
 
 vi.mock("../../../utils/replenishApi.js", () => ({
   fetchReplenish: vi.fn(),
@@ -106,6 +136,12 @@ describe("ReplenishTab", () => {
       ],
     });
     fetchAllCoupons.mockResolvedValue({ success: true, coupons: [] });
+    fetchWhatsAppTemplates.mockResolvedValue({
+      success: true,
+      syncedAt: "2026-09-30T00:00:00Z",
+      templates: [REPLENISH_TEMPLATE],
+    });
+    fetchTemplateBindings.mockResolvedValue({ success: true, bindings: {} });
   });
 
   it("switches automatic reminders on only after the opt-in confirmation", async () => {
@@ -249,13 +285,41 @@ describe("ReplenishTab", () => {
     expect(
       screen.getByLabelText(/نص رسالة الواتساب المباشرة/),
     ).toBeInTheDocument();
-    expect(screen.queryByLabelText(/اسم القالب المعتمد/)).toBeNull();
+    expect(screen.queryByLabelText("قالب التذكير")).toBeNull();
 
     const templateTab = await screen.findByRole("tab", {
       name: /قالب رسمي معتمد/,
     });
     fireEvent.click(templateTab);
-    expect(screen.getByLabelText(/اسم القالب المعتمد/)).toBeInTheDocument();
+    expect(await screen.findByLabelText("قالب التذكير")).toBeInTheDocument();
+  });
+
+  it("picks the reminder template from the library and saves it", async () => {
+    saveTemplateBinding.mockResolvedValue({
+      success: true,
+      bindings: { replenish: { templateId: "t9", slots: [] } },
+    });
+    const { showToast } = renderTab();
+    fireEvent.click(
+      await screen.findByRole("tab", { name: /قالب رسمي معتمد/ }),
+    );
+    fireEvent.change(await screen.findByLabelText("قالب التذكير"), {
+      target: { value: "t9" },
+    });
+    // Name, product name, and the product link on the button.
+    expect(screen.getByLabelText("{{1}} في النص")).toHaveValue("customer_name");
+    expect(screen.getByLabelText("{{2}} في النص")).toHaveValue("product_name");
+    expect(screen.getByLabelText("رابط زر «اطلبه»")).toHaveValue("product_url");
+    fireEvent.click(screen.getByRole("button", { name: "حفظ القالب" }));
+    await waitFor(() =>
+      expect(saveTemplateBinding).toHaveBeenCalledWith("tok", {
+        feature: "replenish",
+        binding: expect.objectContaining({ templateId: "t9" }),
+      }),
+    );
+    await waitFor(() =>
+      expect(showToast).toHaveBeenCalledWith("تم حفظ قالب التذكير", "success"),
+    );
   });
 
   it("switches to customer orders history and opens custom reminder modal", async () => {

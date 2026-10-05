@@ -86,7 +86,7 @@ const TEMPLATES = {
       body: "أهلاً {{1}}، سلتك بانتظارك",
       footer: null,
       buttons: [],
-      variables: { header: [], body: ["1"], buttons: 0 },
+      variables: { header: [], body: ["1"], buttons: [] },
     },
     {
       id: "2",
@@ -98,7 +98,7 @@ const TEMPLATES = {
       body: "Use {{1}}",
       footer: null,
       buttons: [],
-      variables: { header: [], body: ["1"], buttons: 0 },
+      variables: { header: [], body: ["1"], buttons: [] },
     },
   ],
 };

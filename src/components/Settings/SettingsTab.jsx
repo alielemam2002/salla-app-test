@@ -45,6 +45,7 @@ export default function SettingsTab({ embedded, showToast }) {
         query={templates}
         sync={syncTemplates}
         account={whatsapp.data?.settings}
+        showToast={showToast}
       />
     </div>
   );

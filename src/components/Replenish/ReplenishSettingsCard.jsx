@@ -19,13 +19,12 @@ import {
   DAILY_LIMIT_OPTIONS,
   DEFAULT_REPLENISH_TEXT,
   LEAD_OPTIONS,
-  REPLENISH_VARIABLES,
   SAMPLE_TEMPLATE_AR,
   SCHEDULE_LABEL,
 } from "../../utils/replenish/replenishModel.js";
+import { BINDING_SOURCES } from "../../utils/whatsapp/templateBinding.js";
+import TemplatePicker from "../whatsapp/TemplatePicker.jsx";
 import { timeAgo } from "../../utils/cartRecovery/cartModel.js";
-
-const SLOTS = 4;
 
 const draftOf = (s) => ({
   template: s.template || "",
@@ -63,6 +62,11 @@ export default function ReplenishSettingsCard({
   coupons,
   onCopy,
   showToast,
+  templates,
+  binding,
+  saveBinding,
+  onBindingSaved,
+  onOpenSettings,
 }) {
   const { settings: saved, blockers = [], sentToday = 0, whatsapp } = data;
   const [draft, setDraft] = useState(null);
@@ -71,28 +75,33 @@ export default function ReplenishSettingsCard({
   const [fieldErrors, setFieldErrors] = useState({});
   const [testTo, setTestTo] = useState("");
   const [messageMode, setMessageMode] = useState(
-    saved.template ? "template" : "text",
+    saved.template || binding ? "template" : "text",
   );
+  // The template picked from the library (Settings), saved on its own.
+  const [bindingDraft, setBindingDraft] = useState(null);
+  const bindingValue = bindingDraft || {
+    templateId: binding?.templateId || "",
+    slots: binding?.slots || [],
+  };
+  const saveTemplate = () =>
+    saveBinding.mutate(
+      { feature: "replenish", binding: bindingValue },
+      {
+        onSuccess: () => {
+          setBindingDraft(null);
+          onBindingSaved?.();
+          showToast?.("تم حفظ قالب التذكير", "success");
+        },
+        onError: (e) =>
+          showToast?.(e.result?.error || "تعذّر حفظ القالب", "error"),
+      },
+    );
 
   const values = draft || draftOf(saved);
   const dirty =
     draft !== null && JSON.stringify(draft) !== JSON.stringify(draftOf(saved));
   const needsConsent = !saved.consentAt;
   const set = (name, value) => setDraft({ ...values, [name]: value });
-  const setSlot = (index, key) => {
-    const slots = Array.from(
-      { length: SLOTS },
-      (_, i) => values.params[i] || "",
-    );
-    slots[index] = key;
-    // Variables are {{1}}, {{2}}… in order: stop at the first empty slot.
-    const params = [];
-    for (const slot of slots) {
-      if (!slot) break;
-      params.push(slot);
-    }
-    set("params", params);
-  };
 
   const submit = (enabled) => {
     setError(null);
@@ -215,46 +224,34 @@ export default function ReplenishSettingsCard({
               </div>
               <p className="form-hint">
                 المتغيرات بالترتيب: اسم العميل، اسم المنتج، رابط المنتج. بعد
-                اعتماده اكتب اسمه هنا.
+                اعتماده حدّث قوالبك من «الإعدادات» واختره هنا.
               </p>
             </details>
 
-            <FormRow columns={2}>
-              <Field
-                label="اسم القالب المعتمد"
-                error={fieldErrors.template?.[0]}
+            <TemplatePicker
+              label="قالب التذكير"
+              templates={templates}
+              value={bindingValue}
+              onChange={setBindingDraft}
+              sources={BINDING_SOURCES.replenish}
+              onOpenSettings={onOpenSettings}
+            />
+            <div className="replenish-actions">
+              <Button
+                size="small"
+                onClick={saveTemplate}
+                disabled={!bindingDraft || !bindingValue.templateId}
+                loading={saveBinding.isPending}
               >
-                <TextInput
-                  dir="ltr"
-                  placeholder="replenish_reminder"
-                  value={values.template}
-                  onChange={(e) => set("template", e.target.value)}
-                />
-              </Field>
-              <Field label="لغة القالب" error={fieldErrors.language?.[0]}>
-                <TextInput
-                  dir="ltr"
-                  value={values.language}
-                  onChange={(e) => set("language", e.target.value)}
-                />
-              </Field>
-            </FormRow>
-
-            <div className="replenish-slots">
-              {Array.from({ length: SLOTS }, (_, i) => (
-                <Field key={i} label={`المتغير {{${i + 1}}}`}>
-                  <Select
-                    value={values.params[i] || ""}
-                    disabled={i > values.params.length}
-                    onChange={(e) => setSlot(i, e.target.value)}
-                    placeholder="—"
-                    options={REPLENISH_VARIABLES.map((v) => ({
-                      value: v.key,
-                      label: v.label,
-                    }))}
-                  />
-                </Field>
-              ))}
+                حفظ القالب
+              </Button>
+              {saved.template && !binding && (
+                <span className="form-hint">
+                  يُستخدم القالب المكتوب سابقًا{" "}
+                  <code dir="ltr">{saved.template}</code> حتى تختار قالبًا من
+                  قوالبك.
+                </span>
+              )}
             </div>
 
             <FormRow columns={3}>

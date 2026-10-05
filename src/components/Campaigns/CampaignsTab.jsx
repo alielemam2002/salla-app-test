@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { History, Megaphone, RefreshCw, Send } from "lucide-react";
+import { History, Megaphone, RefreshCw, Send, Settings } from "lucide-react";
 import {
   Alert,
   Badge,
@@ -21,12 +21,18 @@ import {
 } from "../../hooks/campaigns/useCampaigns.js";
 import { useWhatsAppStatus } from "../../hooks/cartRecovery/useCartRecovery.js";
 import { useCouponsQuery } from "../../hooks/coupons/useCoupons.js";
+import { useWhatsAppTemplates } from "../../hooks/settings/useSettings.js";
 import {
   describeVariables,
   filterCustomers,
   formToCampaign,
   ineligibleReason,
+  usesCoupon,
 } from "../../utils/campaigns/campaignModel.js";
+import {
+  BINDING_SOURCES,
+  resolveBinding,
+} from "../../utils/whatsapp/templateBinding.js";
 import { describeCartsError } from "../../utils/cartRecovery/cartModel.js";
 import {
   COUPON_STATUS,
@@ -38,48 +44,29 @@ import RecipientsTable from "./RecipientsTable.jsx";
 
 const schema = z.object({
   name: z.string().trim().min(1, "اكتب اسمًا للحملة"),
-  template: z
-    .string()
-    .trim()
-    .regex(/^[a-z0-9_]{1,512}$/, "أحرف إنجليزية صغيرة وأرقام و _ فقط"),
-  language: z
-    .string()
-    .trim()
-    .regex(/^[a-z]{2,3}(_[A-Z]{2})?$/, "رمز لغة مثل ar أو en_US"),
-  params: z
-    .array(
-      z
-        .object({ source: z.string(), value: z.string().optional() })
-        .superRefine((p, ctx) => {
-          if (p.source !== "customer_name" && !String(p.value || "").trim()) {
-            ctx.addIssue({
-              code: "custom",
-              path: ["value"],
-              message:
-                p.source === "coupon_code" ? "اختر كوبونًا" : "اكتب النص",
-            });
-          }
-        }),
-    )
-    .max(10),
+  // Checked against the library (resolveBinding) when reviewing.
+  binding: z.object({
+    templateId: z.string().min(1, "اختر قالبًا من قوالبك"),
+    slots: z.array(z.any()),
+  }),
+  couponCode: z.string(),
 });
 
 const DEFAULTS = {
   name: "",
-  template: "",
-  language: "ar",
-  params: [{ source: "customer_name", value: "" }],
+  binding: { templateId: "", slots: [] },
+  couponCode: "",
 };
 
 const EMPTY = [];
 
 /**
  * WhatsApp campaigns: send an approved template (an offer, a promo code…)
- * to the customers the merchant picks. Uses the merchant's own WhatsApp
- * account and its "Send from the app" switch (Cart Recovery → WhatsApp
- * settings). Messages go one at a time from this browser.
+ * to the customers the merchant picks. The account, its "Send from the app"
+ * switch and the template library live in the Settings tab. Messages go
+ * one at a time from this browser.
  */
-export default function CampaignsTab({ embedded, showToast }) {
+export default function CampaignsTab({ embedded, showToast, onNavigate }) {
   const getToken = useCallback(
     () => embedded?.auth?.getToken?.() || null,
     [embedded],
@@ -88,6 +75,8 @@ export default function CampaignsTab({ embedded, showToast }) {
   const groupsQuery = useCustomerGroups(getToken);
   const couponsQuery = useCouponsQuery(getToken);
   const waStatus = useWhatsAppStatus(getToken);
+  const templatesQuery = useWhatsAppTemplates(getToken);
+  const openSettings = () => onNavigate?.("settings");
   const sender = useCampaignSender(getToken);
   const history = useCampaignLog();
 
@@ -136,8 +125,21 @@ export default function CampaignsTab({ embedded, showToast }) {
     setSelected((prev) => new Set([...prev, ...list.map((c) => c.id)]));
 
   const openReview = form.handleSubmit((values) => {
+    const resolved = resolveBinding(
+      values.binding,
+      templatesQuery.data?.templates,
+      BINDING_SOURCES.campaign,
+    );
+    if (resolved.error) {
+      form.setError("binding", { message: resolved.error });
+      return;
+    }
+    if (usesCoupon(resolved.binding.slots) && !values.couponCode) {
+      form.setError("couponCode", { message: "اختر كوبون الحملة" });
+      return;
+    }
     setConsent(false);
-    setReview(formToCampaign(values));
+    setReview(formToCampaign(values, resolved.binding));
   });
 
   const send = async () => {
@@ -154,16 +156,31 @@ export default function CampaignsTab({ embedded, showToast }) {
   if (waStatus.isPending) status = null;
   else if (!waStatus.data?.connected) {
     status = (
-      <Alert tone="info" title="اربط واتساب أولًا">
-        تُرسل الحملات من حساب واتساب للأعمال الخاص بك. اربطه من تبويب «السلات
-        المتروكة» ← «إعدادات واتساب».
+      <Alert
+        tone="info"
+        title="اربط واتساب أولًا"
+        action={
+          <Button size="small" icon={Settings} onClick={openSettings}>
+            الإعدادات
+          </Button>
+        }
+      >
+        تُرسل الحملات من حساب واتساب للأعمال الخاص بك. اربطه من تبويب
+        «الإعدادات».
       </Alert>
     );
   } else if (!waStatus.data?.enabled) {
     status = (
-      <Alert tone="info" title="الإرسال من التطبيق متوقف">
-        فعّل «الإرسال من التطبيق» من تبويب «السلات المتروكة» لتتمكن من إرسال
-        الحملات.
+      <Alert
+        tone="info"
+        title="الإرسال من التطبيق متوقف"
+        action={
+          <Button size="small" icon={Settings} onClick={openSettings}>
+            الإعدادات
+          </Button>
+        }
+      >
+        فعّل «الإرسال من التطبيق» من تبويب «الإعدادات» لتتمكن من إرسال الحملات.
       </Alert>
     );
   } else {
@@ -254,6 +271,8 @@ export default function CampaignsTab({ embedded, showToast }) {
           <CampaignForm
             form={form}
             coupons={activeCoupons}
+            templates={templatesQuery.data?.templates}
+            onOpenSettings={openSettings}
             disabled={running}
           />
         </div>
@@ -353,12 +372,12 @@ export default function CampaignsTab({ embedded, showToast }) {
         {review && (
           <div className="campaign-review">
             <p>
-              سيتم إرسال القالب <code dir="ltr">{review.template}</code> (
-              <span dir="ltr">{review.language}</span>) إلى{" "}
+              سيتم إرسال القالب <code dir="ltr">{review.binding.name}</code> (
+              <span dir="ltr">{review.binding.language}</span>) إلى{" "}
               <strong>{recipients.length}</strong> عميل، واحدًا تلو الآخر. أبقِ
               هذه الصفحة مفتوحة حتى تنتهي العملية.
             </p>
-            {review.params.length > 0 && (
+            {review.binding.slots.length > 0 && (
               <ul>
                 {describeVariables(review).map((line) => (
                   <li key={line}>{line}</li>

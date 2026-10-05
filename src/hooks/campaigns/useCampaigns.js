@@ -132,7 +132,7 @@ export function useCampaignSender(getToken, { gapMs = 250 } = {}) {
       recordCampaign({
         id: `c${Date.now()}`,
         name: campaign.name,
-        template: campaign.template,
+        template: campaign.binding?.name || campaign.template,
         at: new Date().toISOString(),
         total: final.total,
         sent: final.sent,

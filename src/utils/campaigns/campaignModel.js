@@ -1,16 +1,13 @@
 import { whatsappNumber } from "../cartRecovery/whatsappMessage.js";
 import { createLocalStore } from "../localStore.js";
+import { slotLabel } from "../whatsapp/templateBinding.js";
 
 /**
  * WhatsApp campaigns (e.g. an offer or a promo code) to chosen customers.
- * Every message is an approved Meta *template*; its {{1}}, {{2}}… are filled
- * per customer from these sources.
+ * Every message is an approved Meta *template* picked from the merchant's
+ * library (Settings); its variables are filled per customer from
+ * BINDING_SOURCES.campaign (customer name, the campaign coupon) or fixed text.
  */
-export const VARIABLE_SOURCES = [
-  { value: "customer_name", label: "الاسم الأول للعميل" },
-  { value: "coupon_code", label: "كود الكوبون" },
-  { value: "custom", label: "نص مخصص (عرض، خصم، رابط…)" },
-];
 
 /** Why a customer can't get a campaign message, or null if they can. */
 export function ineligibleReason(customer) {
@@ -34,25 +31,29 @@ export function filterCustomers(customers, { search = "", groupId = "" } = {}) {
   });
 }
 
-/** Form → the campaign sent with every message. */
-export function formToCampaign(form) {
+/** Does the template show the campaign coupon somewhere? */
+export const usesCoupon = (slots) =>
+  slots.some((slot) => slot.source === "coupon_code");
+
+/** Form + the checked binding → the campaign sent with every message. */
+export function formToCampaign(form, binding) {
   return {
     name: form.name.trim(),
-    template: form.template.trim(),
-    language: form.language.trim(),
-    params: form.params.map((p) => ({
-      source: p.source,
-      value: p.source === "customer_name" ? "" : String(p.value || "").trim(),
-    })),
+    binding,
+    couponCode: usesCoupon(binding.slots) ? form.couponCode || "" : "",
   };
 }
 
-/** "{{1}} = Ahmed" lines for the review step (sample customer). */
+/** "{{1}} في النص = أحمد (اسم كل عميل)" lines for the review step. */
 export function describeVariables(campaign, sampleName = "أحمد") {
-  return campaign.params.map((p, i) => {
+  return campaign.binding.slots.map((slot) => {
     const value =
-      p.source === "customer_name" ? `${sampleName} (اسم كل عميل)` : p.value;
-    return `{{${i + 1}}} = ${value}`;
+      slot.source === "customer_name"
+        ? `${sampleName} (اسم كل عميل)`
+        : slot.source === "coupon_code"
+          ? campaign.couponCode
+          : slot.value;
+    return `${slotLabel(slot)} = ${value}`;
   });
 }
 

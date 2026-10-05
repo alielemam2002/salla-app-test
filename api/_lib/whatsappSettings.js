@@ -132,10 +132,17 @@ export async function saveSettings(merchantId, values, { stored, profile }) {
 }
 
 /**
- * Save the account from the Settings page. The cart reminder template (if
- * any) is kept; features pick templates separately.
+ * Save the account from the Settings page (or Embedded Signup). The cart
+ * reminder template (if any) is kept; features pick templates separately.
+ * `source`: "embedded_signup" (Connect with Facebook) or "manual" (typed);
+ * `pin`: the number's two-step PIN set by Embedded Signup (stored sealed,
+ * reused when the same number connects again).
  */
-export async function saveAccount(merchantId, values, { stored, profile }) {
+export async function saveAccount(
+  merchantId,
+  values,
+  { stored, profile, source, pin },
+) {
   const record = {
     ...(stored || {}),
     phoneNumberId: values.phoneNumberId,
@@ -145,9 +152,12 @@ export async function saveAccount(merchantId, values, { stored, profile }) {
       ? values.accessToken.slice(-4)
       : stored.tokenLast4,
     profile: profile || null,
+    source: source || (values.accessToken ? "manual" : stored?.source),
     enabled: stored?.enabled ?? true,
     updatedAt: new Date().toISOString(),
   };
+  if (pin) record.pin = seal(pin);
+  else if (stored?.phoneNumberId !== values.phoneNumberId) delete record.pin;
   await kvSetJson(keyFor(merchantId), record);
   return record;
 }
@@ -165,6 +175,23 @@ export async function saveTemplates(merchantId, templates) {
   return snapshot;
 }
 
+// Each feature's chosen template + variables (templateBinding.js), checked
+// against the library when saved: { cart?: binding, replenish?: binding }.
+const bindingsKey = (merchantId) => `wa:bindings:${merchantId}`;
+
+export async function loadBindings(merchantId) {
+  return (await kvGetJson(bindingsKey(merchantId))) || {};
+}
+
+/** binding = null forgets the feature's template. */
+export async function saveBinding(merchantId, feature, binding) {
+  const bindings = await loadBindings(merchantId);
+  if (binding) bindings[feature] = binding;
+  else delete bindings[feature];
+  await kvSetJson(bindingsKey(merchantId), bindings);
+  return bindings;
+}
+
 /** Turn sending from the app on or off, keeping everything else. */
 export async function setEnabled(merchantId, stored, enabled) {
   const record = {
@@ -179,6 +206,8 @@ export async function setEnabled(merchantId, stored, enabled) {
 export async function deleteSettings(merchantId) {
   await kvDel(keyFor(merchantId));
   await kvDel(templatesKey(merchantId));
+  // The chosen templates belong to the account being removed.
+  await kvDel(bindingsKey(merchantId));
 }
 
 /** What the browser may see: never the token, only its last 4 characters. */
@@ -192,6 +221,7 @@ export function publicSettings(record) {
     params: record.params || [],
     tokenLast4: record.tokenLast4 || null,
     profile: record.profile || null,
+    source: record.source || "manual",
     enabled: record.enabled !== false,
     updatedAt: record.updatedAt,
   };

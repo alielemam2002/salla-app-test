@@ -9,6 +9,11 @@ import {
 } from "../ui/index.js";
 import { useClipboard } from "../../hooks/ui/useClipboard.js";
 import { useCouponsQuery } from "../../hooks/coupons/useCoupons.js";
+import { useWhatsAppTemplates } from "../../hooks/settings/useSettings.js";
+import {
+  useSaveTemplateBinding,
+  useTemplateBindings,
+} from "../../hooks/whatsapp/useTemplateBindings.js";
 import {
   useReplenish,
   useReplenishMutations,
@@ -30,12 +35,15 @@ import ManualReminderModal from "./ManualReminderModal.jsx";
  * from new orders (api/salla-webhook.js), and a daily WhatsApp run with the
  * merchant's approved template (api/replenish.js).
  */
-export default function ReplenishTab({ embedded, showToast }) {
+export default function ReplenishTab({ embedded, showToast, onNavigate }) {
   const getToken = useCallback(
     () => embedded?.auth?.getToken?.() || null,
     [embedded],
   );
   const query = useReplenish(getToken);
+  const templatesQuery = useWhatsAppTemplates(getToken);
+  const bindingsQuery = useTemplateBindings(getToken);
+  const saveBinding = useSaveTemplateBinding(getToken);
   const [keyword, setKeyword] = useState("");
   const products = useReplenishProducts(getToken, keyword);
   const couponsQuery = useCouponsQuery(getToken);
@@ -92,6 +100,11 @@ export default function ReplenishTab({ embedded, showToast }) {
         sendTest={sendTest}
         coupons={activeCoupons}
         showToast={showToast}
+        templates={templatesQuery.data?.templates}
+        binding={bindingsQuery.data?.bindings?.replenish || null}
+        saveBinding={saveBinding}
+        onBindingSaved={() => query.refetch()}
+        onOpenSettings={() => onNavigate?.("settings")}
         onCopy={async (text) => {
           const ok = await copy(text);
           showToast?.(
