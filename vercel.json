@@ -7,6 +7,10 @@
     {
       "source": "/api/meta-webhook",
       "destination": "/api/salla-webhook"
+    },
+    {
+      "source": "/api/mobile-app",
+      "destination": "/api/store"
     }
   ],
   "crons": [

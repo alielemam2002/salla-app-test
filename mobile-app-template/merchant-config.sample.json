@@ -1,0 +1,14 @@
+{
+  "appName": "متجر تجريبي",
+  "storeUrl": "https://salla.sa",
+  "primaryColor": "#10B981",
+  "packageName": "sa.salla.app.demo_12345",
+  "version": "1.0.0",
+  "versionCode": 1,
+  "icon": "./assets/icon.png",
+  "splash": {
+    "image": "./assets/splash.png",
+    "resizeMode": "contain",
+    "backgroundColor": "#10B981"
+  }
+}

@@ -20,5 +20,6 @@
 @import "./features/cart-recovery.css";
 @import "./features/alerts.css";
 @import "./features/replenish.css";
+@import "./features/mobile-app.css";
 @import "./features/settings.css";
 @import "./ui/kit.css";
