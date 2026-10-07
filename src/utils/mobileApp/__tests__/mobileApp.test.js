@@ -1,7 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+const memoryKv = new Map();
+vi.mock("../../../../api/_lib/kv.js", () => ({
+  kvGetJson: vi.fn(async (key) => memoryKv.get(key) || null),
+  kvSetJson: vi.fn(async (key, val) => {
+    memoryKv.set(key, val);
+    return val;
+  }),
+}));
+
 import {
+  createBuildJob,
   generatePackageName,
+  getDeviceTokens,
+  getPushHistory,
   isValidPackageName,
+  registerPushToken,
+  sendPushNotification,
   validateStoreUrl,
 } from "../../../../api/_lib/mobileApp.js";
 
@@ -69,6 +84,88 @@ describe("mobileApp helpers", () => {
       const invalid = validateStoreUrl("https://another-domain.com", "mystore.com");
       expect(invalid.valid).toBe(false);
       expect(invalid.error).toContain("نطاق متجرك");
+    });
+  });
+
+  describe("createBuildJob", () => {
+    it("creates a build record with native flags defaulting to true", async () => {
+      const record = await createBuildJob("9911", {
+        appName: "متجر تجربة",
+        storeUrl: "https://test.salla.sa",
+        packageName: "sa.salla.app.test_9911",
+      });
+
+      expect(record.bottomNavEnabled).toBe(true);
+      expect(record.pullToRefresh).toBe(true);
+      expect(record.status).toBe("QUEUED");
+      expect(record.merchantId).toBe("9911");
+    });
+
+    it("respects customized bottomNavEnabled and pullToRefresh settings", async () => {
+      const record = await createBuildJob("9922", {
+        appName: "متجر مخصص",
+        storeUrl: "https://custom.salla.sa",
+        packageName: "sa.salla.app.custom_9922",
+        bottomNavEnabled: false,
+        pullToRefresh: false,
+      });
+
+      expect(record.bottomNavEnabled).toBe(false);
+      expect(record.pullToRefresh).toBe(false);
+    });
+  });
+
+  describe("Push Notifications", () => {
+    it("registers and retrieves device push tokens uniquely", async () => {
+      const reg1 = await registerPushToken("7788", {
+        token: "ExponentPushToken[abc12345]",
+        platform: "android",
+      });
+      expect(reg1.success).toBe(true);
+      expect(reg1.count).toBe(1);
+
+      // Duplicate token registration updates instead of duplicating
+      const reg2 = await registerPushToken("7788", {
+        token: "ExponentPushToken[abc12345]",
+        platform: "android",
+      });
+      expect(reg2.count).toBe(1);
+
+      // Second unique token
+      const reg3 = await registerPushToken("7788", {
+        token: "ExponentPushToken[xyz99999]",
+        platform: "android",
+      });
+      expect(reg3.count).toBe(2);
+
+      const tokens = await getDeviceTokens("7788");
+      expect(tokens.length).toBe(2);
+    });
+
+    it("sends push notification and records history", async () => {
+      const notification = await sendPushNotification("7788", {
+        title: "🔥 عرض الجمعة البيضاء",
+        body: "خصم 30% على كل المتجر",
+        url: "/offers",
+      });
+
+      expect(notification.title).toBe("🔥 عرض الجمعة البيضاء");
+      expect(notification.recipientsCount).toBe(2);
+      expect(notification.id).toContain("push_");
+
+      const history = await getPushHistory("7788");
+      expect(history.length).toBe(1);
+      expect(history[0].title).toBe("🔥 عرض الجمعة البيضاء");
+    });
+
+    it("validates missing title or body", async () => {
+      await expect(
+        sendPushNotification("7788", { title: "", body: "محتوى" }),
+      ).rejects.toThrow("عنوان الإشعار مطلوب");
+
+      await expect(
+        sendPushNotification("7788", { title: "عنوان", body: "" }),
+      ).rejects.toThrow("نص الإشعار مطلوب");
     });
   });
 });

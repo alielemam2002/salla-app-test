@@ -25,6 +25,15 @@ const extra = Constants.expoConfig?.extra || {};
 const STORE_URL = extra.storeUrl || "https://salla.sa";
 const PRIMARY_COLOR = extra.primaryColor || "#10B981";
 const APP_NAME = extra.appName || "متجر سلة";
+const BOTTOM_NAV_ENABLED = extra.bottomNavEnabled !== false;
+const PULL_TO_REFRESH_ENABLED = extra.pullToRefresh !== false;
+
+const NAV_TABS = [
+  { id: "home", label: "الرئيسية", icon: "🏠", path: "" },
+  { id: "categories", label: "التصنيفات", icon: "📑", path: "/categories" },
+  { id: "cart", label: "السلة", icon: "🛒", path: "/cart" },
+  { id: "profile", label: "حسابي", icon: "👤", path: "/profile" },
+];
 
 export default function App() {
   const webViewRef = useRef(null);
@@ -32,6 +41,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [activeTab, setActiveTab] = useState("home");
 
   // Monitor network connectivity
   useEffect(() => {
@@ -158,6 +168,22 @@ export default function App() {
     );
   }
 
+  // Switch tabs and navigate within Salla store
+  const handleTabPress = (tab) => {
+    setActiveTab(tab.id);
+    const baseUrl = STORE_URL.replace(/\/+$/, "");
+    const targetUrl = tab.path ? `${baseUrl}${tab.path}` : baseUrl;
+    const js = `
+      try {
+        if (!window.location.href.includes("${tab.path || baseUrl}")) {
+          window.location.href = "${targetUrl}";
+        }
+      } catch (e) {}
+      true;
+    `;
+    webViewRef.current?.injectJavaScript(js);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ExpoStatusBar style="light" backgroundColor={PRIMARY_COLOR} />
@@ -171,11 +197,25 @@ export default function App() {
         domStorageEnabled={true}
         sharedCookiesEnabled={true}
         thirdPartyCookiesEnabled={true}
-        pullToRefreshEnabled={true}
+        pullToRefreshEnabled={PULL_TO_REFRESH_ENABLED}
         allowsBackForwardNavigationGestures={true}
         mixedContentMode="compatibility"
         onNavigationStateChange={(navState) => {
           setCanGoBack(navState.canGoBack);
+          const currentPath = (navState.url || "").toLowerCase();
+          if (currentPath.includes("/cart")) {
+            setActiveTab("cart");
+          } else if (currentPath.includes("/categories")) {
+            setActiveTab("categories");
+          } else if (
+            currentPath.includes("/profile") ||
+            currentPath.includes("/account") ||
+            currentPath.includes("/login")
+          ) {
+            setActiveTab("profile");
+          } else {
+            setActiveTab("home");
+          }
         }}
         onLoadStart={() => setIsLoading(true)}
         onLoadEnd={handleLoadEnd}
@@ -186,6 +226,43 @@ export default function App() {
         }}
         onShouldStartLoadWithRequest={handleShouldStartLoad}
       />
+
+      {/* Native Bottom Navigation Bar */}
+      {BOTTOM_NAV_ENABLED && (
+        <View style={styles.bottomNavBar}>
+          {NAV_TABS.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <TouchableOpacity
+                key={tab.id}
+                style={styles.navTabItem}
+                onPress={() => handleTabPress(tab)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.navTabIcon}>{tab.icon}</Text>
+                <Text
+                  style={[
+                    styles.navTabLabel,
+                    isActive
+                      ? [styles.navTabLabelActive, { color: PRIMARY_COLOR }]
+                      : styles.navTabLabelInactive,
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+                {isActive && (
+                  <View
+                    style={[
+                      styles.navTabActiveDot,
+                      { backgroundColor: PRIMARY_COLOR },
+                    ]}
+                  />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
 
       {/* Loading Overlay */}
       {isLoading && (
@@ -253,5 +330,45 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "600",
+  },
+  bottomNavBar: {
+    height: 60,
+    backgroundColor: "#FFFFFF",
+    flexDirection: "row",
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+  },
+  navTabItem: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 6,
+    position: "relative",
+  },
+  navTabIcon: {
+    fontSize: 20,
+    marginBottom: 2,
+  },
+  navTabLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  navTabLabelActive: {
+    fontWeight: "700",
+  },
+  navTabLabelInactive: {
+    color: "#6B7280",
+  },
+  navTabActiveDot: {
+    position: "absolute",
+    bottom: 4,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
   },
 });

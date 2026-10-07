@@ -10,5 +10,7 @@
     "image": "./assets/splash.png",
     "resizeMode": "contain",
     "backgroundColor": "#10B981"
-  }
+  },
+  "bottomNavEnabled": true,
+  "pullToRefresh": true
 }

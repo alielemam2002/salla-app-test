@@ -90,6 +90,8 @@ export function validateStoreUrl(urlString, allowedDomain = null) {
 const configKey = (merchantId) => `mobile_app:${merchantId}`;
 const buildKey = (buildId) => `mobile_app_build:${buildId}`;
 const merchantBuildsKey = (merchantId) => `mobile_app_builds:${merchantId}`;
+const tokensKey = (merchantId) => `mobile_app_tokens:${merchantId}`;
+const pushHistoryKey = (merchantId) => `mobile_app_push_history:${merchantId}`;
 
 export async function getMobileAppConfig(merchantId) {
   return await kvGetJson(configKey(merchantId));
@@ -156,6 +158,8 @@ export async function createBuildJob(merchantId, appConfig) {
     packageName: appConfig.packageName,
     primaryColor: appConfig.primaryColor || DEFAULT_PRIMARY_COLOR,
     logoUrl: appConfig.logoUrl || null,
+    bottomNavEnabled: appConfig.bottomNavEnabled !== false,
+    pullToRefresh: appConfig.pullToRefresh !== false,
     platform: "android",
     buildType: "apk_and_aab",
     status: "QUEUED",
@@ -232,6 +236,104 @@ export async function cancelBuildJob(merchantId) {
   return true;
 }
 
+export async function registerPushToken(merchantId, tokenData) {
+  const merchantStr = String(merchantId);
+  const token = typeof tokenData === "string" ? tokenData : tokenData?.token;
+  if (!token || typeof token !== "string") {
+    throw new Error("رمز الإشعار (Push Token) مطلوب");
+  }
+
+  const existing = (await kvGetJson(tokensKey(merchantStr))) || [];
+  const filtered = existing.filter((t) =>
+    typeof t === "string" ? t !== token : t.token !== token
+  );
+  filtered.push({
+    token,
+    platform: tokenData?.platform || "android",
+    registeredAt: Date.now(),
+  });
+  await kvSetJson(tokensKey(merchantStr), filtered);
+  return { success: true, count: filtered.length };
+}
+
+export async function getDeviceTokens(merchantId) {
+  const merchantStr = String(merchantId);
+  return (await kvGetJson(tokensKey(merchantStr))) || [];
+}
+
+export async function getPushHistory(merchantId) {
+  const merchantStr = String(merchantId);
+  return (await kvGetJson(pushHistoryKey(merchantStr))) || [];
+}
+
+export async function sendPushNotification(
+  merchantId,
+  { title, body, url = null },
+) {
+  const merchantStr = String(merchantId);
+  if (!title || !title.trim()) throw new Error("عنوان الإشعار مطلوب");
+  if (!body || !body.trim()) throw new Error("نص الإشعار مطلوب");
+
+  const tokens = await getDeviceTokens(merchantStr);
+  const tokenStrings = tokens
+    .map((t) => (typeof t === "string" ? t : t.token))
+    .filter(Boolean);
+
+  let successCount = 0;
+  let failureCount = 0;
+
+  if (tokenStrings.length > 0) {
+    const messages = tokenStrings.map((to) => ({
+      to,
+      sound: "default",
+      title: title.trim(),
+      body: body.trim(),
+      data: { url: url || "" },
+    }));
+
+    try {
+      const res = await fetch("https://exp.host/--/api/v2/push/send", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Accept-encoding": "gzip, deflate",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(messages),
+      });
+
+      if (res.ok) {
+        successCount = tokenStrings.length;
+      } else {
+        failureCount = tokenStrings.length;
+      }
+    } catch {
+      failureCount = tokenStrings.length;
+    }
+  }
+
+  const historyItem = {
+    id: `push_${Date.now()}`,
+    title: title.trim(),
+    body: body.trim(),
+    url: url || null,
+    recipientsCount: tokenStrings.length,
+    sentAt: Date.now(),
+    status:
+      tokenStrings.length > 0 && failureCount === 0
+        ? "DELIVERED"
+        : tokenStrings.length === 0
+          ? "QUEUED_EMPTY"
+          : "PARTIAL",
+  };
+
+  const history = await getPushHistory(merchantStr);
+  history.unshift(historyItem);
+  await kvSetJson(pushHistoryKey(merchantStr), history.slice(0, 30));
+
+  return historyItem;
+}
+
 export async function dispatchBuild(buildRecord, callbackUrl = null) {
   const githubToken = process.env.GITHUB_BUILD_TOKEN;
   const githubRepo = process.env.GITHUB_REPO;
@@ -256,6 +358,8 @@ export async function dispatchBuild(buildRecord, callbackUrl = null) {
             package_name: buildRecord.packageName,
             primary_color: buildRecord.primaryColor,
             logo_url: buildRecord.logoUrl,
+            bottom_nav_enabled: buildRecord.bottomNavEnabled,
+            pull_to_refresh: buildRecord.pullToRefresh,
             callback_url: callbackUrl,
           },
         }),

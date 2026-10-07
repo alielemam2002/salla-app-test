@@ -60,3 +60,21 @@ export async function cancelMobileAppBuild(token) {
     action: "mobile_app_cancel",
   });
 }
+
+export async function sendPushNotification(token, { title, body, url = null }) {
+  return await callMobileAppApi({
+    token,
+    action: "mobile_app_push_send",
+    title,
+    body,
+    url,
+  });
+}
+
+export async function fetchPushHistory(token) {
+  return await callMobileAppApi({
+    token,
+    action: "mobile_app_push_history",
+  });
+}
+

@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Bell, Smartphone } from "lucide-react";
 import { Alert, Button, Card, Spinner } from "../ui/index.js";
 import MobileAppForm from "./MobileAppForm.jsx";
 import MobileDeviceMockup from "./MobileDeviceMockup.jsx";
 import MobileAppBuildProgress from "./MobileAppBuildProgress.jsx";
 import MobileAppSuccessCard from "./MobileAppSuccessCard.jsx";
+import MobilePushNotificationManager from "./MobilePushNotificationManager.jsx";
 import {
   cancelMobileAppBuild,
   fetchMobileAppConfig,
@@ -24,6 +26,8 @@ export default function MobileAppTab({ embedded, showToast }) {
     packageName: "sa.salla.app.store",
   });
   const [isEditing, setIsEditing] = useState(false);
+  const [activeSubTab, setActiveSubTab] = useState("builder"); // "builder" | "notifications"
+  const [notificationBanner, setNotificationBanner] = useState(null);
 
   // Fetch mobile app configuration and latest build
   const {
@@ -159,6 +163,26 @@ export default function MobileAppTab({ embedded, showToast }) {
             جاهز للتثبيت الفوري والنشر على Google Play دون أي تعديل لثيم متجرك.
           </p>
         </div>
+
+        {/* Sub-tab Navigation */}
+        <div className="mobile-app-subtabs-nav">
+          <button
+            type="button"
+            className={`subtab-btn ${activeSubTab === "builder" ? "active" : ""}`}
+            onClick={() => setActiveSubTab("builder")}
+          >
+            <Smartphone size={16} />
+            <span>بناء وهوية التطبيق</span>
+          </button>
+          <button
+            type="button"
+            className={`subtab-btn ${activeSubTab === "notifications" ? "active" : ""}`}
+            onClick={() => setActiveSubTab("notifications")}
+          >
+            <Bell size={16} />
+            <span>مركز الإشعارات الفورية</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Two-Column Layout */}
@@ -172,13 +196,21 @@ export default function MobileAppTab({ embedded, showToast }) {
               storeUrl={formConfig.storeUrl}
               primaryColor={formConfig.primaryColor}
               logoUrl={formConfig.logoUrl}
+              bottomNavEnabled={formConfig.bottomNavEnabled !== false}
+              notificationBanner={notificationBanner}
+              onDismissNotification={() => setNotificationBanner(null)}
             />
           </div>
         </aside>
 
-        {/* Right Column: Workflow Steps (Form vs Building vs Success) */}
+        {/* Right Column: Workflow Steps (Form vs Building vs Success vs Notifications) */}
         <main className="mobile-app-main-column">
-          {isBuilding ? (
+          {activeSubTab === "notifications" ? (
+            <MobilePushNotificationManager
+              onPreviewNotification={setNotificationBanner}
+              showToast={showToast}
+            />
+          ) : isBuilding ? (
             <MobileAppBuildProgress
               appName={formConfig.appName}
               buildId={data?.config?.currentBuildId}

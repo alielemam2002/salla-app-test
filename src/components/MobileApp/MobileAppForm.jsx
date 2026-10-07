@@ -10,7 +10,7 @@ import {
   Smartphone,
   UploadCloud,
 } from "lucide-react";
-import { Button, TextInput } from "../ui/index.js";
+import { Button, Switch, TextInput } from "../ui/index.js";
 
 const PRESET_COLORS = [
   { name: "زمردي (الأصلي)", hex: "#10B981" },
@@ -184,6 +184,32 @@ export default function MobileAppForm({
           <span className="form-hint">
             معرّف مميز لتطبيقك في نظام أندرويد لضمان عدم التعارض على Google Play.
           </span>
+        </div>
+
+        {/* Native App Features & Experience */}
+        <div className="form-group native-features-section">
+          <label className="form-label">ميزات وتجربة التطبيق الأصلي (Native Features)</label>
+          <div className="native-features-card">
+            <Switch
+              id="bottom-nav-toggle"
+              checked={config.bottomNavEnabled !== false}
+              onChange={(checked) =>
+                onChange({ ...config, bottomNavEnabled: checked })
+              }
+              label="شريط التنقل السفلي الأصلي (Native Bottom Bar)"
+              description="أزرار تنقل أصلية وسريعة في أسفل الشاشة (الرئيسية، التصنيفات، السلة، حسابي) لتجربة استخدام فائقة السرعة."
+            />
+            <div className="native-feature-divider" />
+            <Switch
+              id="pull-refresh-toggle"
+              checked={config.pullToRefresh !== false}
+              onChange={(checked) =>
+                onChange({ ...config, pullToRefresh: checked })
+              }
+              label="السحب للأسفل للتحديث (Pull to Refresh)"
+              description="إمكانية سحب الشاشة للأسفل لإعادة تحميل أحدث المنتجات والعروض."
+            />
+          </div>
         </div>
       </div>
 
