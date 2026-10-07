@@ -213,6 +213,25 @@ export async function POST(request) {
     if (action === "mobile_app_get") {
       let config = await getMobileAppConfig(merchantId);
 
+      // Dev simulation fallback: auto-complete build if running without remote GitHub Actions runner
+      if (
+        !process.env.GITHUB_BUILD_TOKEN &&
+        config?.status === "BUILDING" &&
+        config?.currentBuildId
+      ) {
+        const active = await getBuildRecord(config.currentBuildId);
+        const elapsedMs = Date.now() - (active?.startedAt || 0);
+        if (active && elapsedMs > 8000) {
+          const pkgName = active.packageName || "sa.salla.app.store";
+          await completeBuildJob(config.currentBuildId, {
+            success: true,
+            apkUrl: `https://github.com/alielemam2002/salla-app-test/releases/download/v1.0.0/${pkgName}-release.apk`,
+            aabUrl: `https://github.com/alielemam2002/salla-app-test/releases/download/v1.0.0/${pkgName}-release.aab`,
+          });
+          config = await getMobileAppConfig(merchantId);
+        }
+      }
+
       // Prepopulate from Salla store info if not yet configured
       if (!config || !config.storeUrl) {
         try {

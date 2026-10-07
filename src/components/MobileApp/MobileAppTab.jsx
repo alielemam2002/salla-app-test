@@ -13,6 +13,10 @@ import {
   saveMobileAppConfig,
   triggerMobileAppBuild,
 } from "../../utils/mobileAppApi.js";
+import {
+  isSessionInvalidError,
+  refreshSallaSession,
+} from "../../utils/sallaSession.js";
 
 export default function MobileAppTab({ embedded, showToast }) {
   const queryClient = useQueryClient();
@@ -130,14 +134,25 @@ export default function MobileAppTab({ embedded, showToast }) {
   }
 
   if (isError) {
+    const isSessionInvalid = isSessionInvalidError(error);
     return (
       <Card className="mobile-app-container">
         <Alert
           tone="error"
           title="تعذّر تحميل إعدادات التطبيق"
           action={
-            <Button size="small" variant="secondary" onClick={() => refetch()}>
-              إعادة المحاولة
+            <Button
+              size="small"
+              variant="secondary"
+              onClick={() => {
+                if (isSessionInvalid) {
+                  refreshSallaSession(embedded, showToast);
+                } else {
+                  refetch();
+                }
+              }}
+            >
+              {isSessionInvalid ? "تحديث الجلسة" : "إعادة المحاولة"}
             </Button>
           }
         >
