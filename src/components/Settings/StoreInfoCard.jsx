@@ -15,6 +15,11 @@ import {
 } from "../../utils/settings/settingsLabels.js";
 import { storeAccessMessage } from "../../utils/sallaAccess.js";
 
+import {
+  isSessionInvalidError,
+  refreshSallaSession,
+} from "../../utils/sallaSession.js";
+
 const yesNo = (value) =>
   value === null || value === undefined ? null : value ? "نعم" : "لا";
 
@@ -91,15 +96,39 @@ function AccessDetails({ access }) {
  * Everything Salla tells us about the store (GET /store/info and the
  * account's user/info), and whether the app holds the store's tokens.
  */
-export default function StoreInfoCard({ query }) {
+export default function StoreInfoCard({ query, embedded, showToast }) {
   let content;
   if (query.isPending) {
     content = <Skeleton height={160} />;
   } else if (query.isError) {
+    const isSession = isSessionInvalidError(query.error);
     content = (
-      <Alert tone="error" title="تعذّر تحميل بيانات المتجر">
+      <Alert
+        tone="error"
+        title="تعذّر تحميل بيانات المتجر"
+        action={
+          isSession ? (
+            <Button
+              size="small"
+              variant="primary"
+              onClick={() => refreshSallaSession(embedded, showToast)}
+            >
+              تحديث الجلسة
+            </Button>
+          ) : (
+            <Button
+              size="small"
+              variant="secondary"
+              onClick={() => query.refetch()}
+            >
+              إعادة المحاولة
+            </Button>
+          )
+        }
+      >
         {storeAccessMessage(query.error.result?.code) ||
-          query.error.result?.error}
+          query.error.result?.error ||
+          query.error.message}
       </Alert>
     );
   } else {

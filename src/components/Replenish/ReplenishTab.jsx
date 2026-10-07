@@ -29,6 +29,10 @@ import RemindersCard from "./RemindersCard.jsx";
 import CustomerOrdersCard from "./CustomerOrdersCard.jsx";
 import ReplenishMessageModal from "./ReplenishMessageModal.jsx";
 import ManualReminderModal from "./ManualReminderModal.jsx";
+import {
+  isSessionInvalidError,
+  refreshSallaSession,
+} from "../../utils/sallaSession.js";
 
 /**
  * Smart replenishment: consumption days per product, reminders scheduled
@@ -75,14 +79,30 @@ export default function ReplenishTab({ embedded, showToast, onNavigate }) {
     );
   }
   if (query.isError) {
+    const isSession = isSessionInvalidError(query.error);
     return (
       <Alert
         tone="error"
         title="تعذّر تحميل تذكير إعادة الشراء"
         action={
-          <Button size="small" onClick={() => query.refetch()}>
-            إعادة المحاولة
-          </Button>
+          <>
+            {isSession && (
+              <Button
+                size="small"
+                variant="primary"
+                onClick={() => refreshSallaSession(embedded, showToast)}
+              >
+                تحديث الجلسة
+              </Button>
+            )}
+            <Button
+              size="small"
+              variant={isSession ? "secondary" : "primary"}
+              onClick={() => query.refetch()}
+            >
+              إعادة المحاولة
+            </Button>
+          </>
         }
       >
         {query.error.result?.error || "حاول مرة أخرى."}

@@ -107,6 +107,57 @@
   gap: var(--space-md);
 }
 
+.wa-signup-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+}
+
+.wa-signup-box h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.wa-signup-box p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.wa-signup-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-xs);
+}
+
+.form-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  margin: var(--space-xs) 0;
+}
+
+.form-divider::before,
+.form-divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.form-divider span {
+  padding: 0 var(--space-sm);
+}
+
 .settings-templates {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

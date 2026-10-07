@@ -1,4 +1,4 @@
-import { Facebook, FileText, Settings } from "lucide-react";
+import { FileText, Settings } from "lucide-react";
 import { Alert, Button, Switch } from "../ui/index.js";
 import {
   BINDING_SOURCES,
@@ -12,15 +12,11 @@ const SOURCE_LABELS = new Map(
 
 /**
  * How reminders can be sent: manually (always), or from the app once the
- * merchant has connected their WhatsApp Business account (Settings tab),
+ * merchant has connected their WhatsApp Business account (in Settings tab),
  * picked the reminder template, and the "Send from the app" switch is on.
- * `signup` (useEmbeddedSignup) adds "Connect with Facebook" when the
- * server has Embedded Signup set up.
- * Nothing secret is shown (the server never returns the token).
  */
 export default function WhatsAppApiStatus({
   status,
-  signup,
   onOpenTemplate,
   onOpenSettings,
   onToggle,
@@ -50,49 +46,26 @@ export default function WhatsAppApiStatus({
       الإعدادات
     </Button>
   );
-  // Embedded Signup: must open the popup right in the click.
-  const connectButton = signup?.available && (
-    <Button
-      size="small"
-      variant="primary"
-      icon={Facebook}
-      loading={signup.busy}
-      disabled={!signup.ready}
-      onClick={signup.start}
-    >
-      ربط واتساب عبر فيسبوك
-    </Button>
-  );
-  const actions = connectButton ? (
-    <div className="wa-connect-actions">
-      {connectButton}
-      {settingsButton}
-    </div>
-  ) : (
-    settingsButton
-  );
 
   if (tokenUnreadable) {
     return (
       <Alert
         tone="warning"
         title="أدخل رمز الوصول لواتساب مرة أخرى"
-        action={actions}
+        action={settingsButton}
       >
-        تعذّرت قراءة الرمز المحفوظ. أعد الربط عبر فيسبوك أو أدخله مرة أخرى من
-        تبويب «الإعدادات»؛ إلى ذلك الحين يمكنك إرسال التذكيرات يدويًا فقط.
+        تعذّرت قراءة الرمز المحفوظ. أعد ربط الحساب من تبويب «الإعدادات»؛ إلى ذلك
+        الحين يمكنك إرسال التذكيرات يدويًا فقط.
       </Alert>
     );
   }
 
   if (!connected) {
     return (
-      <Alert tone="info" title="الإرسال اليدوي فقط" action={actions}>
+      <Alert tone="info" title="الإرسال اليدوي فقط" action={settingsButton}>
         {!storageReady
-          ? "استخدم زر «واتساب» لإرسال كل تذكير بنفسك. الإرسال من التطبيق يحتاج أولًا إلى تفعيل تخزين الإعدادات على الخادم (Upstash Redis و WA_SETTINGS_KEY)."
-          : connectButton
-            ? "استخدم زر «واتساب» لإرسال كل تذكير بنفسك، أو اضغط «ربط واتساب عبر فيسبوك»: تختار نشاطك التجاري وحساب واتساب للأعمال والرقم في نافذة من Meta، ونحفظ الربط تلقائيًا دون نسخ أي رموز. (أو أدخل البيانات يدويًا من «الإعدادات».)"
-            : "استخدم زر «واتساب» لإرسال كل تذكير بنفسك. اربط حساب واتساب للأعمال من تبويب «الإعدادات» لتتمكن من الإرسال من التطبيق."}
+          ? "استخدم زر «واتساب» لإرسال كل تذكير يدويًا. الإرسال التلقائي من التطبيق يحتاج أولًا إلى تفعيل تخزين الإعدادات على الخادم (Upstash Redis)."
+          : "استخدم زر «واتساب» لإرسال كل تذكير يدويًا. اربط حساب واتساب للأعمال من تبويب «الإعدادات» لتتمكن من الإرسال مباشرة من التطبيق."}
       </Alert>
     );
   }

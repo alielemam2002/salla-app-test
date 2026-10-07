@@ -8,6 +8,7 @@ import {
   useStoreInfo,
   useWhatsAppTemplates,
 } from "../../hooks/settings/useSettings.js";
+import { useEmbeddedSignup } from "../../hooks/whatsapp/useEmbeddedSignup.js";
 import StoreInfoCard from "./StoreInfoCard.jsx";
 import WhatsAppAccountCard from "./WhatsAppAccountCard.jsx";
 import WhatsAppTemplatesCard from "./WhatsAppTemplatesCard.jsx";
@@ -28,15 +29,22 @@ export default function SettingsTab({ embedded, showToast }) {
   const templates = useWhatsAppTemplates(getToken);
   const { toggle, remove } = useWhatsAppSettingsMutations(getToken);
   const { saveAccount, syncTemplates } = useSettingsMutations(getToken);
+  const signup = useEmbeddedSignup(getToken);
 
   return (
     <div className="settings-page">
-      <StoreInfoCard query={store} />
+      <StoreInfoCard
+        query={store}
+        embedded={embedded}
+        showToast={showToast}
+      />
       <WhatsAppAccountCard
         query={whatsapp}
+        signup={signup}
         saveAccount={saveAccount}
         toggle={toggle}
         remove={remove}
+        embedded={embedded}
         // Disconnecting also deletes the saved templates.
         onRemoved={() => templates.refetch()}
         showToast={showToast}

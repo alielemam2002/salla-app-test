@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  act,
   fireEvent,
   render,
   screen,
@@ -15,8 +14,6 @@ import {
 } from "../../../utils/cartsApi.js";
 import { fetchAllCoupons } from "../../../utils/couponsApi.js";
 import {
-  completeWhatsAppSignup,
-  fetchSignupConfig,
   fetchTemplateBindings,
   fetchWhatsAppSettings,
   fetchWhatsAppStatus,
@@ -30,7 +27,6 @@ import {
   contactsStore,
   settingsStore,
 } from "../../../utils/cartRecovery/recoveryStorage.js";
-import { resetFacebookSdk } from "../../../utils/whatsapp/embeddedSignup.js";
 
 vi.mock("../../../utils/cartsApi.js", () => ({
   fetchAllAbandonedCarts: vi.fn(),
@@ -172,9 +168,6 @@ describe("CartRecoveryTab", () => {
     contactsStore.reset();
     apiSendsStore.reset();
     fetchWhatsAppStatus.mockResolvedValue(NOT_CONFIGURED);
-    fetchSignupConfig.mockResolvedValue({ success: true, available: false });
-    delete window.FB;
-    resetFacebookSdk();
     fetchAllAbandonedCarts.mockResolvedValue({
       success: true,
       carts: CARTS,
@@ -554,131 +547,13 @@ describe("CartRecoveryTab", () => {
     expect(await within(dialog).findByText("رسالة تجربة")).toBeInTheDocument();
   });
 
-  describe("connect with Facebook (Embedded Signup)", () => {
-    const signupMessage = (origin, event, data) =>
-      new MessageEvent("message", {
-        origin,
-        data: JSON.stringify({ type: "WA_EMBEDDED_SIGNUP", event, data }),
-      });
-
-    beforeEach(() => {
-      window.FB = { init: vi.fn(), login: vi.fn() };
-      fetchSignupConfig.mockResolvedValue({
-        success: true,
-        available: true,
-        appId: "998877665544",
-        configId: "1122334455",
-        version: "v23.0",
-      });
+  it("navigates to Settings when the settings button is clicked in the status alert", async () => {
+    fetchWhatsAppStatus.mockResolvedValue(NOT_CONFIGURED);
+    const { onNavigate } = renderTab();
+    const settingsBtn = await screen.findByRole("button", {
+      name: "الإعدادات",
     });
-
-    async function openPopup() {
-      const button = await screen.findByRole("button", {
-        name: "ربط واتساب عبر فيسبوك",
-      });
-      await waitFor(() => expect(button).toBeEnabled());
-      fireEvent.click(button);
-      return window.FB.login.mock.calls[0][0];
-    }
-
-    it("opens Meta's popup and saves the account it returns", async () => {
-      completeWhatsAppSignup.mockResolvedValue({
-        success: true,
-        settings: { phoneNumberId: "1324055010792496" },
-        templates: null,
-        templatesError: null,
-        warnings: [],
-      });
-      renderTab();
-      const loggedIn = await openPopup();
-
-      expect(window.FB.init).toHaveBeenCalledWith({
-        appId: "998877665544",
-        autoLogAppEvents: true,
-        xfbml: false,
-        version: "v23.0",
-      });
-      expect(window.FB.login).toHaveBeenCalledWith(
-        expect.any(Function),
-        expect.objectContaining({
-          config_id: "1122334455",
-          response_type: "code",
-          override_default_response_type: true,
-        }),
-      );
-      expect(
-        screen.getByText("أكمل الربط في نافذة فيسبوك"),
-      ).toBeInTheDocument();
-
-      act(() => loggedIn({ authResponse: { code: "AQcode" } }));
-      // Only Meta's own messages count.
-      act(() => {
-        window.dispatchEvent(
-          signupMessage("https://facebook.com.evil.example", "FINISH", {
-            waba_id: "666666",
-            phone_number_id: "666666",
-          }),
-        );
-        window.dispatchEvent(
-          signupMessage("https://www.facebook.com", "FINISH", {
-            waba_id: "1478536534308215",
-            phone_number_id: "1324055010792496",
-            business_id: "42",
-          }),
-        );
-      });
-
-      await waitFor(() =>
-        expect(completeWhatsAppSignup).toHaveBeenCalledWith("tok", {
-          code: "AQcode",
-          wabaId: "1478536534308215",
-          phoneNumberId: "1324055010792496",
-        }),
-      );
-      expect(completeWhatsAppSignup).toHaveBeenCalledTimes(1);
-      expect(
-        await screen.findByText("تم ربط واتساب عبر فيسبوك"),
-      ).toBeInTheDocument();
-      // The connection status is read again.
-      await waitFor(() => expect(fetchWhatsAppStatus).toHaveBeenCalledTimes(2));
-    });
-
-    it("says where the merchant stopped when the popup is closed", async () => {
-      renderTab();
-      const loggedIn = await openPopup();
-      act(() => {
-        window.dispatchEvent(
-          signupMessage("https://www.facebook.com", "CANCEL", {
-            current_step: "PHONE_NUMBER_SETUP",
-          }),
-        );
-      });
-      act(() => loggedIn({ authResponse: null, status: "unknown" }));
-      expect(await screen.findByText("لم يكتمل الربط")).toBeInTheDocument();
-      expect(screen.getByText("PHONE_NUMBER_SETUP")).toBeInTheDocument();
-      expect(completeWhatsAppSignup).not.toHaveBeenCalled();
-    });
-
-    it("shows the server's error when saving fails", async () => {
-      completeWhatsAppSignup.mockResolvedValue({
-        success: false,
-        status: 422,
-        code: "signup_code_rejected",
-        error: "لم تقبل Meta رمز الربط",
-      });
-      renderTab();
-      const loggedIn = await openPopup();
-      act(() => {
-        window.dispatchEvent(
-          signupMessage("https://www.facebook.com", "FINISH", {
-            waba_id: "1478536534308215",
-            phone_number_id: "1324055010792496",
-          }),
-        );
-      });
-      act(() => loggedIn({ authResponse: { code: "AQcode" } }));
-      expect(await screen.findByText("تعذّر ربط واتساب")).toBeInTheDocument();
-      expect(screen.getByText("لم تقبل Meta رمز الربط")).toBeInTheDocument();
-    });
+    fireEvent.click(settingsBtn);
+    expect(onNavigate).toHaveBeenCalledWith("settings");
   });
 });

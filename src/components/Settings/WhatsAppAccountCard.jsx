@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CheckCircle2, MessageCircle, Unplug } from "lucide-react";
+import { CheckCircle2, Facebook, MessageCircle, Unplug } from "lucide-react";
 import {
   Alert,
   Button,
@@ -14,6 +14,11 @@ import {
   Switch,
   TextInput,
 } from "../ui/index.js";
+import EmbeddedSignupNotice from "../whatsapp/EmbeddedSignupNotice.jsx";
+import {
+  isSessionInvalidError,
+  refreshSallaSession,
+} from "../../utils/sallaSession.js";
 
 const ID = /^\d{5,25}$/;
 
@@ -34,17 +39,18 @@ const toForm = (s) => ({
 
 /**
  * The merchant's own WhatsApp Business account, entered once for every
- * feature. The token is write-only: after saving only its last 4
- * characters are shown. Saving checks the number + token with Meta, then
- * reads the account's templates.
+ * feature. Can be connected automatically via Meta Embedded Signup or manually.
+ * The token is write-only: after saving only its last 4 characters are shown.
  */
 export default function WhatsAppAccountCard({
   query,
+  signup,
   saveAccount,
   toggle,
   remove,
   onRemoved,
   showToast,
+  embedded,
 }) {
   const saved = query.data?.settings || null;
   const [confirmRemove, setConfirmRemove] = useState(false);
@@ -91,8 +97,22 @@ export default function WhatsAppAccountCard({
   if (query.isPending) {
     content = <Skeleton height={140} />;
   } else if (query.isError) {
+    const isSession = isSessionInvalidError(query.error);
     content = (
-      <Alert tone="error">
+      <Alert
+        tone="error"
+        action={
+          isSession && (
+            <Button
+              size="small"
+              variant="primary"
+              onClick={() => refreshSallaSession(embedded, showToast)}
+            >
+              تحديث الجلسة
+            </Button>
+          )
+        }
+      >
         {query.error.result?.error || "تعذّر تحميل إعدادات واتساب"}
       </Alert>
     );
@@ -139,6 +159,35 @@ export default function WhatsAppAccountCard({
               }
             />
           </Alert>
+        )}
+
+        {signup && <EmbeddedSignupNotice signup={signup} />}
+
+        {!saved?.profile && signup?.available && (
+          <>
+            <div className="wa-signup-box">
+              <h4>الربط السريع عبر فيسبوك (تلقائي وموصى به)</h4>
+              <p>
+                اربط حسابك تلقائيًا بنقرة واحدة: اختر نشاطك التجاري وحساب واتساب
+                للأعمال والرقم في نافذة Meta، وسنقوم بحفظ الربط وتحديث القوالب
+                مباشرة دون نسخ أي رموز.
+              </p>
+              <div className="wa-signup-cta">
+                <Button
+                  variant="primary"
+                  icon={Facebook}
+                  loading={signup.busy}
+                  disabled={!signup.ready}
+                  onClick={signup.start}
+                >
+                  ربط واتساب عبر فيسبوك
+                </Button>
+              </div>
+            </div>
+            <div className="form-divider">
+              <span>أو أدخل بيانات الربط يدويًا</span>
+            </div>
+          </>
         )}
 
         <form className="settings-form" onSubmit={onSubmit} noValidate>

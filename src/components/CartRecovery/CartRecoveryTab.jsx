@@ -23,13 +23,16 @@ import {
   useWhatsAppStatus,
 } from "../../hooks/cartRecovery/useCartRecovery.js";
 import { useCouponsQuery } from "../../hooks/coupons/useCoupons.js";
-import { useEmbeddedSignup } from "../../hooks/whatsapp/useEmbeddedSignup.js";
 import {
   ABANDONED_AFTER_OPTIONS,
   describeCartsError,
   isEligible,
   summarizeCarts,
 } from "../../utils/cartRecovery/cartModel.js";
+import {
+  isSessionInvalidError,
+  refreshSallaSession,
+} from "../../utils/sallaSession.js";
 import {
   DEFAULT_TEMPLATES,
   cartMessageValues,
@@ -47,7 +50,6 @@ import CartDetailsModal from "./CartDetailsModal.jsx";
 import WhatsAppTemplateCard from "./WhatsAppTemplateCard.jsx";
 import WhatsAppApiStatus from "./WhatsAppApiStatus.jsx";
 import CartTemplateModal from "./CartTemplateModal.jsx";
-import EmbeddedSignupNotice from "../whatsapp/EmbeddedSignupNotice.jsx";
 
 const EMPTY = [];
 
@@ -72,8 +74,6 @@ export default function CartRecoveryTab({ embedded, showToast, onNavigate }) {
   const apiSends = useApiSends();
   const sender = useWhatsAppSender(getToken);
   const { toggle: toggleApi } = useWhatsAppSettingsMutations(getToken);
-  // "Connect WhatsApp with Facebook" (Meta Embedded Signup).
-  const signup = useEmbeddedSignup(getToken);
   // Connected to the merchant's own account AND switched on.
   const apiEnabled = Boolean(waStatus.data?.configured);
   const [confirmBulk, setConfirmBulk] = useState(false);
@@ -189,14 +189,30 @@ export default function CartRecoveryTab({ embedded, showToast, onNavigate }) {
       </div>
     );
   } else if (query.isError) {
+    const isSession = isSessionInvalidError(query.error);
     content = (
       <Alert
         tone="error"
         title="تعذّر تحميل السلات المتروكة"
         action={
-          <Button size="small" onClick={() => query.refetch()}>
-            إعادة المحاولة
-          </Button>
+          <>
+            {isSession && (
+              <Button
+                size="small"
+                variant="primary"
+                onClick={() => refreshSallaSession(embedded, showToast)}
+              >
+                تحديث الجلسة
+              </Button>
+            )}
+            <Button
+              size="small"
+              variant={isSession ? "secondary" : "primary"}
+              onClick={() => query.refetch()}
+            >
+              إعادة المحاولة
+            </Button>
+          </>
         }
       >
         {describeCartsError(query.error.result)}
@@ -261,7 +277,6 @@ export default function CartRecoveryTab({ embedded, showToast, onNavigate }) {
 
           <WhatsAppApiStatus
             status={waStatus}
-            signup={signup}
             onOpenTemplate={() => setSettingsOpen(true)}
             onOpenSettings={() => onNavigate?.("settings")}
             toggling={toggleApi.isPending}
@@ -282,7 +297,6 @@ export default function CartRecoveryTab({ embedded, showToast, onNavigate }) {
               })
             }
           />
-          <EmbeddedSignupNotice signup={signup} />
 
           {!query.isPending && !query.isError && (
             <CartRecoveryStats
