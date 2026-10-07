@@ -45,7 +45,10 @@ function CouponCard({ coupon, status, onView, onEdit, onDelete }) {
       </header>
 
       <p className="coupon-card-discount">{formatDiscount(coupon)}</p>
-      <CouponScope storewide={isStorewide(coupon)} />
+      <CouponScope
+        storewide={isStorewide(coupon)}
+        count={Array.isArray(coupon?.include_product_ids) ? coupon.include_product_ids.length : 0}
+      />
 
       {target !== null && (
         <CouponCountdown

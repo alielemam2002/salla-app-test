@@ -24,6 +24,7 @@ export const FIELD_LABELS = {
   usage_limit_per_user: "حد الاستخدام لكل عميل",
   free_shipping: "شحن مجاني",
   exclude_sale_products: "استثناء المنتجات المخفضة",
+  include_product_ids: "المنتجات المشمولة",
   group_suffix: "لاحقة المجموعة",
 };
 

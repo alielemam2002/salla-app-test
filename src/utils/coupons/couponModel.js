@@ -116,7 +116,13 @@ export function isStorewide(coupon) {
  */
 export function getUnmanagedSettings(coupon) {
   const reasons = [];
-  if (!isStorewide(coupon))
+  const hasOtherProductScope = [
+    "exclude_product_ids",
+    "include_category_ids",
+    "exclude_category_ids",
+    "exclude_brands_ids",
+  ].some((key) => !isEmptyList(coupon?.[key]));
+  if (hasOtherProductScope)
     reasons.push("شروط المنتجات أو التصنيفات أو الماركات");
   if (
     !isEmptyList(coupon?.include_customer_group_ids) ||

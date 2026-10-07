@@ -173,6 +173,7 @@ export default function CouponsTab({ embedded, showToast }) {
         serverError={formError}
         onClose={formDialog.close}
         onSubmit={handleSubmit}
+        getToken={getToken}
       />
 
       <CouponDetailsModal

@@ -250,6 +250,35 @@ describe("coupon form", () => {
       active: false,
     });
   });
+
+  it("handles coupons targeted to a specific product", () => {
+    const specificForm = {
+      ...validForm,
+      target_type: "specific_product",
+      include_product_ids: [],
+    };
+    // Rejects if no product selected
+    expect(validateCouponForm(specificForm, NOW).include_product_ids).toMatch(
+      /اختيار منتج واحد على الأقل/,
+    );
+
+    // Accepts when product ID is provided
+    const validSpecific = {
+      ...specificForm,
+      include_product_ids: [15504447],
+    };
+    expect(validateCouponForm(validSpecific, NOW)).toEqual({});
+    expect(formToCouponInput(validSpecific).include_product_ids).toEqual([
+      15504447,
+    ]);
+
+    // Maps back from Salla coupon with include_product_ids
+    const fromSalla = couponToForm(
+      coupon({ include_product_ids: ["15504447"] }),
+    );
+    expect(fromSalla.target_type).toBe("specific_product");
+    expect(fromSalla.include_product_ids).toEqual([15504447]);
+  });
 });
 
 describe("describeCouponError", () => {

@@ -15,6 +15,9 @@ export const EMPTY_COUPON_FORM = {
   free_shipping: false,
   exclude_sale_products: false,
   active: true,
+  target_type: "storewide",
+  include_product_ids: [],
+  selected_product: null,
 };
 
 /** "2026-03-17 08:30:00" → "2026-03-17T08:30" (datetime-local value). */
@@ -45,6 +48,9 @@ const numberText = (value) => {
 
 export function couponToForm(coupon) {
   if (!coupon) return { ...EMPTY_COUPON_FORM };
+  const hasProducts =
+    Array.isArray(coupon.include_product_ids) &&
+    coupon.include_product_ids.length > 0;
   return {
     code: coupon.code || "",
     type: String(coupon.type || "")
@@ -64,6 +70,11 @@ export function couponToForm(coupon) {
     free_shipping: Boolean(coupon.free_shipping),
     exclude_sale_products: Boolean(coupon.is_sale_products_exclude),
     active: (coupon.status || "active") === "active",
+    target_type: hasProducts ? "specific_product" : "storewide",
+    include_product_ids: hasProducts
+      ? coupon.include_product_ids.map(Number).filter(Boolean)
+      : [],
+    selected_product: null,
   };
 }
 
@@ -132,13 +143,25 @@ export function validateCouponForm(form, now = Date.now()) {
       errors.usage_limit_per_user = "لا يمكن أن يزيد عن حد الاستخدام الكلي";
     }
   }
+
+  if (form.target_type === "specific_product") {
+    if (!form.include_product_ids || form.include_product_ids.length === 0) {
+      errors.include_product_ids = "يرجى اختيار منتج واحد على الأقل لتطبيق الكوبون عليه";
+    }
+  }
   return errors;
 }
 
 /** Form state → the `coupon` object api/coupons.js expects. */
 export function formToCouponInput(form) {
   const optionalNumber = (v) => (isBlank(v) ? undefined : Number(v));
-  return {
+  const isSpecific = form.target_type === "specific_product";
+  const productIds =
+    isSpecific && Array.isArray(form.include_product_ids)
+      ? form.include_product_ids.map(Number).filter(Boolean)
+      : [];
+
+  const out = {
     code: form.code.trim(),
     type: form.type,
     amount: Number(form.amount),
@@ -153,4 +176,8 @@ export function formToCouponInput(form) {
     exclude_sale_products: form.exclude_sale_products,
     status: form.active ? "active" : "inactive",
   };
+  if (isSpecific) {
+    out.include_product_ids = productIds;
+  }
+  return out;
 }

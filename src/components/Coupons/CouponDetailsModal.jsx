@@ -47,7 +47,11 @@ export default function CouponDetailsModal({
         )
       }
     >
-      <CouponScope storewide={isStorewide(coupon)} detailed />
+      <CouponScope
+        storewide={isStorewide(coupon)}
+        count={Array.isArray(coupon?.include_product_ids) ? coupon.include_product_ids.length : 0}
+        detailed
+      />
       <KeyValueList
         items={[
           { label: "قيمة الخصم", value: formatDiscount(coupon), mono: false },

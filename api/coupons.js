@@ -123,6 +123,16 @@ export function buildCouponPayload(input) {
   if (input.status === "active" || input.status === "inactive") {
     payload.status = input.status;
   }
+  if (Array.isArray(input.include_product_ids)) {
+    const ids = input.include_product_ids
+      .map(Number)
+      .filter((id) => Number.isInteger(id) && id > 0);
+    if (ids.length > 0) {
+      payload.include_product_ids = ids;
+    } else if (input.explicit_storewide) {
+      payload.include_product_ids = [];
+    }
+  }
   return { payload };
 }
 

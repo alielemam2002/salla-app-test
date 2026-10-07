@@ -178,7 +178,7 @@ describe("CouponsTab", () => {
 
     fireEvent.click(screen.getAllByRole("button", { name: "إنشاء كوبون" })[0]);
     const dialog = screen.getByRole("dialog");
-    expect(within(dialog).getByText("المتجر بالكامل")).toBeInTheDocument();
+    expect(within(dialog).getByRole("tab", { name: "المتجر بالكامل" })).toBeInTheDocument();
 
     fireEvent.change(within(dialog).getByLabelText(/كود الكوبون/), {
       target: { value: "NEW15" },
@@ -263,7 +263,7 @@ describe("CouponsTab", () => {
   it("disables Edit for coupons with settings the form can't manage", async () => {
     fetchAllCoupons.mockResolvedValue({
       success: true,
-      coupons: [{ ...ACTIVE, include_product_ids: ["5"] }],
+      coupons: [{ ...ACTIVE, include_category_ids: ["5"] }],
     });
     renderTab();
     const card = await screen.findByRole("article", { name: "SUMMER20" });

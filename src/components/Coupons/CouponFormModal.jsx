@@ -6,6 +6,7 @@ import {
   Field,
   FormRow,
   Modal,
+  SegmentedTabs,
   Select,
   Switch,
   TextInput,
@@ -13,6 +14,7 @@ import {
 import { useCouponForm } from "../../hooks/coupons/useCouponForm.js";
 import { FIELD_LABELS } from "../../utils/coupons/couponErrors.js";
 import CouponScope from "./CouponScope.jsx";
+import CouponProductPicker from "./CouponProductPicker.jsx";
 
 const TYPE_OPTIONS = [
   { value: "percentage", label: "نسبة مئوية (%)" },
@@ -20,7 +22,7 @@ const TYPE_OPTIONS = [
 ];
 
 /**
- * Create / edit a storewide coupon.
+ * Create / edit a coupon (storewide or targeted to a specific product).
  * `serverError` is the described Salla error ({ title, reason, fieldErrors }).
  */
 export default function CouponFormModal({
@@ -31,6 +33,7 @@ export default function CouponFormModal({
   serverError,
   onClose,
   onSubmit,
+  getToken,
 }) {
   const formId = useId();
   const isEdit = Boolean(coupon);
@@ -102,7 +105,38 @@ export default function CouponFormModal({
           </Alert>
         )}
 
-        <CouponScope storewide detailed />
+        <div className="coupon-target-mode">
+          <span className="form-label">نطاق تطبيق الكوبون</span>
+          <SegmentedTabs
+            variant="pill"
+            ariaLabel="نطاق تطبيق الكوبون"
+            tabs={[
+              { id: "storewide", label: "المتجر بالكامل" },
+              { id: "specific_product", label: "منتج محدد" },
+            ]}
+            activeTab={form.target_type || "storewide"}
+            onTabChange={(mode) => setField("target_type", mode)}
+          />
+        </div>
+
+        {form.target_type === "specific_product" ? (
+          <CouponProductPicker
+            selectedIds={form.include_product_ids || []}
+            selectedProduct={form.selected_product}
+            onSelect={(product) => {
+              setField("include_product_ids", [product.id]);
+              setField("selected_product", product);
+            }}
+            onRemove={() => {
+              setField("include_product_ids", []);
+              setField("selected_product", null);
+            }}
+            getToken={getToken}
+            error={fieldError("include_product_ids")}
+          />
+        ) : (
+          <CouponScope storewide detailed />
+        )}
 
         <Field
           label="كود الكوبون"
