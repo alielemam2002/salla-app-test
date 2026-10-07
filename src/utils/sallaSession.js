@@ -56,6 +56,16 @@ export function refreshSallaSession(customEmbedded, showToast) {
 }
 
 /**
+ * Safely extracts the session token from the embedded SDK instance.
+ * @param {object} [customEmbedded]
+ * @returns {string|null}
+ */
+export function getToken(customEmbedded) {
+  const sdk = customEmbedded || embedded;
+  return sdk?.auth?.getToken?.() || null;
+}
+
+/**
  * Resets the cooldown timer (useful in unit tests).
  */
 export function _resetRefreshCooldown() {

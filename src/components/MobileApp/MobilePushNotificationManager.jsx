@@ -36,10 +36,12 @@ const PRESET_MESSAGES = [
 ];
 
 export default function MobilePushNotificationManager({
+  getToken: customGetToken,
   onPreviewNotification,
   showToast,
 }) {
   const queryClient = useQueryClient();
+  const resolveToken = () => (customGetToken ? customGetToken() : getToken());
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [url, setUrl] = useState("");
@@ -47,7 +49,7 @@ export default function MobilePushNotificationManager({
   const { data, isLoading } = useQuery({
     queryKey: ["mobile-app-push-history"],
     queryFn: async () => {
-      const token = getToken();
+      const token = resolveToken();
       return await fetchPushHistory(token);
     },
   });
@@ -57,7 +59,7 @@ export default function MobilePushNotificationManager({
       if (!title.trim()) throw new Error("يرجى إدخال عنوان الإشعار");
       if (!body.trim()) throw new Error("يرجى إدخال نص الإشعار");
 
-      const token = getToken();
+      const token = resolveToken();
       const res = await sendPushNotificationApi(token, {
         title: title.trim(),
         body: body.trim(),
