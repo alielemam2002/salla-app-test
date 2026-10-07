@@ -1,0 +1,121 @@
+name: Build Salla Mobile App (Android APK & AAB)
+
+on:
+  repository_dispatch:
+    types: [build-mobile-app]
+  workflow_dispatch:
+    inputs:
+      merchant_id:
+        description: 'Salla Merchant ID'
+        required: true
+        default: '12345'
+      build_id:
+        description: 'Build Job ID'
+        required: true
+        default: 'manual_build'
+      app_name:
+        description: 'App Name'
+        required: true
+        default: 'متجر سلة'
+      store_url:
+        description: 'Store URL'
+        required: true
+        default: 'https://salla.sa'
+      package_name:
+        description: 'Android Package Name'
+        required: true
+        default: 'sa.salla.app.demo_12345'
+      primary_color:
+        description: 'Primary Color (Hex)'
+        required: false
+        default: '#10B981'
+
+jobs:
+  build:
+    name: Build Android APK and AAB
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'mobile-app-template/package.json'
+
+      - name: Set up Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Inject Merchant Configuration
+        run: |
+          MERCHANT_ID="${{ github.event.client_payload.merchant_id || github.event.inputs.merchant_id }}"
+          BUILD_ID="${{ github.event.client_payload.build_id || github.event.inputs.build_id }}"
+          APP_NAME="${{ github.event.client_payload.app_name || github.event.inputs.app_name }}"
+          STORE_URL="${{ github.event.client_payload.store_url || github.event.inputs.store_url }}"
+          PACKAGE_NAME="${{ github.event.client_payload.package_name || github.event.inputs.package_name }}"
+          PRIMARY_COLOR="${{ github.event.client_payload.primary_color || github.event.inputs.primary_color || '#10B981' }}"
+          LOGO_URL="${{ github.event.client_payload.logo_url || '' }}"
+
+          cat <<EOF > mobile-app-template/merchant-config.json
+          {
+            "appName": "$APP_NAME",
+            "storeUrl": "$STORE_URL",
+            "packageName": "$PACKAGE_NAME",
+            "primaryColor": "$PRIMARY_COLOR",
+            "version": "1.0.0",
+            "versionCode": 1
+          }
+          EOF
+
+          echo "Config generated for $APP_NAME ($PACKAGE_NAME)"
+
+      - name: Install Template Dependencies
+        run: |
+          cd mobile-app-template
+          npm install
+
+      - name: Expo Prebuild Android
+        run: |
+          cd mobile-app-template
+          npx expo prebuild --platform android --clean
+
+      - name: Build Android APK & AAB
+        run: |
+          cd mobile-app-template/android
+          chmod +x gradlew
+          ./gradlew assembleRelease
+          ./gradlew bundleRelease
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build-${{ github.event.client_payload.build_id || github.event.inputs.build_id }}
+          path: |
+            mobile-app-template/android/app/build/outputs/apk/release/*.apk
+            mobile-app-template/android/app/build/outputs/bundle/release/*.aab
+
+      - name: Notify Salla App Backend (Completion Webhook)
+        if: ${{ github.event.client_payload.callback_url != '' }}
+        run: |
+          CALLBACK_URL="${{ github.event.client_payload.callback_url }}"
+          BUILD_ID="${{ github.event.client_payload.build_id }}"
+          SECRET="${{ secrets.BUILD_WORKER_SECRET }}"
+
+          curl -X POST "$CALLBACK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"action\": \"mobile_app_complete\",
+              \"buildId\": \"$BUILD_ID\",
+              \"secret\": \"$SECRET\",
+              \"success\": true,
+              \"apkUrl\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
+              \"aabUrl\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+            }"

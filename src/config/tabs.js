@@ -6,6 +6,7 @@ import {
   Repeat,
   Settings,
   ShoppingCart,
+  Smartphone,
   TicketPercent,
 } from "lucide-react";
 
@@ -20,6 +21,7 @@ export const APP_TABS = [
   { id: "cart-recovery", label: "السلات المتروكة", icon: ShoppingCart },
   { id: "campaigns", label: "حملات واتساب", icon: Megaphone },
   { id: "replenish", label: "إعادة الشراء", icon: Repeat },
+  { id: "mobile-app", label: "تطبيق الجوال", icon: Smartphone },
   { id: "addons", label: "الإضافات", icon: Puzzle },
   { id: "settings", label: "الإعدادات", icon: Settings },
 ];

@@ -19,6 +19,18 @@ import {
 } from "./_lib/salla.js";
 import { kvConfigured } from "./_lib/kv.js";
 import { tokenStatus } from "./_lib/merchantTokens.js";
+import {
+  cancelBuildJob,
+  completeBuildJob,
+  createBuildJob,
+  dispatchBuild,
+  generatePackageName,
+  getBuildRecord,
+  getMerchantBuilds,
+  getMobileAppConfig,
+  saveMobileAppConfig,
+  validateStoreUrl,
+} from "./_lib/mobileApp.js";
 
 const fail = (status, code, error) =>
   Response.json({ success: false, status, code, error }, { status });
@@ -91,6 +103,16 @@ const reason = (result) =>
     ? result.reason?.message || "تعذّر التحميل"
     : null;
 
+const SUPPORTED_ACTIONS = [
+  "info",
+  "mobile_app_get",
+  "mobile_app_save",
+  "mobile_app_build",
+  "mobile_app_status",
+  "mobile_app_cancel",
+  "mobile_app_complete",
+];
+
 export async function POST(request) {
   let body;
   try {
@@ -98,13 +120,34 @@ export async function POST(request) {
   } catch {
     return fail(400, "bad_request", "تعذّر قراءة الطلب");
   }
+
+  const action = String(body.action || "info");
+  if (!SUPPORTED_ACTIONS.includes(action)) {
+    return fail(400, "bad_request", `إجراء غير معروف: "${action}"`);
+  }
+
+  // Webhook completion callback from build worker can be authenticated with worker secret
+  if (action === "mobile_app_complete") {
+    const workerSecret = process.env.BUILD_WORKER_SECRET;
+    if (workerSecret && body.secret !== workerSecret) {
+      return fail(401, "unauthorized", "رمز التحقق من خادم البناء غير صحيح");
+    }
+    if (!body.buildId) {
+      return fail(400, "bad_request", "معرّف البناء buildId مطلوب");
+    }
+    const updated = await completeBuildJob(body.buildId, {
+      success: Boolean(body.success),
+      apkUrl: body.apkUrl || null,
+      aabUrl: body.aabUrl || null,
+      errorMessage: body.errorMessage || null,
+    });
+    return Response.json({ success: true, build: updated });
+  }
+
   const { token } = body;
   const appId = process.env.SALLA_APP_ID || body.appId;
   if (!token) return fail(400, "bad_request", "رمز الجلسة مطلوب");
   if (!appId) return fail(400, "bad_request", "معرّف التطبيق مطلوب");
-  if (String(body.action || "info") !== "info") {
-    return fail(400, "bad_request", "إجراء غير معروف");
-  }
 
   try {
     const session = await introspectEmbeddedToken(token, appId);
@@ -112,46 +155,199 @@ export async function POST(request) {
       return fail(session.status, "session_invalid", session.error);
     }
     const merchantId = String(session.data.merchant_id);
-    const access = kvConfigured()
-      ? await tokenStatus(merchantId)
-      : { authorized: false, storage: false };
-    if (!access.authorized) {
+
+    // ==========================================
+    // ACTION: info (Standard Salla store info)
+    // ==========================================
+    if (action === "info") {
+      const access = kvConfigured()
+        ? await tokenStatus(merchantId)
+        : { authorized: false, storage: false };
+      if (!access.authorized) {
+        return Response.json({
+          success: true,
+          merchantId,
+          access,
+          store: null,
+          user: null,
+          errors: {},
+        });
+      }
+
+      const api = sallaApiFor(merchantId);
+      const [storeResult, userResult] = await Promise.allSettled([
+        api("/store/info"),
+        sallaUserInfo(merchantId),
+      ]);
+      const storeBody =
+        storeResult.status === "fulfilled" ? storeResult.value.body : null;
+      const user = userResult.status === "fulfilled" ? userResult.value : null;
+
       return Response.json({
         success: true,
         merchantId,
         access,
-        store: null,
-        user: null,
-        errors: {},
+        store: storeBody?.success ? pickStore(storeBody.data) : null,
+        user: user?.ok ? pickUser(user.data) : null,
+        errors: {
+          store:
+            reason(storeResult) ||
+            (storeBody && !storeBody.success
+              ? storeBody.error?.message || "تعذّر تحميل بيانات المتجر"
+              : null),
+          user: reason(userResult) || (user && !user.ok ? user.error : null),
+        },
       });
     }
 
-    const api = sallaApiFor(merchantId);
-    const [storeResult, userResult] = await Promise.allSettled([
-      api("/store/info"),
-      sallaUserInfo(merchantId),
-    ]);
-    const storeBody =
-      storeResult.status === "fulfilled" ? storeResult.value.body : null;
-    const user = userResult.status === "fulfilled" ? userResult.value : null;
+    // ==========================================
+    // ACTION: mobile_app_get (Get Mobile App Config & Build status)
+    // ==========================================
+    if (action === "mobile_app_get") {
+      let config = await getMobileAppConfig(merchantId);
 
-    return Response.json({
-      success: true,
-      merchantId,
-      access,
-      store: storeBody?.success ? pickStore(storeBody.data) : null,
-      user: user?.ok ? pickUser(user.data) : null,
-      errors: {
-        store:
-          reason(storeResult) ||
-          (storeBody && !storeBody.success
-            ? storeBody.error?.message || "تعذّر تحميل بيانات المتجر"
-            : null),
-        user: reason(userResult) || (user && !user.ok ? user.error : null),
-      },
-    });
+      // Prepopulate from Salla store info if not yet configured
+      if (!config || !config.storeUrl) {
+        try {
+          const api = sallaApiFor(merchantId);
+          const storeRes = await api("/store/info");
+          if (storeRes.body?.success && storeRes.body.data) {
+            const data = storeRes.body.data;
+            const domain = data.domain || `${data.username || "store"}.salla.sa`;
+            config = {
+              appName: data.name || "متجري",
+              storeUrl: `https://${domain}`,
+              logoUrl: data.avatar || null,
+              primaryColor: "#10B981",
+              packageName: generatePackageName(merchantId, data.name),
+              status: "DRAFT",
+              ...config,
+            };
+          }
+        } catch {
+          // Fallback defaults
+          config = {
+            appName: "متجر سلة",
+            storeUrl: "https://salla.sa",
+            primaryColor: "#10B981",
+            packageName: generatePackageName(merchantId, "store"),
+            status: "DRAFT",
+            ...config,
+          };
+        }
+      }
+
+      let latestBuild = config?.currentBuildId
+        ? await getBuildRecord(config.currentBuildId)
+        : config?.latestBuild || null;
+
+      const builds = await getMerchantBuilds(merchantId);
+
+      return Response.json({
+        success: true,
+        merchantId,
+        config,
+        latestBuild,
+        builds,
+      });
+    }
+
+    // ==========================================
+    // ACTION: mobile_app_save (Save configuration)
+    // ==========================================
+    if (action === "mobile_app_save") {
+      const input = body.config || {};
+      if (!input.appName || typeof input.appName !== "string") {
+        return fail(422, "validation_failed", "اسم التطبيق مطلوب");
+      }
+
+      const urlCheck = validateStoreUrl(input.storeUrl);
+      if (!urlCheck.valid) {
+        return fail(422, "validation_failed", urlCheck.error);
+      }
+
+      const packageName =
+        input.packageName || generatePackageName(merchantId, input.appName);
+
+      const saved = await saveMobileAppConfig(merchantId, {
+        appName: input.appName.trim(),
+        storeUrl: urlCheck.sanitizedUrl,
+        primaryColor: input.primaryColor || "#10B981",
+        logoUrl: input.logoUrl || null,
+        splashUrl: input.splashUrl || null,
+        packageName,
+        status: "READY",
+      });
+
+      return Response.json({ success: true, config: saved });
+    }
+
+    // ==========================================
+    // ACTION: mobile_app_build (Trigger Android Build)
+    // ==========================================
+    if (action === "mobile_app_build") {
+      let config = await getMobileAppConfig(merchantId);
+      if (!config || !config.storeUrl || !config.appName) {
+        return fail(
+          400,
+          "config_missing",
+          "يرجى حفظ إعدادات التطبيق قبل بدء البناء",
+        );
+      }
+
+      const urlCheck = validateStoreUrl(config.storeUrl);
+      if (!urlCheck.valid) {
+        return fail(422, "validation_failed", urlCheck.error);
+      }
+
+      const buildJob = await createBuildJob(merchantId, config);
+
+      // Trigger builder asynchronously
+      await dispatchBuild(buildJob);
+
+      return Response.json(
+        { success: true, build: buildJob, status: "QUEUED" },
+        { status: 202 },
+      );
+    }
+
+    // ==========================================
+    // ACTION: mobile_app_status (Check build status)
+    // ==========================================
+    if (action === "mobile_app_status") {
+      const buildId = body.buildId;
+      if (!buildId) {
+        const config = await getMobileAppConfig(merchantId);
+        return Response.json({
+          success: true,
+          status: config?.status || "DRAFT",
+          latestBuild: config?.latestBuild || null,
+        });
+      }
+
+      const record = await getBuildRecord(buildId);
+      if (!record || record.merchantId !== merchantId) {
+        return fail(404, "not_found", "لم يتم العثور على سجل البناء المطلوب");
+      }
+
+      return Response.json({ success: true, build: record });
+    }
+
+    // ==========================================
+    // ACTION: mobile_app_cancel (Cancel active build)
+    // ==========================================
+    if (action === "mobile_app_cancel") {
+      const cancelled = await cancelBuildJob(merchantId);
+      return Response.json({
+        success: true,
+        cancelled,
+        message: "تم إلغاء عملية البناء",
+      });
+    }
+
+    return fail(400, "bad_request", "إجراء غير معروف");
   } catch (error) {
-    console.error("Store endpoint failed:", error.code || error.message);
+    console.error("Store/MobileApp endpoint failed:", error.code || error.message);
     return fail(
       error.status || 500,
       error.code || "server_error",
@@ -159,3 +355,4 @@ export async function POST(request) {
     );
   }
 }
+
