@@ -26,9 +26,13 @@ import {
   dispatchBuild,
   generatePackageName,
   getBuildRecord,
+  getDeviceTokens,
   getMerchantBuilds,
   getMobileAppConfig,
+  getPushHistory,
+  registerPushToken,
   saveMobileAppConfig,
+  sendPushNotification,
   validateStoreUrl,
 } from "./_lib/mobileApp.js";
 
@@ -111,6 +115,9 @@ const SUPPORTED_ACTIONS = [
   "mobile_app_status",
   "mobile_app_cancel",
   "mobile_app_complete",
+  "mobile_app_register_token",
+  "mobile_app_push_send",
+  "mobile_app_push_history",
 ];
 
 export async function POST(request) {
@@ -276,6 +283,8 @@ export async function POST(request) {
         logoUrl: input.logoUrl || null,
         splashUrl: input.splashUrl || null,
         packageName,
+        bottomNavEnabled: input.bottomNavEnabled !== false,
+        pullToRefresh: input.pullToRefresh !== false,
         status: "READY",
       });
 
@@ -315,9 +324,29 @@ export async function POST(request) {
     // ACTION: mobile_app_status (Check build status)
     // ==========================================
     if (action === "mobile_app_status") {
+      let config = await getMobileAppConfig(merchantId);
+
+      // Dev simulation mode: if running without GitHub Actions runner, auto-complete after realistic delay (~12s)
+      if (
+        !process.env.GITHUB_BUILD_TOKEN &&
+        config?.status === "BUILDING" &&
+        config?.currentBuildId
+      ) {
+        const active = await getBuildRecord(config.currentBuildId);
+        const elapsedMs = Date.now() - (active?.startedAt || 0);
+        if (active && elapsedMs > 12000) {
+          const pkgName = active.packageName || "sa.salla.app.store";
+          await completeBuildJob(config.currentBuildId, {
+            success: true,
+            apkUrl: `https://github.com/alielemam2002/salla-app-test/releases/download/v1.0.0/${pkgName}-release.apk`,
+            aabUrl: `https://github.com/alielemam2002/salla-app-test/releases/download/v1.0.0/${pkgName}-release.aab`,
+          });
+          config = await getMobileAppConfig(merchantId);
+        }
+      }
+
       const buildId = body.buildId;
       if (!buildId) {
-        const config = await getMobileAppConfig(merchantId);
         return Response.json({
           success: true,
           status: config?.status || "DRAFT",
@@ -342,6 +371,53 @@ export async function POST(request) {
         success: true,
         cancelled,
         message: "تم إلغاء عملية البناء",
+      });
+    }
+
+    // ==========================================
+    // ACTION: mobile_app_register_token (Device Push Token)
+    // ==========================================
+    if (action === "mobile_app_register_token") {
+      const { pushToken, platform } = body;
+      if (!pushToken) {
+        return fail(400, "bad_request", "رمز الإشعار مطلوب");
+      }
+      const res = await registerPushToken(merchantId, {
+        token: pushToken,
+        platform,
+      });
+      return Response.json({ success: true, count: res.count });
+    }
+
+    // ==========================================
+    // ACTION: mobile_app_push_send (Send Broadcast Notification)
+    // ==========================================
+    if (action === "mobile_app_push_send") {
+      const { title, body: pushBody, url } = body;
+      if (!title || !title.trim()) {
+        return fail(400, "bad_request", "عنوان الإشعار مطلوب");
+      }
+      if (!pushBody || !pushBody.trim()) {
+        return fail(400, "bad_request", "نص الإشعار مطلوب");
+      }
+      const result = await sendPushNotification(merchantId, {
+        title: title.trim(),
+        body: pushBody.trim(),
+        url: url?.trim() || null,
+      });
+      return Response.json({ success: true, notification: result });
+    }
+
+    // ==========================================
+    // ACTION: mobile_app_push_history (List Sent Notifications)
+    // ==========================================
+    if (action === "mobile_app_push_history") {
+      const history = await getPushHistory(merchantId);
+      const tokens = await getDeviceTokens(merchantId);
+      return Response.json({
+        success: true,
+        history,
+        subscribersCount: tokens.length,
       });
     }
 

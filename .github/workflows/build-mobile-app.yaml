@@ -64,12 +64,17 @@ jobs:
           PRIMARY_COLOR="${{ github.event.client_payload.primary_color || github.event.inputs.primary_color || '#10B981' }}"
           LOGO_URL="${{ github.event.client_payload.logo_url || '' }}"
 
+          BOTTOM_NAV="${{ github.event.client_payload.bottom_nav_enabled != false }}"
+          PULL_REFRESH="${{ github.event.client_payload.pull_to_refresh != false }}"
+
           cat <<EOF > mobile-app-template/merchant-config.json
           {
             "appName": "$APP_NAME",
             "storeUrl": "$STORE_URL",
             "packageName": "$PACKAGE_NAME",
             "primaryColor": "$PRIMARY_COLOR",
+            "bottomNavEnabled": $BOTTOM_NAV,
+            "pullToRefresh": $PULL_REFRESH,
             "version": "1.0.0",
             "versionCode": 1
           }

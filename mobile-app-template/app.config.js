@@ -70,6 +70,8 @@ module.exports = {
       storeUrl: merchant.storeUrl || "https://salla.sa",
       primaryColor: merchant.primaryColor || "#10B981",
       appName: merchant.appName || "متجر سلة",
+      bottomNavEnabled: merchant.bottomNavEnabled !== false,
+      pullToRefresh: merchant.pullToRefresh !== false,
     },
   },
 };
