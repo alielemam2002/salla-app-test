@@ -207,6 +207,7 @@ export default function MobileAppTab({ embedded, showToast }) {
         <main className="mobile-app-main-column">
           {activeSubTab === "notifications" ? (
             <MobilePushNotificationManager
+              getToken={getToken}
               onPreviewNotification={setNotificationBanner}
               showToast={showToast}
             />
