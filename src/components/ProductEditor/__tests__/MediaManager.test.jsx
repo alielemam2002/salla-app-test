@@ -5,6 +5,9 @@ import { uploadProductImageFile } from "../../../utils/productMediaApi.js";
 
 vi.mock("../../../utils/productMediaApi.js", () => ({
   uploadProductImageFile: vi.fn(),
+  generateAiImage: vi.fn(),
+  improveAiImage: vi.fn(),
+  attachAiImage: vi.fn(),
 }));
 
 const jpeg = (name) =>

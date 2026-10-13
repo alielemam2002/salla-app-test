@@ -1217,6 +1217,203 @@
   }
 }
 
+/* ---------- AI image studio (MediaManager → AiImageStudio) ---------- */
+
+.media-manager-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.ai-studio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.ai-studio-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.ai-studio-submit,
+.ai-studio-device {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.ai-studio-device {
+  margin-block-start: var(--space-sm);
+}
+
+.ai-studio-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-studio-source {
+  position: relative;
+  display: block;
+  inline-size: 72px;
+  block-size: 72px;
+  padding: 0;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.ai-studio-source img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.ai-studio-source--active {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-primary-soft);
+}
+
+.ai-studio-source-check {
+  position: absolute;
+  inset-block-start: 4px;
+  inset-inline-end: 4px;
+  display: grid;
+  place-items: center;
+  inline-size: 18px;
+  block-size: 18px;
+  border-radius: var(--radius-full);
+  background: var(--accent-primary);
+  color: var(--accent-on-primary);
+}
+
+.ai-studio-tools {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-sm);
+}
+
+.ai-studio-tool {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ai-studio-tool span {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.ai-studio-tool--active {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-soft);
+}
+
+.ai-studio-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding-block-start: var(--space-md);
+  border-block-start: 1px solid var(--border-color);
+}
+
+.ai-studio-results-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.ai-studio-result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-studio-result {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  padding: var(--space-sm);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  min-width: 0;
+}
+
+/* Checkerboard so a removed (transparent) background is visible. */
+.ai-studio-result-thumb {
+  inline-size: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-tertiary);
+  background-image:
+    linear-gradient(45deg, var(--bg-hover) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--bg-hover) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--bg-hover) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--bg-hover) 75%);
+  background-size: 16px 16px;
+  background-position:
+    0 0,
+    0 8px,
+    8px -8px,
+    -8px 0;
+  overflow: hidden;
+}
+
+.ai-studio-result-thumb img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: contain;
+}
+
+.ai-studio-result-label {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.ai-studio-result-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.ai-studio-result-error {
+  margin: 0;
+  color: var(--accent-danger);
+  font-size: 0.75rem;
+}
+
+@media (max-width: 720px) {
+  .ai-studio-tools {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ---------- AI Copilot Modal & Buttons ---------- */
 
 .editor-ai-btn {
